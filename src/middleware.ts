@@ -1,6 +1,4 @@
-import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { updateSession } from '@/lib/supabase/middleware'
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -23,36 +21,13 @@ export async function middleware(request: NextRequest) {
   const isProtectedRoute = pathname.startsWith('/dashboard')
   const isAuthRoute = pathname === '/login' || pathname === '/register'
 
-  if (isProtectedRoute || isAuthRoute) {
-    // Client en lecture seule pour vérifier l'état de la session
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return request.cookies.getAll()
-          },
-          setAll() {},
-        },
-      }
-    )
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    // Auth désactivé en mode mock — à réactiver quand Supabase Auth est configuré
-    // if (!user && isProtectedRoute) {
-    //   return NextResponse.redirect(new URL('/login', request.url))
-    // }
-    // if (user && isAuthRoute) {
-    //   return NextResponse.redirect(new URL('/dashboard', request.url))
-    // }
+  if (isAuthRoute) {
+    return NextResponse.next()
   }
 
-  // Rafraîchit silencieusement le token de session et propage les cookies
-  return updateSession(request)
+  // Supabase n'est pas encore implémenté en production.
+  // Toutes les routes passent en attendant la mise en place.
+  return NextResponse.next()
 }
 
 export const config = {
