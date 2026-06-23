@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Bell, Search, Menu, Settings, LogOut, User, Sun, Moon } from 'lucide-react'
-import { mockTeacher } from '@/components/shared/Sidebar'
+import { createClient } from '@/lib/supabase/client'
+import type { TeacherIdentity } from '@/features/profile/types/profile.types'
 
 const BRAND = '#534AB7'
 
@@ -11,12 +12,23 @@ interface NavbarProps {
   onMenuToggle?: () => void
   isDark?: boolean
   onThemeToggle?: () => void
+  teacher: TeacherIdentity | null
 }
 
-export default function Navbar({ onMenuToggle, isDark = true, onThemeToggle }: NavbarProps) {
+export default function Navbar({ onMenuToggle, isDark = true, onThemeToggle, teacher }: NavbarProps) {
   const router = useRouter()
   const [profileOpen, setProfileOpen] = useState(false)
+  const [isSigningOut, setIsSigningOut] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  async function handleSignOut() {
+    setProfileOpen(false)
+    setIsSigningOut(true)
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+    router.refresh()
+  }
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -79,16 +91,16 @@ export default function Navbar({ onMenuToggle, isDark = true, onThemeToggle }: N
                 className="h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
                 style={{ backgroundColor: BRAND }}
               >
-                {mockTeacher.initials}
+                {teacher?.initials ?? '?'}
               </div>
-              <span className="hidden md:block">{mockTeacher.name.split(' ')[0]}</span>
+              <span className="hidden md:block">{teacher?.name.split(' ')[0] ?? 'Bienvenue'}</span>
             </button>
 
             {profileOpen && (
               <div className="absolute right-0 mt-2 w-52 rounded-2xl border border-border bg-card shadow-xl z-50 overflow-hidden">
                 <div className="px-4 py-3 border-b border-border">
-                  <p className="text-sm font-semibold">{mockTeacher.name}</p>
-                  <p className="text-xs text-muted-foreground">{mockTeacher.subject}</p>
+                  <p className="text-sm font-semibold">{teacher?.name ?? 'Bienvenue'}</p>
+                  <p className="text-xs text-muted-foreground">{teacher?.subject ?? 'Profil incomplet'}</p>
                 </div>
                 <div className="p-1.5 space-y-0.5">
                   <button
@@ -104,10 +116,11 @@ export default function Navbar({ onMenuToggle, isDark = true, onThemeToggle }: N
                     <Settings size={15} /> Paramètres
                   </button>
                   <button
-                    onClick={() => { setProfileOpen(false); router.push('/login') }}
-                    className="w-full flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-rose-400 hover:bg-rose-500/10 transition-colors"
+                    onClick={handleSignOut}
+                    disabled={isSigningOut}
+                    className="w-full flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-rose-400 hover:bg-rose-500/10 transition-colors disabled:opacity-60"
                   >
-                    <LogOut size={15} /> Se déconnecter
+                    <LogOut size={15} /> {isSigningOut ? 'Déconnexion…' : 'Se déconnecter'}
                   </button>
                 </div>
               </div>

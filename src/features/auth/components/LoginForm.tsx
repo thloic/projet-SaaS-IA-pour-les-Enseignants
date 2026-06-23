@@ -3,22 +3,13 @@
 import { useRef, useState } from 'react'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
-import {
-  Brain,
-  FileText,
-  Sparkles,
-  Target,
-  BarChart2,
-  Eye,
-  EyeOff,
-} from 'lucide-react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { Brain, FileText, Sparkles, Target, BarChart2, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
-import { loginSchema } from '@/features/auth/schemas/authSchema'
+import { createClient } from '@/lib/supabase/client'
+import { magicLinkSchema } from '@/features/auth/schemas/authSchema'
 
 const BRAND = '#534AB7'
 
@@ -31,13 +22,17 @@ const bubbles = [
 
 export default function LoginForm() {
   const containerRef = useRef<HTMLDivElement>(null)
-  const router = useRouter()
 
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
+  const [isMagicLinkLoading, setIsMagicLinkLoading] = useState(false)
+  const [magicLinkSent, setMagicLinkSent] = useState(false)
+  const [error, setError] = useState<string | null>(() =>
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('error') === 'auth'
+      ? 'La connexion a échoué. Veuillez réessayer.'
+      : null
+  )
 
   useGSAP(
     () => {
@@ -58,25 +53,53 @@ export default function LoginForm() {
     { scope: containerRef }
   )
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleGoogleLogin() {
+    setError(null)
+    setIsGoogleLoading(true)
+
+    const supabase = createClient()
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    })
+
+    if (oauthError) {
+      setIsGoogleLoading(false)
+      setError(oauthError.message)
+    }
+    // En cas de succès, le navigateur est redirigé vers Google — pas besoin de remettre isGoogleLoading à false.
+  }
+
+  async function handleMagicLink(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
 
-    const parsed = loginSchema.safeParse({ email, password })
+    const parsed = magicLinkSchema.safeParse({ email: email.trim() })
     if (!parsed.success) {
       setError(parsed.error.issues[0].message)
       return
     }
 
-    if (email === 'error@test.com') {
-      setError('Identifiants incorrects. Veuillez réessayer.')
+    setIsMagicLinkLoading(true)
+
+    const supabase = createClient()
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      email: parsed.data.email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    })
+
+    setIsMagicLinkLoading(false)
+
+    if (otpError) {
+      setError(otpError.message)
       return
     }
 
-    setIsLoading(true)
-    setTimeout(() => {
-      router.push('/onboarding')
-    }, 1500)
+    setMagicLinkSent(true)
   }
 
   return (
@@ -143,6 +166,8 @@ export default function LoginForm() {
             variant="outline"
             className="w-full gap-3"
             type="button"
+            onClick={handleGoogleLogin}
+            disabled={isGoogleLoading}
           >
             <svg
               width="18"
@@ -168,7 +193,7 @@ export default function LoginForm() {
                 fill="#EA4335"
               />
             </svg>
-            Continuer avec Google
+            {isGoogleLoading ? 'Redirection…' : 'Continuer avec Google'}
           </Button>
 
           <div className="flex items-center gap-3">
@@ -183,69 +208,38 @@ export default function LoginForm() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="vous@exemple.fr"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-              />
+          {magicLinkSent ? (
+            <div className="flex items-start gap-3 rounded-md bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-700">
+              <CheckCircle2 size={18} className="mt-0.5 shrink-0" />
+              <span>
+                Lien envoyé à <strong>{email}</strong>. Vérifiez votre boîte mail pour vous connecter.
+              </span>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Mot de passe</Label>
-              <div className="relative">
+          ) : (
+            <form onSubmit={handleMagicLink} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
                 <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  id="email"
+                  type="email"
+                  placeholder="vous@exemple.fr"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
-                  autoComplete="current-password"
-                  className="pr-10"
+                  autoComplete="email"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                  tabIndex={-1}
-                  aria-label={
-                    showPassword
-                      ? 'Masquer le mot de passe'
-                      : 'Afficher le mot de passe'
-                  }
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
               </div>
-            </div>
 
-            <Button
-              type="submit"
-              className="w-full text-white hover:opacity-90 transition-opacity"
-              style={{ backgroundColor: BRAND }}
-              disabled={isLoading}
-            >
-              {isLoading ? 'Connexion…' : 'Se connecter'}
-            </Button>
-          </form>
-
-          <p className="text-center text-sm text-gray-500">
-            Pas encore de compte ?{' '}
-            <Link
-              href="/register"
-              className="font-medium hover:underline"
-              style={{ color: BRAND }}
-            >
-              S&apos;inscrire
-            </Link>
-          </p>
+              <Button
+                type="submit"
+                className="w-full text-white hover:opacity-90 transition-opacity"
+                style={{ backgroundColor: BRAND }}
+                disabled={isMagicLinkLoading}
+              >
+                {isMagicLinkLoading ? 'Envoi…' : 'Recevoir le lien de connexion'}
+              </Button>
+            </form>
+          )}
         </div>
       </div>
     </div>

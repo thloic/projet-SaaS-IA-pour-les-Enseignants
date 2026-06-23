@@ -4,9 +4,11 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   Brain,
   Home,
+  FileText,
   BookOpen,
   ClipboardList,
   MessageSquare,
+  UsersRound,
   History,
   ChevronLeft,
   ChevronRight,
@@ -15,23 +17,15 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import type { TeacherIdentity } from '@/features/profile/types/profile.types'
 
 const BRAND = '#534AB7'
 
-export const mockTeacher = {
-  name: 'Marie Dupont',
-  initials: 'MD',
-  subject: 'Mathématiques',
-  level: '3ème',
-  country: 'France',
-  plan: 'free' as const,
-  generationsUsed: 2,
-  generationsLimit: 3,
-}
-
 const navItems = [
   { label: 'Accueil', href: '/dashboard', icon: Home },
+  { label: 'Documents', href: '/documents', icon: FileText },
   { label: 'Nouveau cours', href: '/generate', icon: BookOpen, isNew: true },
+  { label: 'Classe', href: '/classroom', icon: UsersRound },
   { label: 'Quiz & QCM', href: '/quiz', icon: ClipboardList },
   { label: 'Bulletins', href: '/bulletin', icon: MessageSquare },
   { label: 'Historique', href: '/history', icon: History },
@@ -47,12 +41,15 @@ function progressColor(used: number, limit: number) {
 interface SidebarProps {
   collapsed: boolean
   onToggle: () => void
+  teacher: TeacherIdentity | null
 }
 
-export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
+export default function Sidebar({ collapsed, onToggle, teacher }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const progress = (mockTeacher.generationsUsed / mockTeacher.generationsLimit) * 100
+  const generationsUsed = teacher?.generationsUsed ?? 0
+  const generationsLimit = teacher?.generationsLimit ?? 3
+  const progress = (generationsUsed / generationsLimit) * 100
 
   return (
     <>
@@ -97,12 +94,12 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   className="h-8 w-8 shrink-0 rounded-full flex items-center justify-center text-xs font-bold text-white"
                   style={{ backgroundColor: BRAND }}
                 >
-                  {mockTeacher.initials}
+                  {teacher?.initials ?? '?'}
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold">{mockTeacher.name}</p>
+                  <p className="truncate text-sm font-semibold">{teacher?.name ?? 'Bienvenue'}</p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {mockTeacher.subject} · {mockTeacher.level}
+                    {teacher ? `${teacher.subject} · ${teacher.level}` : 'Profil incomplet'}
                   </p>
                 </div>
               </div>
@@ -155,15 +152,15 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
               <div>
                 <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
                   <span>
-                    {mockTeacher.generationsUsed}/{mockTeacher.generationsLimit} générations
+                    {generationsUsed}/{generationsLimit} générations
                   </span>
                   <span>{Math.round(progress)}%</span>
                 </div>
                 <div className="h-1.5 rounded-full bg-muted">
                   <div
                     className={`h-1.5 rounded-full transition-all ${progressColor(
-                      mockTeacher.generationsUsed,
-                      mockTeacher.generationsLimit
+                      generationsUsed,
+                      generationsLimit
                     )}`}
                     style={{ width: `${progress}%` }}
                   />
@@ -182,8 +179,8 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       {/* Mobile bottom navigation */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/80 backdrop-blur-md">
-        <div className="grid grid-cols-5 gap-1 px-2 py-2">
-          {navItems.slice(0, 5).map(({ label, href, icon: Icon }) => {
+        <div className="grid grid-cols-6 gap-1 px-2 py-2">
+          {navItems.slice(0, 6).map(({ label, href, icon: Icon }) => {
             const active = pathname === href
             return (
               <button
