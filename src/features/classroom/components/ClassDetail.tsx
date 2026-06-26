@@ -101,6 +101,27 @@ function normalizeHeader(value: string) {
     .trim()
 }
 
+function getStudentSaveErrorMessage(err: unknown) {
+  if (!(err instanceof Error)) return 'Impossible d ajouter cet eleve.'
+
+  const message = err.message
+  const code = 'code' in err && typeof err.code === 'string' ? err.code : null
+  const missingDossierColumn =
+    message.includes('family_language') ||
+    message.includes('intervention_plan') ||
+    message.includes('general_notes')
+
+  if (code === 'PGRST204' && missingDossierColumn) {
+    return 'La base Supabase n est pas a jour : appliquez la migration 005_student_profile_dossier.sql, puis reessayez.'
+  }
+
+  if (message.toLowerCase().includes('row-level security')) {
+    return 'Supabase a bloque l enregistrement par RLS. Verifiez que vous etes connecte et que les migrations du module classe sont appliquees.'
+  }
+
+  return message
+}
+
 export default function ClassDetail({ classId }: ClassDetailProps) {
   const router = useRouter()
   const confirm = useConfirm()
@@ -237,20 +258,24 @@ export default function ClassDetail({ classId }: ClassDetailProps) {
         throw studentError ?? new Error('Impossible de creer cet eleve.')
       }
 
+      const studentId = (student as StudentProfile).id
       const { error: linkError } = await supabase.from('class_students').insert({
         user_id: user.id,
         class_id: classId,
-        student_id: (student as StudentProfile).id,
+        student_id: studentId,
       })
 
-      if (linkError) throw linkError
+      if (linkError) {
+        await supabase.from('student_profiles').delete().eq('id', studentId)
+        throw linkError
+      }
 
       const normalized = normalizeStudent(student as StudentProfile)
       setStudents((current) => [normalized, ...current])
       setForm(emptyStudentForm)
       showToast(`${parsed.data.firstName} ${parsed.data.lastName} ajoute a la classe.`, 'success')
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Impossible d ajouter cet eleve.'
+      const message = getStudentSaveErrorMessage(err)
       setError(message)
       showToast(message, 'error')
     } finally {
@@ -357,22 +382,29 @@ export default function ClassDetail({ classId }: ClassDetailProps) {
         throw insertError ?? new Error('Import impossible.')
       }
 
-      const links = (insertedStudents as StudentProfile[]).map((student) => ({
+      const createdStudents = insertedStudents as StudentProfile[]
+      const links = createdStudents.map((student) => ({
         user_id: user.id,
         class_id: classId,
         student_id: student.id,
       }))
 
       const { error: linkError } = await supabase.from('class_students').insert(links)
-      if (linkError) throw linkError
+      if (linkError) {
+        await supabase
+          .from('student_profiles')
+          .delete()
+          .in('id', createdStudents.map((student) => student.id))
+        throw linkError
+      }
 
       setStudents((current) => [
-        ...(insertedStudents as StudentProfile[]).map(normalizeStudent),
+        ...createdStudents.map(normalizeStudent),
         ...current,
       ])
       showToast(`${rows.length} eleve${rows.length > 1 ? 's' : ''} importe${rows.length > 1 ? 's' : ''}.`, 'success')
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Import impossible.'
+      const message = getStudentSaveErrorMessage(err)
       setError(message)
       showToast(message, 'error')
     } finally {
