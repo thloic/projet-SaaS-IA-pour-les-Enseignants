@@ -41,19 +41,43 @@ const steps = [
   },
 ]
 
-const freeFeatures = [
-  '3 générations de cours',
-  '3 quiz auto',
-  '5 commentaires bulletin',
-  'Export PDF',
-]
-
-const proFeatures = [
-  'Générations illimitées',
-  'Quiz illimités',
-  'Bulletins illimités',
-  'Export PDF + Word',
-  'Partage public',
+const pricingTiers = [
+  {
+    name: 'Starter',
+    audience: 'Enseignant indépendant',
+    price: '20 $',
+    period: '/mois',
+    features: ['Modules 1 à 4', 'Correction + planification'],
+    cta: "Rejoindre la liste d'attente",
+    highlight: false,
+  },
+  {
+    name: 'Pro',
+    audience: 'Enseignant en établissement',
+    price: '39 $',
+    period: '/mois',
+    features: ['Les 5 modules', 'Tableau de bord intégré'],
+    cta: "Rejoindre la liste d'attente",
+    highlight: true,
+  },
+  {
+    name: 'Établissement',
+    audience: 'Direction / Coordinateur pédagogique',
+    price: '299 $',
+    period: '/mois',
+    features: ["Tous les enseignants de l'école", 'Analytics direction', 'Intégrations'],
+    cta: "Rejoindre la liste d'attente",
+    highlight: false,
+  },
+  {
+    name: 'District',
+    audience: 'Commission scolaire / Académie',
+    price: 'Sur devis',
+    period: '',
+    features: ['Déploiement multi-établissements', 'Conformité institutionnelle'],
+    cta: 'Nous contacter',
+    highlight: false,
+  },
 ]
 
 export default function Home() {
@@ -424,94 +448,85 @@ export default function Home() {
 
       {/* ── TARIFS ── */}
       <section id="pricing" className="py-24 px-6">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-black mb-4">
               Tarifs simples
             </h2>
             <p className={`text-lg ${muted}`}>
-              Commencez gratuitement, évoluez quand vous le souhaitez
+              Choisissez le plan adapté à votre contexte pédagogique
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
-            {/* Gratuit */}
-            <div
-              className={`rounded-2xl p-8 border ${
-                dark
-                  ? 'bg-white/5 border-white/10'
-                  : 'bg-gray-50 border-gray-200'
-              }`}
-            >
-              <h3 className="font-bold text-xl mb-1">Gratuit</h3>
-              <p className={`text-sm mb-6 ${muted}`}>Pour découvrir</p>
-              <div className="text-4xl font-black mb-6">
-                0{' '}
-                <span className="text-lg font-normal opacity-60">€/mois</span>
-              </div>
-              <ul
-                className={`space-y-3 text-sm mb-8 ${
-                  dark ? 'text-gray-300' : 'text-gray-600'
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 max-w-6xl mx-auto">
+            {pricingTiers.map((tier) => (
+              <div
+                key={tier.name}
+                className={`rounded-2xl p-6 border relative flex flex-col ${
+                  tier.highlight
+                    ? 'border-2'
+                    : dark
+                      ? 'bg-white/5 border-white/10'
+                      : 'bg-gray-50 border-gray-200'
                 }`}
+                style={
+                  tier.highlight
+                    ? {
+                        borderColor: BRAND,
+                        backgroundColor: dark ? `${BRAND}20` : `${BRAND}08`,
+                      }
+                    : undefined
+                }
               >
-                {freeFeatures.map((f) => (
-                  <li key={f} className="flex items-center gap-2">
-                    <Check
-                      size={14}
-                      className="text-emerald-400 shrink-0"
-                    />{' '}
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <Link href="/register">
-                <Button variant="outline" className="w-full">
-                  Commencer gratuitement
-                </Button>
-              </Link>
-            </div>
+                {tier.highlight ? (
+                  <span
+                    className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-bold text-white"
+                    style={{ backgroundColor: BRAND }}
+                  >
+                    Populaire
+                  </span>
+                ) : null}
 
-            {/* Pro */}
-            <div
-              className="rounded-2xl p-8 border-2 relative"
-              style={{
-                borderColor: BRAND,
-                backgroundColor: dark ? `${BRAND}20` : `${BRAND}08`,
-              }}
-            >
-              <span
-                className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-bold text-white"
-                style={{ backgroundColor: BRAND }}
-              >
-                Populaire
-              </span>
-              <h3 className="font-bold text-xl mb-1">Pro</h3>
-              <p className={`text-sm mb-6 ${muted}`}>
-                Pour les enseignants actifs
-              </p>
-              <div className="text-4xl font-black mb-6">À venir</div>
-              <ul
-                className={`space-y-3 text-sm mb-8 ${
-                  dark ? 'text-gray-300' : 'text-gray-600'
-                }`}
-              >
-                {proFeatures.map((f) => (
-                  <li key={f} className="flex items-center gap-2">
-                    <Check
-                      size={14}
-                      className="text-emerald-400 shrink-0"
-                    />{' '}
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <Button
-                className="w-full text-white"
-                style={{ backgroundColor: BRAND }}
-              >
-                Rejoindre la liste d&apos;attente
-              </Button>
-            </div>
+                <h3 className="font-bold text-xl mb-1">{tier.name}</h3>
+                <p className={`text-sm min-h-10 mb-6 ${muted}`}>
+                  {tier.audience}
+                </p>
+                <div className="text-3xl font-black mb-6">
+                  {tier.price}{' '}
+                  {tier.period ? (
+                    <span className="text-base font-normal opacity-60">
+                      {tier.period}
+                    </span>
+                  ) : null}
+                </div>
+                <ul
+                  className={`space-y-3 text-sm mb-8 flex-1 ${
+                    dark ? 'text-gray-300' : 'text-gray-600'
+                  }`}
+                >
+                  {tier.features.map((feature) => (
+                    <li key={feature} className="flex items-start gap-2">
+                      <Check
+                        size={14}
+                        className="text-emerald-400 shrink-0 mt-0.5"
+                      />{' '}
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Button
+                  className={`w-full ${
+                    tier.highlight ? 'text-white' : ''
+                  }`}
+                  variant={tier.highlight ? 'default' : 'outline'}
+                  style={
+                    tier.highlight ? { backgroundColor: BRAND } : undefined
+                  }
+                >
+                  {tier.cta}
+                </Button>
+              </div>
+            ))}
           </div>
         </div>
       </section>
