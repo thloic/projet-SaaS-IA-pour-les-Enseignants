@@ -51,16 +51,19 @@ alter table public.teacher_profiles
 
 alter table public.teacher_profiles enable row level security;
 
+drop policy if exists "teacher_profiles_select_own" on public.teacher_profiles;
 create policy "teacher_profiles_select_own"
   on public.teacher_profiles
   for select
   using (auth.uid() = user_id);
 
+drop policy if exists "teacher_profiles_insert_own" on public.teacher_profiles;
 create policy "teacher_profiles_insert_own"
   on public.teacher_profiles
   for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "teacher_profiles_update_own" on public.teacher_profiles;
 create policy "teacher_profiles_update_own"
   on public.teacher_profiles
   for update

@@ -79,13 +79,23 @@ Reliés par un **tableau de bord central** qui donne une vue 360° de chaque él
 
 ## 5. Upload/saisie d'un document source
 
-**Objectif** : permettre à l'enseignant d'amener un document à décliner ensuite.
+**Objectif** : permettre à l'enseignant d'amener dans la plateforme un document existant (un cours, un exercice, une évaluation) qu'il pourra ensuite décliner en plusieurs versions adaptées aux différents profils d'élèves. C'est la première étape du Module 2 (Adapte Leçon).
 
-**Ce que ça fait** : saisie directe de texte ou import d'un fichier (texte, PDF). Le document devient la base des déclinaisons adaptées.
+**Contexte dans le parcours** : l'enseignant arrive ici depuis le tableau de bord (entrée « Documents »). Il a un document sous la main et veut le préparer pour différenciation. À ce stade, aucune génération IA n'a lieu : on se contente de récupérer et préparer le contenu source. La déclinaison en 5 variantes viendra dans la fonctionnalité suivante (6).
+
+**Ce que ça fait concrètement** :
+- Propose deux façons d'amener un document : saisie directe (texte collé/écrit), ou import de fichier (texte ou PDF, dont le texte est extrait automatiquement).
+- Affiche proprement le document récupéré, modifiable, pour que l'enseignant vérifie que le contenu est correct avant de poursuivre.
+- Sauvegarde ce document source (associé à l'enseignant connecté) pour qu'il devienne la base des déclinaisons à venir.
+- Présente clairement l'étape suivante (« adapter ce document »), même si la génération elle-même n'est pas encore active — sans lien mort, plutôt une indication « à venir ».
+
+**Ce que ça ne fait PAS (à ce stade)** : pas d'OCR de copies manuscrites (fonctionnalité 26, bien plus tard, et risquée) — on se limite au texte déjà numérique (PDF dont le texte est extrait, ou saisie directe). Un PDF scanné/image n'est pas supporté. Aucune génération IA, aucune transformation du contenu : on stocke et on affiche, c'est tout.
+
+**Contrainte d'affichage** : écran responsive / mobile-first — un enseignant doit pouvoir coller ou importer un document confortablement depuis son téléphone via le navigateur.
 
 **Valeur** : porte d'entrée du module de différenciation.
 
-**Vigilance** : se limiter au texte numérique au départ — pas d'OCR manuscrit ici (c'est la fonctionnalité 26).
+**Vigilance** : l'extraction de texte d'un PDF peut donner des résultats imparfaits selon la mise en page (colonnes, tableaux) — l'enseignant doit pouvoir relire et corriger le texte extrait avant de continuer, plutôt que de supposer que l'extraction est toujours parfaite. Se limiter au texte numérique — pas d'OCR manuscrit ici (c'est la fonctionnalité 26).
 
 ---
 

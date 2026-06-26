@@ -9,8 +9,11 @@ export const classSchema = z.object({
 export const studentSchema = z.object({
   firstName: z.string().trim().min(1, 'Le prenom est requis'),
   lastName: z.string().trim().min(1, 'Le nom est requis'),
-  language: z.string().trim().min(1, 'La langue est requise'),
+  sex: z.enum(['M', 'F']),
+  familyLanguage: z.string().trim().min(1, 'La langue familiale est requise'),
   needs: z.string().trim().optional(),
+  interventionPlan: z.boolean().default(false),
+  generalNotes: z.string().trim().max(1000, 'La note est trop longue').optional(),
 })
 
 export const observationSchema = z.object({

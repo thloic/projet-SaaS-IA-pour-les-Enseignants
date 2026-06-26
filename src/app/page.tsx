@@ -80,7 +80,7 @@ export default function Home() {
           y: -8,
           duration: 2.5,
           yoyo: true,
-          repeat: -1,
+          repeat: 5, // quelques flottements après l'arrivée, pas une boucle perpétuelle
           ease: 'power1.inOut',
           stagger: 0.5,
         },

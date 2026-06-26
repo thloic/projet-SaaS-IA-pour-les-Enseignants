@@ -1,1 +1,1 @@
-export interface GenerationInput {}
+export type GenerationInput = Record<string, never>

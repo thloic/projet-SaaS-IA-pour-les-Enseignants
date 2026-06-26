@@ -25,11 +25,8 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const { supabaseResponse, user, supabase } = await updateSession(request)
 
-  console.log(`[middleware] ${pathname} — user=${user?.id ?? 'none'} (${user?.email ?? '—'})`)
-
   if (isPublicPath(pathname)) {
     if ((pathname === '/login' || pathname === '/register') && user) {
-      console.log(`[middleware] ${pathname} → /dashboard (déjà connecté)`)
       return redirectWithSession(request, '/dashboard', supabaseResponse)
     }
     return supabaseResponse
@@ -37,7 +34,6 @@ export async function middleware(request: NextRequest) {
 
   // Tout le reste est protégé par défaut.
   if (!user) {
-    console.log(`[middleware] ${pathname} → /login (pas de session)`)
     return redirectWithSession(request, '/login', supabaseResponse)
   }
 
@@ -49,18 +45,20 @@ export async function middleware(request: NextRequest) {
 
   const { data: profile, error } = await supabase
     .from('teacher_profiles')
-    .select('id')
+    .select('id, first_name, last_name')
     .eq('user_id', user.id)
     .maybeSingle()
 
-  console.log(
-    `[middleware] ${pathname} — profil pour user ${user.id} :`,
-    profile ? `trouvé (id=${profile.id})` : 'aucun',
-    error ? `| erreur requête : ${error.message}` : ''
-  )
+  // Une ligne peut exister sans être complète (ex. créée avant que first_name/
+  // last_name soient renseignés) — on exige les deux pour considérer
+  // l'onboarding comme terminé, sinon on y renvoie l'utilisateur.
+  const isProfileComplete = Boolean(profile?.first_name?.trim() && profile?.last_name?.trim())
 
-  if (!profile) {
-    console.log(`[middleware] ${pathname} → /onboarding (aucun profil)`)
+  if (error) {
+    console.error('[middleware] échec de la vérification du profil enseignant :', error.message)
+  }
+
+  if (!isProfileComplete) {
     return redirectWithSession(request, '/onboarding', supabaseResponse)
   }
 

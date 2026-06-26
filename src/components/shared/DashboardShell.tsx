@@ -12,18 +12,25 @@ interface DashboardShellProps {
 
 export default function DashboardShell({ teacher, children }: DashboardShellProps) {
   const [collapsed, setCollapsed] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
   const [isDark, setIsDark] = useState(true)
 
   return (
     <div className={`min-h-screen bg-background text-foreground ${isDark ? 'dark' : ''}`}>
-      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((v) => !v)} teacher={teacher} />
+      <Sidebar
+        collapsed={collapsed}
+        mobileOpen={mobileOpen}
+        onMobileClose={() => setMobileOpen(false)}
+        onToggle={() => setCollapsed((v) => !v)}
+        teacher={teacher}
+      />
       <div
         className={`flex min-h-screen flex-col transition-all duration-300 ${
           collapsed ? 'lg:pl-16' : 'lg:pl-60'
         }`}
       >
         <Navbar
-          onMenuToggle={() => setCollapsed((v) => !v)}
+          onMenuToggle={() => setMobileOpen((v) => !v)}
           isDark={isDark}
           onThemeToggle={() => setIsDark((v) => !v)}
           teacher={teacher}

@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { createClient } from '@/lib/supabase/client'
 import { profileSchema } from '@/features/profile/schemas/profileSchema'
+import { useToast } from '@/components/shared/ToastProvider'
 import type { ContentLanguage, GradingSystem } from '@/features/profile/types/profile.types'
 
 const BRAND = '#534AB7'
@@ -49,11 +50,20 @@ const COUNTRIES = [
 
 const STEPS = ['Votre profil', 'Votre enseignement', 'Preferences']
 
-export default function OnboardingForm() {
+interface OnboardingFormProps {
+  initialFirstName?: string
+  initialLastName?: string
+}
+
+export default function OnboardingForm({
+  initialFirstName = '',
+  initialLastName = '',
+}: OnboardingFormProps) {
   const router = useRouter()
+  const { showToast } = useToast()
   const [step, setStep] = useState(0)
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
+  const [firstName, setFirstName] = useState(initialFirstName)
+  const [lastName, setLastName] = useState(initialLastName)
   const [country, setCountry] = useState('Canada - Quebec')
   const [subject, setSubject] = useState('Mathematiques')
   const [levels, setLevels] = useState<string[]>([])
@@ -92,48 +102,55 @@ export default function OnboardingForm() {
     })
 
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? 'Profil incomplet.')
+      const message = parsed.error.issues[0]?.message ?? 'Profil incomplet.'
+      setError(message)
+      showToast(message, 'error')
       return
     }
 
     setIsSaving(true)
 
-    const supabase = createClient()
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
+    try {
+      const supabase = createClient()
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser()
 
-    if (userError || !user) {
+      if (userError || !user) {
+        throw new Error('Connectez-vous avant de completer votre profil enseignant.')
+      }
+
+      const { error: profileError } = await supabase.from('teacher_profiles').upsert(
+        {
+          user_id: user.id,
+          first_name: parsed.data.firstName,
+          last_name: parsed.data.lastName,
+          country: parsed.data.country,
+          subject: parsed.data.subject,
+          levels: parsed.data.levels,
+          grading_system: parsed.data.gradingSystem,
+          language: parsed.data.language,
+          style_notes: parsed.data.styleNotes || null,
+        },
+        { onConflict: 'user_id' }
+      )
+
+      if (profileError) {
+        throw new Error(profileError.message)
+      }
+
+      showToast('Profil enregistré avec succès. Bienvenue sur EducAssist !', 'success')
+      router.push('/dashboard')
+      router.refresh()
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Une erreur est survenue. Veuillez réessayer.'
+      setError(message)
+      showToast(message, 'error')
+    } finally {
       setIsSaving(false)
-      setError('Connectez-vous avant de completer votre profil enseignant.')
-      return
     }
-
-    const { error: profileError } = await supabase.from('teacher_profiles').upsert(
-      {
-        user_id: user.id,
-        first_name: parsed.data.firstName,
-        last_name: parsed.data.lastName,
-        country: parsed.data.country,
-        subject: parsed.data.subject,
-        levels: parsed.data.levels,
-        grading_system: parsed.data.gradingSystem,
-        language: parsed.data.language,
-        style_notes: parsed.data.styleNotes || null,
-      },
-      { onConflict: 'user_id' }
-    )
-
-    setIsSaving(false)
-
-    if (profileError) {
-      setError(profileError.message)
-      return
-    }
-
-    router.push('/dashboard')
-    router.refresh()
   }
 
   return (

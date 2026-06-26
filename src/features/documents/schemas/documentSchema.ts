@@ -1,7 +1,5 @@
 import { z } from 'zod'
 
-// "se limiter au texte numérique au départ" (cahier des charges, fonctionnalité 5) —
-// le PDF est délibérément hors périmètre pour cette première version.
 export const documentSchema = z.object({
   title: z.string().trim().min(1, 'Le titre est requis').max(200, 'Titre trop long'),
   contentText: z
@@ -11,6 +9,7 @@ export const documentSchema = z.object({
     .max(20000, 'Le contenu est limité à 20 000 caractères pour l\'instant'),
   sourceType: z.enum(['text', 'file']),
   originalFilename: z.string().trim().max(255).optional(),
+  fileType: z.enum(['txt', 'pdf', 'docx']).optional(),
 })
 
 export type DocumentInput = z.infer<typeof documentSchema>

@@ -13,6 +13,7 @@ create table if not exists public.student_profiles (
   user_id uuid not null references auth.users(id) on delete cascade,
   first_name text not null,
   last_name text not null,
+  sex text not null default 'M' check (sex in ('M', 'F')),
   needs text[] not null default '{}',
   language text not null default 'fr',
   created_at timestamptz not null default now(),
@@ -80,18 +81,21 @@ alter table public.attendance_records enable row level security;
 alter table public.participation_events enable row level security;
 alter table public.student_observations enable row level security;
 
+drop policy if exists "classes_own_all" on public.classes;
 create policy "classes_own_all"
   on public.classes
   for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+drop policy if exists "student_profiles_own_all" on public.student_profiles;
 create policy "student_profiles_own_all"
   on public.student_profiles
   for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+drop policy if exists "class_students_own_all" on public.class_students;
 create policy "class_students_own_all"
   on public.class_students
   for all
@@ -110,6 +114,7 @@ create policy "class_students_own_all"
     )
   );
 
+drop policy if exists "class_sessions_own_all" on public.class_sessions;
 create policy "class_sessions_own_all"
   on public.class_sessions
   for all
@@ -123,6 +128,7 @@ create policy "class_sessions_own_all"
     )
   );
 
+drop policy if exists "attendance_records_own_all" on public.attendance_records;
 create policy "attendance_records_own_all"
   on public.attendance_records
   for all
@@ -141,6 +147,7 @@ create policy "attendance_records_own_all"
     )
   );
 
+drop policy if exists "participation_events_own_all" on public.participation_events;
 create policy "participation_events_own_all"
   on public.participation_events
   for all
@@ -159,6 +166,7 @@ create policy "participation_events_own_all"
     )
   );
 
+drop policy if exists "student_observations_own_all" on public.student_observations;
 create policy "student_observations_own_all"
   on public.student_observations
   for all

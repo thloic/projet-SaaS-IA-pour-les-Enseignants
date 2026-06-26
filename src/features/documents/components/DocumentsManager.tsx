@@ -1,7 +1,6 @@
 'use client'
 
-import { useActionState, useRef, useState } from 'react'
-import { useFormStatus } from 'react-dom'
+import { startTransition, useActionState, useRef, useState } from 'react'
 import {
   FileText,
   Type,
@@ -10,6 +9,7 @@ import {
   ChevronDown,
   ChevronUp,
   AlertCircle,
+  Sparkles,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,39 +17,61 @@ import { Label } from '@/components/ui/label'
 import {
   createDocumentAction,
   deleteDocumentAction,
+  extractDocumentTextAction,
+  getDocumentContentAction,
   type DocumentActionState,
 } from '@/features/documents/server/document.actions'
-import type { SourceDocument } from '@/features/documents/types/document.types'
+import { useToast } from '@/components/shared/ToastProvider'
+import { useConfirm } from '@/components/shared/ConfirmProvider'
+import type { DocumentFileType, SourceDocumentListItem } from '@/features/documents/types/document.types'
 
 const BRAND = '#534AB7'
 const MAX_CONTENT_LENGTH = 20000
-const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2 Mo
+const MAX_TEXT_FILE_SIZE = 2 * 1024 * 1024 // 2 Mo
+const MAX_PDF_FILE_SIZE = 8 * 1024 * 1024 // 8 Mo
+const MAX_DOCX_FILE_SIZE = 8 * 1024 * 1024 // 8 Mo
 
 const initialActionState: DocumentActionState = { error: null }
 
 interface DocumentsManagerProps {
-  initialDocuments: SourceDocument[]
+  initialDocuments: SourceDocumentListItem[]
 }
 
 export default function DocumentsManager({ initialDocuments }: DocumentsManagerProps) {
+  const { showToast } = useToast()
   const [mode, setMode] = useState<'text' | 'file'>('text')
   const [contentText, setContentText] = useState('')
   const [fileName, setFileName] = useState<string | null>(null)
+  const [fileType, setFileType] = useState<DocumentFileType | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
+  const [fileWarning, setFileWarning] = useState<string | null>(null)
   const [isReadingFile, setIsReadingFile] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const formRef = useRef<HTMLFormElement>(null)
 
   const [state, formAction, isPending] = useActionState(
     async (prevState: DocumentActionState, formData: FormData) => {
-      const result = await createDocumentAction(prevState, formData)
-      if (!result.error) {
+      try {
+        const result = await createDocumentAction(prevState, formData)
+        if (result.error) {
+          showToast(result.error, 'error')
+          return result
+        }
+
         setContentText('')
         setFileName(null)
+        setFileType(null)
         setFileError(null)
+        setFileWarning(null)
         formRef.current?.reset()
+        showToast('Document ajouté avec succès.', 'success')
+        return result
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Une erreur inattendue est survenue. Veuillez réessayer.'
+        showToast(message, 'error')
+        return { error: message }
       }
-      return result
     },
     initialActionState
   )
@@ -57,26 +79,81 @@ export default function DocumentsManager({ initialDocuments }: DocumentsManagerP
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     setFileError(null)
+    setFileWarning(null)
     if (!file) return
 
-    if (!file.name.toLowerCase().endsWith('.txt') && file.type !== 'text/plain') {
-      setFileError(
-        'Seuls les fichiers .txt sont acceptés pour l’instant — l’import PDF arrive dans une prochaine version.'
-      )
+    const isTxt = file.name.toLowerCase().endsWith('.txt') || file.type === 'text/plain'
+    const isPdf = file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf'
+    const isDocx =
+      file.name.toLowerCase().endsWith('.docx') ||
+      file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+
+    function failWith(message: string) {
+      setFileError(message)
+      setFileName(null)
+      setFileType(null)
+      showToast(message, 'error')
+    }
+
+    if (file.name.toLowerCase().endsWith('.doc')) {
+      failWith('Les anciens fichiers .doc ne sont pas pris en charge. Exportez en .docx.')
       return
     }
-    if (file.size > MAX_FILE_SIZE) {
-      setFileError('Fichier trop volumineux (2 Mo maximum).')
+
+    if (!isTxt && !isPdf && !isDocx) {
+      failWith('Seuls les fichiers .txt, .pdf et .docx sont acceptes.')
+      return
+    }
+
+    if (isTxt && file.size > MAX_TEXT_FILE_SIZE) {
+      failWith('Fichier trop volumineux (2 Mo maximum).')
+      return
+    }
+
+    if (isPdf && file.size > MAX_PDF_FILE_SIZE) {
+      failWith('PDF trop volumineux (8 Mo maximum).')
+      return
+    }
+
+    if (isDocx && file.size > MAX_DOCX_FILE_SIZE) {
+      failWith('DOCX trop volumineux (8 Mo maximum).')
+      return
+    }
+
+    if (isTxt) {
+      setIsReadingFile(true)
+      try {
+        const text = await file.text()
+        if (text.length > MAX_CONTENT_LENGTH) {
+          const warning = 'Le document a ete limite a 20 000 caracteres. Relisez le contenu avant de sauvegarder.'
+          setFileWarning(warning)
+          showToast(warning, 'error')
+        }
+        setContentText(text.trim().slice(0, MAX_CONTENT_LENGTH))
+        setFileName(file.name)
+        setFileType('txt')
+      } catch {
+        failWith('Impossible de lire ce fichier.')
+      } finally {
+        setIsReadingFile(false)
+      }
       return
     }
 
     setIsReadingFile(true)
     try {
-      const text = await file.text()
-      setContentText(text.slice(0, MAX_CONTENT_LENGTH))
+      const result = await extractDocumentTextAction(file)
+      if (result.error || !result.text) {
+        failWith(result.error ?? 'Impossible d extraire le texte de ce fichier.')
+        return
+      }
+      setContentText(result.text)
       setFileName(file.name)
+      setFileType(result.fileType)
+      setFileWarning(result.warning)
+      if (result.warning) showToast(result.warning, 'error')
     } catch {
-      setFileError('Impossible de lire ce fichier.')
+      failWith('Impossible de lire ce fichier.')
     } finally {
       setIsReadingFile(false)
     }
@@ -108,6 +185,7 @@ export default function DocumentsManager({ initialDocuments }: DocumentsManagerP
       >
         <input type="hidden" name="sourceType" value={mode} />
         <input type="hidden" name="originalFilename" value={fileName ?? ''} />
+        <input type="hidden" name="fileType" value={fileType ?? ''} />
 
         <div className="space-y-2">
           <Label htmlFor="title">Titre</Label>
@@ -143,7 +221,7 @@ export default function DocumentsManager({ initialDocuments }: DocumentsManagerP
             }`}
             style={mode === 'file' ? { backgroundColor: BRAND } : {}}
           >
-            <UploadCloud size={14} /> Fichier .txt
+            <UploadCloud size={14} /> Importer un fichier
           </button>
         </div>
 
@@ -151,10 +229,13 @@ export default function DocumentsManager({ initialDocuments }: DocumentsManagerP
           <div className="space-y-2">
             <input
               type="file"
-              accept=".txt,text/plain"
+              accept=".txt,.pdf,.docx,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
               onChange={handleFileChange}
               className="w-full rounded-xl bg-muted/40 border border-border px-3 py-2.5 text-sm"
             />
+            <p className="text-xs text-muted-foreground">
+              Fichiers .txt, .pdf textuel ou .docx. Les anciens .doc et PDF scannes ne sont pas pris en charge.
+            </p>
             {isReadingFile && (
               <p className="text-xs text-muted-foreground">Lecture du fichier…</p>
             )}
@@ -162,6 +243,12 @@ export default function DocumentsManager({ initialDocuments }: DocumentsManagerP
               <div className="flex gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
                 <AlertCircle size={14} className="mt-0.5 shrink-0" />
                 <span>{fileError}</span>
+              </div>
+            )}
+            {fileWarning && (
+              <div className="flex gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+                <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                <span>{fileWarning}</span>
               </div>
             )}
           </div>
@@ -215,53 +302,129 @@ export default function DocumentsManager({ initialDocuments }: DocumentsManagerP
             : `${initialDocuments.length} document${initialDocuments.length > 1 ? 's' : ''}`}
         </h2>
 
-        {initialDocuments.map((doc) => {
-          const isExpanded = expandedId === doc.id
-          return (
-            <div key={doc.id} className="rounded-2xl border border-border bg-card/40 p-4 space-y-2">
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setExpandedId(isExpanded ? null : doc.id)}
-                  className="flex-1 flex items-center gap-2 text-left min-w-0"
-                >
-                  {isExpanded ? (
-                    <ChevronUp size={14} className="shrink-0" />
-                  ) : (
-                    <ChevronDown size={14} className="shrink-0" />
-                  )}
-                  <span className="font-semibold text-sm truncate">{doc.title}</span>
-                  <span className="text-xs text-muted-foreground shrink-0">
-                    {doc.source_type === 'file' ? doc.original_filename : 'Texte direct'}
-                  </span>
-                </button>
-                <form action={deleteDocumentAction.bind(null, doc.id)}>
-                  <DeleteButton />
-                </form>
-              </div>
-              {isExpanded && (
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap border-t border-border pt-2">
-                  {doc.content_text}
-                </p>
-              )}
-            </div>
-          )
-        })}
+        {initialDocuments.map((doc) => (
+          <DocumentListItem
+            key={doc.id}
+            doc={doc}
+            isExpanded={expandedId === doc.id}
+            onToggleExpand={() => setExpandedId(expandedId === doc.id ? null : doc.id)}
+          />
+        ))}
       </div>
     </div>
   )
 }
 
-function DeleteButton() {
-  const { pending } = useFormStatus()
+interface DocumentListItemProps {
+  doc: SourceDocumentListItem
+  isExpanded: boolean
+  onToggleExpand: () => void
+}
+
+const initialDeleteState: DocumentActionState = { error: null }
+
+function DocumentListItem({ doc, isExpanded, onToggleExpand }: DocumentListItemProps) {
+  const { showToast } = useToast()
+  const confirm = useConfirm()
+  const [content, setContent] = useState<string | null>(null)
+  const [isLoadingContent, setIsLoadingContent] = useState(false)
+
+  async function handleToggleExpand() {
+    onToggleExpand()
+    if (content !== null || isLoadingContent) return
+
+    setIsLoadingContent(true)
+    try {
+      const result = await getDocumentContentAction(doc.id)
+      if (result.error) {
+        showToast(result.error, 'error')
+        return
+      }
+      setContent(result.content ?? '')
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Impossible de charger le contenu de ce document.'
+      showToast(message, 'error')
+    } finally {
+      setIsLoadingContent(false)
+    }
+  }
+
+  const [, deleteAction, isDeleting] = useActionState(
+    async () => {
+      try {
+        const result = await deleteDocumentAction(doc.id)
+        if (result.error) {
+          showToast(result.error, 'error')
+        } else {
+          showToast('Document supprimé.', 'success')
+        }
+        return result
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Une erreur inattendue est survenue. Veuillez réessayer.'
+        showToast(message, 'error')
+        return { error: message }
+      }
+    },
+    initialDeleteState
+  )
+
+  async function handleDeleteClick() {
+    const confirmed = await confirm({
+      title: 'Supprimer ce document ?',
+      message: `« ${doc.title} » sera définitivement supprimé. Cette action est irréversible.`,
+      confirmLabel: 'Supprimer',
+    })
+    if (!confirmed) return
+    startTransition(() => {
+      deleteAction()
+    })
+  }
+
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="p-2 rounded-lg border border-border text-muted-foreground hover:text-rose-400 hover:border-rose-500/30 transition-colors disabled:opacity-50 shrink-0"
-      aria-label="Supprimer"
-    >
-      <Trash2 size={14} />
-    </button>
+    <div className="rounded-2xl border border-border bg-card/40 p-4 space-y-2">
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={handleToggleExpand}
+          className="flex-1 flex items-center gap-2 text-left min-w-0"
+        >
+          {isExpanded ? (
+            <ChevronUp size={14} className="shrink-0" />
+          ) : (
+            <ChevronDown size={14} className="shrink-0" />
+          )}
+          <span className="font-semibold text-sm truncate">{doc.title}</span>
+          <span className="text-xs text-muted-foreground shrink-0">
+            {doc.source_type === 'file'
+              ? `${doc.file_type?.toUpperCase() ?? 'FICHIER'} · ${doc.original_filename}`
+              : 'Texte direct'}
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={handleDeleteClick}
+          disabled={isDeleting}
+          className="p-2 rounded-lg border border-border text-muted-foreground hover:text-rose-400 hover:border-rose-500/30 transition-colors disabled:opacity-50 shrink-0"
+          aria-label="Supprimer"
+        >
+          <Trash2 size={14} />
+        </button>
+      </div>
+      {isExpanded && (
+        <div className="text-sm text-muted-foreground whitespace-pre-wrap border-t border-border pt-2">
+          {isLoadingContent ? 'Chargement du contenu…' : content}
+        </div>
+      )}
+      <button
+        type="button"
+        disabled
+        title="Disponible prochainement"
+        className="flex items-center gap-2 rounded-xl border border-dashed border-border px-3 py-2 text-xs font-medium text-muted-foreground opacity-60 cursor-not-allowed"
+      >
+        <Sparkles size={14} /> Adapter en 5 versions — bientôt disponible
+      </button>
+    </div>
   )
 }

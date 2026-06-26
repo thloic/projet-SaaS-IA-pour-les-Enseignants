@@ -1,4 +1,5 @@
 export type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused'
+export type StudentSex = 'M' | 'F'
 export type ObservationCategory =
   | 'behavior'
   | 'effort'
@@ -22,8 +23,12 @@ export interface StudentProfile {
   user_id: string
   first_name: string
   last_name: string
+  sex: StudentSex
   needs: string[]
   language: string
+  family_language: string
+  intervention_plan: boolean
+  general_notes: string
   created_at: string
   updated_at: string
 }

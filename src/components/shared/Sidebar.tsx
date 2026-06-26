@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Settings,
   Crown,
+  X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -40,11 +41,13 @@ function progressColor(used: number, limit: number) {
 
 interface SidebarProps {
   collapsed: boolean
+  mobileOpen: boolean
+  onMobileClose: () => void
   onToggle: () => void
   teacher: TeacherIdentity | null
 }
 
-export default function Sidebar({ collapsed, onToggle, teacher }: SidebarProps) {
+export default function Sidebar({ collapsed, mobileOpen, onMobileClose, onToggle, teacher }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const generationsUsed = teacher?.generationsUsed ?? 0
@@ -176,6 +179,83 @@ export default function Sidebar({ collapsed, onToggle, teacher }: SidebarProps) 
           </div>
         )}
       </aside>
+
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <button
+            className="absolute inset-0 bg-black/50"
+            onClick={onMobileClose}
+            aria-label="Fermer le menu"
+          />
+          <aside className="relative z-10 flex h-full w-72 max-w-[85vw] flex-col border-r border-border bg-card shadow-xl">
+            <div className="flex h-16 items-center justify-between px-4">
+              <div className="flex items-center gap-2">
+                <div className="rounded-lg p-1.5 shrink-0" style={{ backgroundColor: BRAND }}>
+                  <Brain className="text-white" size={18} />
+                </div>
+                <span className="font-black text-base whitespace-nowrap">EducAssist</span>
+              </div>
+              <button
+                onClick={onMobileClose}
+                className="rounded-lg border border-border p-2 text-muted-foreground hover:text-foreground"
+                aria-label="Fermer la sidebar"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="px-3 pb-3">
+              <div className="rounded-2xl bg-muted/40 border border-border px-3 py-3">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="h-8 w-8 shrink-0 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                    style={{ backgroundColor: BRAND }}
+                  >
+                    {teacher?.initials ?? '?'}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">{teacher?.name ?? 'Bienvenue'}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {teacher ? `${teacher.subject} · ${teacher.level}` : 'Profil incomplet'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <nav className="flex-1 px-2 space-y-0.5 overflow-y-auto">
+              {navItems.map(({ label, href, icon: Icon, isNew }) => {
+                const active = pathname === href
+                return (
+                  <button
+                    key={label}
+                    onClick={() => {
+                      onMobileClose()
+                      router.push(href)
+                    }}
+                    className={`w-full flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors ${
+                      active
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
+                    }`}
+                  >
+                    <Icon size={18} className="shrink-0" />
+                    <span className="flex-1 text-left">{label}</span>
+                    {isNew && (
+                      <Badge
+                        className="text-[10px] px-1.5"
+                        style={{ backgroundColor: BRAND, color: 'white' }}
+                      >
+                        Nouveau
+                      </Badge>
+                    )}
+                  </button>
+                )
+              })}
+            </nav>
+          </aside>
+        </div>
+      )}
 
       {/* Mobile bottom navigation */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/80 backdrop-blur-md">

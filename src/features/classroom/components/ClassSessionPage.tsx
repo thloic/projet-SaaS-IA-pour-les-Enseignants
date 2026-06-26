@@ -91,6 +91,14 @@ export default function ClassSessionPage({ classId }: ClassSessionPageProps) {
     return map
   }, [participation])
 
+  const observationsByStudent = useMemo(() => {
+    const map = new Map<string, StudentObservation[]>()
+    observations.forEach((observation) => {
+      map.set(observation.student_id, [...(map.get(observation.student_id) ?? []), observation])
+    })
+    return map
+  }, [observations])
+
   const summary = useMemo(() => {
     return attendance.reduce(
       (acc, record) => {
@@ -174,6 +182,8 @@ export default function ClassSessionPage({ classId }: ClassSessionPageProps) {
       .from('class_students')
       .select('id, user_id, class_id, student_id, student_profiles(*)')
       .eq('class_id', classId)
+      .order('last_name', { foreignTable: 'student_profiles' })
+      .order('first_name', { foreignTable: 'student_profiles' })
 
     if (linkError) {
       setIsLoading(false)
@@ -182,12 +192,7 @@ export default function ClassSessionPage({ classId }: ClassSessionPageProps) {
     }
 
     const joined = (links ?? []) as unknown as JoinedStudent[]
-    const roster = joined
-      .map((item) => item.student_profiles)
-      .filter(Boolean)
-      .sort((a, b) =>
-        `${a?.last_name} ${a?.first_name}`.localeCompare(`${b?.last_name} ${b?.first_name}`)
-      ) as StudentProfile[]
+    const roster = joined.map((item) => item.student_profiles).filter(Boolean) as StudentProfile[]
 
     setClassroom(classData as ClassRoom)
     setSession(activeSession)
@@ -390,15 +395,25 @@ export default function ClassSessionPage({ classId }: ClassSessionPageProps) {
           {students.map((student) => {
             const record = attendanceByStudent.get(student.id)
             const score = participationByStudent.get(student.id) ?? 0
+            const studentObservations = observationsByStudent.get(student.id) ?? []
 
             return (
               <article key={student.id} className="rounded-2xl border border-border bg-card/50 p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h2 className="truncate font-bold">
+                    <button
+                      onClick={() => {
+                        setSelectedStudent(student)
+                        setSelectedTag(observationTags[0])
+                      }}
+                      className="block max-w-full truncate text-left font-bold hover:text-primary"
+                    >
                       {student.first_name} {student.last_name}
-                    </h2>
+                    </button>
                     <div className="mt-1 flex flex-wrap gap-1">
+                      <Badge variant="outline" className="text-[10px]">
+                        {student.sex}
+                      </Badge>
                       <Badge variant="outline" className="text-[10px]">
                         Participation {score > 0 ? `+${score}` : score}
                       </Badge>
@@ -420,6 +435,15 @@ export default function ClassSessionPage({ classId }: ClassSessionPageProps) {
                     <MessageSquarePlus size={18} />
                   </button>
                 </div>
+                {studentObservations.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1">
+                    {studentObservations.slice(-3).map((observation) => (
+                      <Badge key={observation.id} variant="outline" className="text-[10px]">
+                        {observation.tag}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
 
                 <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {attendanceOptions.map(({ status, label, icon: Icon, className }) => {

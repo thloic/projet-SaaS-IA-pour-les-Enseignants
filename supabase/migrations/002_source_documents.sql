@@ -5,28 +5,36 @@ create table if not exists public.source_documents (
   content_text text not null,
   source_type text not null default 'text' check (source_type in ('text', 'file')),
   original_filename text,
+  file_type text check (file_type in ('txt', 'pdf', 'docx')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
+alter table public.source_documents
+  add column if not exists file_type text check (file_type in ('txt', 'pdf', 'docx'));
+
 alter table public.source_documents enable row level security;
 
+drop policy if exists "source_documents_select_own" on public.source_documents;
 create policy "source_documents_select_own"
   on public.source_documents
   for select
   using (auth.uid() = user_id);
 
+drop policy if exists "source_documents_insert_own" on public.source_documents;
 create policy "source_documents_insert_own"
   on public.source_documents
   for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "source_documents_update_own" on public.source_documents;
 create policy "source_documents_update_own"
   on public.source_documents
   for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+drop policy if exists "source_documents_delete_own" on public.source_documents;
 create policy "source_documents_delete_own"
   on public.source_documents
   for delete
