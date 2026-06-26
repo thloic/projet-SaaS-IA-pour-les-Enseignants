@@ -5,13 +5,20 @@ import type { SupabaseClient, User } from '@supabase/supabase-js'
 export async function updateSession(request: NextRequest): Promise<{
   supabaseResponse: NextResponse
   user: User | null
-  supabase: SupabaseClient
+  supabase: SupabaseClient | null
 }> {
   let supabaseResponse = NextResponse.next({ request })
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('[middleware] Variables Supabase manquantes dans l environnement.')
+    return { supabaseResponse, user: null, supabase: null }
+  }
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {
@@ -32,7 +39,12 @@ export async function updateSession(request: NextRequest): Promise<{
   // silencieusement la session via le refresh token si besoin.
   const {
     data: { user },
+    error,
   } = await supabase.auth.getUser()
+
+  if (error) {
+    console.error('[middleware] échec de la récupération de session Supabase :', error.message)
+  }
 
   return { supabaseResponse, user, supabase }
 }

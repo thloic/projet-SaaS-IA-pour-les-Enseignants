@@ -43,6 +43,10 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse
   }
 
+  if (!supabase) {
+    return redirectWithSession(request, '/login', supabaseResponse)
+  }
+
   const { data: profile, error } = await supabase
     .from('teacher_profiles')
     .select('id, first_name, last_name')
