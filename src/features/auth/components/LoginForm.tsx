@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { createClient } from '@/lib/supabase/client'
 import { magicLinkSchema } from '@/features/auth/schemas/authSchema'
+import { getAuthCallbackErrorMessage, getAuthErrorMessage } from '@/features/auth/utils/authError'
 
 const BRAND = '#534AB7'
 
@@ -28,9 +29,8 @@ export default function LoginForm() {
   const [isMagicLinkLoading, setIsMagicLinkLoading] = useState(false)
   const [magicLinkSent, setMagicLinkSent] = useState(false)
   const [error, setError] = useState<string | null>(() =>
-    typeof window !== 'undefined' &&
-    new URLSearchParams(window.location.search).get('error') === 'auth'
-      ? 'La connexion a échoué. Veuillez réessayer.'
+    typeof window !== 'undefined'
+      ? getAuthCallbackErrorMessage(window.location.search, window.location.hash)
       : null
   )
 
@@ -67,7 +67,7 @@ export default function LoginForm() {
 
     if (oauthError) {
       setIsGoogleLoading(false)
-      setError(oauthError.message)
+      setError(getAuthErrorMessage(oauthError))
     }
     // En cas de succès, le navigateur est redirigé vers Google — pas besoin de remettre isGoogleLoading à false.
   }
@@ -95,7 +95,7 @@ export default function LoginForm() {
     setIsMagicLinkLoading(false)
 
     if (otpError) {
-      setError(otpError.message)
+      setError(getAuthErrorMessage(otpError))
       return
     }
 

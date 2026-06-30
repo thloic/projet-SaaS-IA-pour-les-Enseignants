@@ -12,6 +12,10 @@ export async function GET(request: Request) {
     if (!error) {
       return NextResponse.redirect(`${origin}/dashboard`)
     }
+
+    console.error('[auth/callback] échec échange session :', error.message)
+    const errorCode = encodeURIComponent(error.code ?? 'callback_failed')
+    return NextResponse.redirect(`${origin}/login?error=auth&error_code=${errorCode}`)
   }
 
   return NextResponse.redirect(`${origin}/login?error=auth`)
