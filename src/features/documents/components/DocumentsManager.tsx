@@ -67,8 +67,8 @@ export default function DocumentsManager({ initialDocuments }: DocumentsManagerP
         showToast('Document ajouté avec succès.', 'success')
         return result
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Une erreur inattendue est survenue. Veuillez réessayer.'
+        console.error('[documents] échec de l’ajout du document', err)
+        const message = "Nous n’avons pas pu ajouter ce document. Réessayez dans quelques instants."
         showToast(message, 'error')
         return { error: message }
       }
@@ -159,6 +159,27 @@ export default function DocumentsManager({ initialDocuments }: DocumentsManagerP
     }
   }
 
+  function handleDocumentSubmit(event: React.FormEvent<HTMLFormElement>) {
+    const formData = new FormData(event.currentTarget)
+    const title = String(formData.get('title') ?? '').trim()
+
+    if (!title) {
+      event.preventDefault()
+      showToast('Donnez un titre à votre document avant de l’ajouter.', 'error')
+      return
+    }
+
+    if (!contentText.trim()) {
+      event.preventDefault()
+      showToast(
+        mode === 'file'
+          ? 'Choisissez un fichier contenant du texte avant de continuer.'
+          : 'Ajoutez le contenu de votre document avant de continuer.',
+        'error'
+      )
+    }
+  }
+
   return (
     <div className="max-w-2xl mx-auto space-y-8 pb-20 lg:pb-6">
       {/* Header */}
@@ -181,6 +202,8 @@ export default function DocumentsManager({ initialDocuments }: DocumentsManagerP
       <form
         ref={formRef}
         action={formAction}
+        onSubmit={handleDocumentSubmit}
+        noValidate
         className="rounded-2xl border border-border bg-card/40 p-6 space-y-4"
       >
         <input type="hidden" name="sourceType" value={mode} />
@@ -240,13 +263,13 @@ export default function DocumentsManager({ initialDocuments }: DocumentsManagerP
               <p className="text-xs text-muted-foreground">Lecture du fichier…</p>
             )}
             {fileError && (
-              <div className="flex gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+              <div className="flex gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-700 dark:text-rose-300">
                 <AlertCircle size={14} className="mt-0.5 shrink-0" />
                 <span>{fileError}</span>
               </div>
             )}
             {fileWarning && (
-              <div className="flex gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+              <div className="flex gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-200">
                 <AlertCircle size={14} className="mt-0.5 shrink-0" />
                 <span>{fileWarning}</span>
               </div>
@@ -278,7 +301,7 @@ export default function DocumentsManager({ initialDocuments }: DocumentsManagerP
         </div>
 
         {state.error && (
-          <div className="flex gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+          <div className="flex gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-700 dark:text-rose-300">
             <AlertCircle size={14} className="mt-0.5 shrink-0" />
             <span>{state.error}</span>
           </div>
@@ -342,8 +365,8 @@ function DocumentListItem({ doc, isExpanded, onToggleExpand }: DocumentListItemP
       }
       setContent(result.content ?? '')
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Impossible de charger le contenu de ce document.'
+      console.error('[documents] échec du chargement du contenu', err)
+      const message = 'Impossible de charger le contenu de ce document pour le moment.'
       showToast(message, 'error')
     } finally {
       setIsLoadingContent(false)
@@ -361,8 +384,8 @@ function DocumentListItem({ doc, isExpanded, onToggleExpand }: DocumentListItemP
         }
         return result
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Une erreur inattendue est survenue. Veuillez réessayer.'
+        console.error('[documents] échec de la suppression', err)
+        const message = 'Impossible de supprimer ce document pour le moment. Réessayez.'
         showToast(message, 'error')
         return { error: message }
       }

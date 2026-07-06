@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { createClient } from '@/lib/supabase/client'
 import { observationSchema } from '@/features/classroom/schemas/classroomSchema'
+import { useToast } from '@/components/shared/ToastProvider'
 import type {
   AttendanceRecord,
   AttendanceStatus,
@@ -38,10 +39,10 @@ const attendanceOptions: Array<{
   icon: typeof Check
   className: string
 }> = [
-  { status: 'present', label: 'Present', icon: UserCheck, className: 'border-emerald-500/40 text-emerald-300 bg-emerald-500/10' },
-  { status: 'late', label: 'Retard', icon: Clock, className: 'border-amber-500/40 text-amber-300 bg-amber-500/10' },
-  { status: 'absent', label: 'Absent', icon: UserMinus, className: 'border-rose-500/40 text-rose-300 bg-rose-500/10' },
-  { status: 'excused', label: 'Excuse', icon: Check, className: 'border-sky-500/40 text-sky-300 bg-sky-500/10' },
+  { status: 'present', label: 'Present', icon: UserCheck, className: 'border-emerald-500/40 text-emerald-700 bg-emerald-500/10 dark:text-emerald-300' },
+  { status: 'late', label: 'Retard', icon: Clock, className: 'border-amber-500/40 text-amber-700 bg-amber-500/10 dark:text-amber-300' },
+  { status: 'absent', label: 'Absent', icon: UserMinus, className: 'border-rose-500/40 text-rose-700 bg-rose-500/10 dark:text-rose-300' },
+  { status: 'excused', label: 'Excuse', icon: Check, className: 'border-sky-500/40 text-sky-700 bg-sky-500/10 dark:text-sky-300' },
 ]
 
 const observationTags: Array<{ category: ObservationCategory; tag: string }> = [
@@ -64,6 +65,7 @@ type JoinedStudent = ClassStudent & {
 
 export default function ClassSessionPage({ classId }: ClassSessionPageProps) {
   const router = useRouter()
+  const { showToast } = useToast()
   const [classroom, setClassroom] = useState<ClassRoom | null>(null)
   const [session, setSession] = useState<ClassSession | null>(null)
   const [students, setStudents] = useState<StudentProfile[]>([])
@@ -114,6 +116,8 @@ export default function ClassSessionPage({ classId }: ClassSessionPageProps) {
     setIsLoading(true)
     setError(null)
 
+    try {
+
     const supabase = createClient()
     const {
       data: { user },
@@ -121,9 +125,7 @@ export default function ClassSessionPage({ classId }: ClassSessionPageProps) {
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      setIsLoading(false)
-      setError('Connectez-vous pour demarrer une session.')
-      return
+      throw new Error('AUTH_REQUIRED')
     }
 
     const { data: classData, error: classError } = await supabase
@@ -133,9 +135,7 @@ export default function ClassSessionPage({ classId }: ClassSessionPageProps) {
       .maybeSingle()
 
     if (classError || !classData) {
-      setIsLoading(false)
-      setError(classError?.message ?? 'Classe introuvable.')
-      return
+      throw classError ?? new Error('CLASS_NOT_FOUND')
     }
 
     const today = new Date().toISOString().slice(0, 10)
@@ -150,9 +150,7 @@ export default function ClassSessionPage({ classId }: ClassSessionPageProps) {
       .maybeSingle()
 
     if (sessionError) {
-      setIsLoading(false)
-      setError(sessionError.message)
-      return
+      throw sessionError
     }
 
     let activeSession = existingSession as ClassSession | null
@@ -170,9 +168,7 @@ export default function ClassSessionPage({ classId }: ClassSessionPageProps) {
         .single()
 
       if (createError || !newSession) {
-        setIsLoading(false)
-        setError(createError?.message ?? 'Impossible de creer la session.')
-        return
+        throw createError ?? new Error('SESSION_CREATE_FAILED')
       }
 
       activeSession = newSession as ClassSession
@@ -186,9 +182,7 @@ export default function ClassSessionPage({ classId }: ClassSessionPageProps) {
       .order('first_name', { foreignTable: 'student_profiles' })
 
     if (linkError) {
-      setIsLoading(false)
-      setError(linkError.message)
-      return
+      throw linkError
     }
 
     const joined = (links ?? []) as unknown as JoinedStudent[]
@@ -198,24 +192,42 @@ export default function ClassSessionPage({ classId }: ClassSessionPageProps) {
     setSession(activeSession)
     setStudents(roster)
     await loadSessionData(activeSession.id)
-    setIsLoading(false)
+    } catch (error) {
+      console.error('[classroom] échec de la préparation de la séance', error)
+      const message =
+        error instanceof Error && error.message === 'AUTH_REQUIRED'
+          ? 'Votre session a expiré. Reconnectez-vous pour démarrer la séance.'
+          : error instanceof Error && error.message === 'CLASS_NOT_FOUND'
+            ? 'Cette classe est introuvable ou n’est plus disponible.'
+            : 'Impossible de préparer cette séance pour le moment. Réessayez.'
+      setError(message)
+      showToast(message, 'error')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   async function loadSessionData(sessionId: string) {
-    const supabase = createClient()
-    const [attendanceResult, participationResult, observationResult] = await Promise.all([
-      supabase.from('attendance_records').select('*').eq('session_id', sessionId),
-      supabase.from('participation_events').select('*').eq('session_id', sessionId),
-      supabase.from('student_observations').select('*').eq('session_id', sessionId),
-    ])
+    try {
+      const supabase = createClient()
+      const [attendanceResult, participationResult, observationResult] = await Promise.all([
+        supabase.from('attendance_records').select('*').eq('session_id', sessionId),
+        supabase.from('participation_events').select('*').eq('session_id', sessionId),
+        supabase.from('student_observations').select('*').eq('session_id', sessionId),
+      ])
 
-    if (attendanceResult.error) setError(attendanceResult.error.message)
-    if (participationResult.error) setError(participationResult.error.message)
-    if (observationResult.error) setError(observationResult.error.message)
+      const queryError = attendanceResult.error ?? participationResult.error ?? observationResult.error
+      if (queryError) throw queryError
 
-    setAttendance((attendanceResult.data ?? []) as AttendanceRecord[])
-    setParticipation((participationResult.data ?? []) as ParticipationEvent[])
-    setObservations((observationResult.data ?? []) as StudentObservation[])
+      setAttendance((attendanceResult.data ?? []) as AttendanceRecord[])
+      setParticipation((participationResult.data ?? []) as ParticipationEvent[])
+      setObservations((observationResult.data ?? []) as StudentObservation[])
+    } catch (error) {
+      console.error('[classroom] échec du chargement des données de séance', error)
+      const message = 'Impossible d’actualiser les informations de cette séance.'
+      setError(message)
+      showToast(message, 'error')
+    }
   }
 
   useEffect(() => {
@@ -228,62 +240,56 @@ export default function ClassSessionPage({ classId }: ClassSessionPageProps) {
     if (!session) return
 
     setError(null)
-    const supabase = createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    try {
+      const supabase = createClient()
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError || !user) throw new Error('AUTH_REQUIRED')
 
-    if (!user) {
-      setError('Session utilisateur introuvable.')
-      return
+      const { error: upsertError } = await supabase.from('attendance_records').upsert(
+        {
+          user_id: user.id,
+          session_id: session.id,
+          student_id: studentId,
+          status,
+        },
+        { onConflict: 'session_id,student_id' }
+      )
+
+      if (upsertError) throw upsertError
+      await loadSessionData(session.id)
+    } catch (error) {
+      console.error('[classroom] échec de l’enregistrement de la présence', error)
+      const message = 'Impossible d’enregistrer cette présence pour le moment.'
+      setError(message)
+      showToast(message, 'error')
     }
-
-    const { error: upsertError } = await supabase.from('attendance_records').upsert(
-      {
-        user_id: user.id,
-        session_id: session.id,
-        student_id: studentId,
-        status,
-      },
-      { onConflict: 'session_id,student_id' }
-    )
-
-    if (upsertError) {
-      setError(upsertError.message)
-      return
-    }
-
-    await loadSessionData(session.id)
   }
 
   async function addParticipation(studentId: string, value: -1 | 1 | 2, label: string) {
     if (!session) return
 
     setError(null)
-    const supabase = createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    try {
+      const supabase = createClient()
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError || !user) throw new Error('AUTH_REQUIRED')
 
-    if (!user) {
-      setError('Session utilisateur introuvable.')
-      return
+      const { error: insertError } = await supabase.from('participation_events').insert({
+        user_id: user.id,
+        session_id: session.id,
+        student_id: studentId,
+        value,
+        label,
+      })
+
+      if (insertError) throw insertError
+      await loadSessionData(session.id)
+    } catch (error) {
+      console.error('[classroom] échec de l’enregistrement de la participation', error)
+      const message = 'Impossible d’enregistrer cette participation pour le moment.'
+      setError(message)
+      showToast(message, 'error')
     }
-
-    const { error: insertError } = await supabase.from('participation_events').insert({
-      user_id: user.id,
-      session_id: session.id,
-      student_id: studentId,
-      value,
-      label,
-    })
-
-    if (insertError) {
-      setError(insertError.message)
-      return
-    }
-
-    await loadSessionData(session.id)
   }
 
   async function saveObservation() {
@@ -297,59 +303,61 @@ export default function ClassSessionPage({ classId }: ClassSessionPageProps) {
     })
 
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? 'Observation incomplete.')
+      const message = parsed.error.issues[0]?.message ?? 'Complétez l’observation avant de l’enregistrer.'
+      setError(message)
+      showToast(message, 'error')
       return
     }
 
     setIsSavingObservation(true)
-    const supabase = createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    try {
+      const supabase = createClient()
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError || !user) throw new Error('AUTH_REQUIRED')
 
-    if (!user) {
+      const { error: insertError } = await supabase.from('student_observations').insert({
+        user_id: user.id,
+        session_id: session.id,
+        student_id: selectedStudent.id,
+        category: parsed.data.category,
+        tag: parsed.data.tag,
+        note: parsed.data.note || null,
+      })
+
+      if (insertError) throw insertError
+      setSelectedStudent(null)
+      setNote('')
+      showToast('Observation enregistrée.', 'success')
+      await loadSessionData(session.id)
+    } catch (error) {
+      console.error('[classroom] échec de l’enregistrement de l’observation', error)
+      const message = 'Impossible d’enregistrer cette observation pour le moment.'
+      setError(message)
+      showToast(message, 'error')
+    } finally {
       setIsSavingObservation(false)
-      setError('Session utilisateur introuvable.')
-      return
     }
-
-    const { error: insertError } = await supabase.from('student_observations').insert({
-      user_id: user.id,
-      session_id: session.id,
-      student_id: selectedStudent.id,
-      category: parsed.data.category,
-      tag: parsed.data.tag,
-      note: parsed.data.note || null,
-    })
-
-    setIsSavingObservation(false)
-
-    if (insertError) {
-      setError(insertError.message)
-      return
-    }
-
-    setSelectedStudent(null)
-    setNote('')
-    await loadSessionData(session.id)
   }
 
   async function closeSession() {
     if (!session) return
 
-    const supabase = createClient()
-    const { error: updateError } = await supabase
-      .from('class_sessions')
-      .update({ ended_at: new Date().toISOString() })
-      .eq('id', session.id)
+    try {
+      const supabase = createClient()
+      const { error: updateError } = await supabase
+        .from('class_sessions')
+        .update({ ended_at: new Date().toISOString() })
+        .eq('id', session.id)
 
-    if (updateError) {
-      setError(updateError.message)
-      return
+      if (updateError) throw updateError
+      router.push(`/classroom/${classId}`)
+      router.refresh()
+    } catch (error) {
+      console.error('[classroom] échec de la clôture de la séance', error)
+      const message = 'Impossible de terminer cette séance pour le moment.'
+      setError(message)
+      showToast(message, 'error')
     }
-
-    router.push(`/classroom/${classId}`)
-    router.refresh()
   }
 
   if (isLoading) {
@@ -372,15 +380,15 @@ export default function ClassSessionPage({ classId }: ClassSessionPageProps) {
           </p>
         </div>
         <div className="grid grid-cols-4 gap-2 text-center sm:flex sm:text-left">
-          <SummaryBadge label="Presents" value={summary.present} color="text-emerald-300" />
-          <SummaryBadge label="Retards" value={summary.late} color="text-amber-300" />
-          <SummaryBadge label="Absents" value={summary.absent} color="text-rose-300" />
-          <SummaryBadge label="Notes" value={observations.length} color="text-sky-300" />
+          <SummaryBadge label="Presents" value={summary.present} color="text-emerald-700 dark:text-emerald-300" />
+          <SummaryBadge label="Retards" value={summary.late} color="text-amber-700 dark:text-amber-300" />
+          <SummaryBadge label="Absents" value={summary.absent} color="text-rose-700 dark:text-rose-300" />
+          <SummaryBadge label="Notes" value={observations.length} color="text-sky-700 dark:text-sky-300" />
         </div>
       </section>
 
       {error && (
-        <div className="flex gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+        <div className="flex gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-700 dark:text-rose-300">
           <AlertCircle size={16} className="mt-0.5 shrink-0" />
           <span>{error}</span>
         </div>
@@ -471,13 +479,13 @@ export default function ClassSessionPage({ classId }: ClassSessionPageProps) {
                   </button>
                   <button
                     onClick={() => addParticipation(student.id, 1, 'Participation positive')}
-                    className="flex min-h-11 items-center justify-center gap-1 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-sm font-semibold text-emerald-300"
+                    className="flex min-h-11 items-center justify-center gap-1 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-sm font-semibold text-emerald-700 dark:text-emerald-300"
                   >
                     <Plus size={15} /> Active
                   </button>
                   <button
                     onClick={() => addParticipation(student.id, 2, 'Participation forte')}
-                    className="flex min-h-11 items-center justify-center gap-1 rounded-xl border border-violet-500/30 bg-violet-500/10 text-sm font-semibold text-violet-300"
+                    className="flex min-h-11 items-center justify-center gap-1 rounded-xl border border-violet-500/30 bg-violet-500/10 text-sm font-semibold text-violet-700 dark:text-violet-300"
                   >
                     <Sparkles size={15} /> Forte
                   </button>

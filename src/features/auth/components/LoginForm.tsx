@@ -11,6 +11,8 @@ import { Separator } from '@/components/ui/separator'
 import { createClient } from '@/lib/supabase/client'
 import { magicLinkSchema } from '@/features/auth/schemas/authSchema'
 import { getAuthCallbackErrorMessage, getAuthErrorMessage } from '@/features/auth/utils/authError'
+import { useToast } from '@/components/shared/ToastProvider'
+import ThemeToggle from '@/components/shared/ThemeToggle'
 
 const BRAND = '#534AB7'
 
@@ -23,6 +25,7 @@ const bubbles = [
 
 export default function LoginForm() {
   const containerRef = useRef<HTMLDivElement>(null)
+  const { showToast } = useToast()
 
   const [email, setEmail] = useState('')
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
@@ -57,17 +60,22 @@ export default function LoginForm() {
     setError(null)
     setIsGoogleLoading(true)
 
-    const supabase = createClient()
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
+    try {
+      const supabase = createClient()
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
 
-    if (oauthError) {
+      if (oauthError) throw oauthError
+    } catch (error) {
+      console.error('[auth] échec de la connexion Google', error)
+      const message = getAuthErrorMessage(error instanceof Error ? error : null)
       setIsGoogleLoading(false)
-      setError(getAuthErrorMessage(oauthError))
+      setError(message)
+      showToast(message, 'error')
     }
     // En cas de succès, le navigateur est redirigé vers Google — pas besoin de remettre isGoogleLoading à false.
   }
@@ -78,32 +86,38 @@ export default function LoginForm() {
 
     const parsed = magicLinkSchema.safeParse({ email: email.trim() })
     if (!parsed.success) {
-      setError(parsed.error.issues[0].message)
+      const message = parsed.error.issues[0].message
+      setError(message)
+      showToast(message, 'error')
       return
     }
 
     setIsMagicLinkLoading(true)
 
-    const supabase = createClient()
-    const { error: otpError } = await supabase.auth.signInWithOtp({
-      email: parsed.data.email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
+    try {
+      const supabase = createClient()
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: parsed.data.email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
 
-    setIsMagicLinkLoading(false)
-
-    if (otpError) {
-      setError(getAuthErrorMessage(otpError))
-      return
+      if (otpError) throw otpError
+      setMagicLinkSent(true)
+      showToast('Le lien de connexion vient de vous être envoyé.', 'success')
+    } catch (error) {
+      console.error('[auth] échec de l’envoi du lien magique', error)
+      const message = getAuthErrorMessage(error instanceof Error ? error : null)
+      setError(message)
+      showToast(message, 'error')
+    } finally {
+      setIsMagicLinkLoading(false)
     }
-
-    setMagicLinkSent(true)
   }
 
   return (
-    <div ref={containerRef} className="flex h-screen w-full overflow-hidden">
+    <div ref={containerRef} className="flex h-screen w-full overflow-hidden bg-background text-foreground">
       {/* ── Left panel ── */}
       <div
         className="hidden lg:flex lg:w-1/2 flex-col p-12 overflow-hidden"
@@ -146,7 +160,8 @@ export default function LoginForm() {
       </div>
 
       {/* ── Right panel ── */}
-      <div className="flex w-full lg:w-1/2 items-center justify-center p-8 bg-white">
+      <div className="relative flex w-full items-center justify-center bg-[#F5F3FF] p-8 transition-colors dark:bg-[#080711] lg:w-1/2">
+        <ThemeToggle className="absolute right-5 top-5" />
         <div className="auth-animate w-full max-w-md space-y-6">
           {/* Mobile logo */}
           <div className="flex items-center gap-2 lg:hidden">
@@ -157,8 +172,8 @@ export default function LoginForm() {
           </div>
 
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold text-gray-900">Connexion</h1>
-            <p className="text-sm text-gray-500">Bon retour parmi nous 👋</p>
+            <h1 className="text-2xl font-bold text-foreground">Connexion</h1>
+            <p className="text-sm text-muted-foreground">Bon retour parmi nous 👋</p>
           </div>
 
           {/* Google */}
@@ -198,25 +213,25 @@ export default function LoginForm() {
 
           <div className="flex items-center gap-3">
             <Separator className="flex-1" />
-            <span className="text-xs text-gray-400 shrink-0">ou</span>
+            <span className="text-xs text-muted-foreground shrink-0">ou</span>
             <Separator className="flex-1" />
           </div>
 
           {error && (
-            <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
+            <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
               {error}
             </div>
           )}
 
           {magicLinkSent ? (
-            <div className="flex items-start gap-3 rounded-md bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-700">
+            <div className="flex items-start gap-3 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">
               <CheckCircle2 size={18} className="mt-0.5 shrink-0" />
               <span>
                 Lien envoyé à <strong>{email}</strong>. Vérifiez votre boîte mail pour vous connecter.
               </span>
             </div>
           ) : (
-            <form onSubmit={handleMagicLink} className="space-y-4">
+            <form onSubmit={handleMagicLink} className="space-y-4" noValidate>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input

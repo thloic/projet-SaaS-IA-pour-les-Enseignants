@@ -8,11 +8,18 @@ import type { TeacherIdentity, TeacherProfile } from '@/features/profile/types/p
 // un seul aller-retour Supabase est effectué au lieu de deux.
 export const getCurrentUser = cache(async () => {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  try {
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser()
 
-  return user
+    if (error) throw error
+    return user
+  } catch (error) {
+    console.error('[profile] impossible de vérifier la session utilisateur', error)
+    return null
+  }
 })
 
 // Pour les comptes connectés via Google, Supabase remplit user_metadata avec
@@ -48,18 +55,19 @@ export const getCurrentTeacherProfile = cache(async (): Promise<TeacherProfile |
   if (!user) return null
 
   const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('teacher_profiles')
-    .select('*')
-    .eq('user_id', user.id)
-    .maybeSingle()
+  try {
+    const { data, error } = await supabase
+      .from('teacher_profiles')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle()
 
-  if (error) {
-    console.error('Unable to load teacher profile', error)
+    if (error) throw error
+    return data
+  } catch (error) {
+    console.error('[profile] impossible de charger le profil enseignant', error)
     return null
   }
-
-  return data
 })
 
 export function profileToTeacherIdentity(
@@ -71,10 +79,12 @@ export function profileToTeacherIdentity(
   const name = `${firstName} ${lastName}`.trim() || 'Enseignant'
   const initials = `${firstName[0] ?? ''}${lastName[0] ?? ''}`.toUpperCase()
 
+  const subjects = profile.subjects?.length ? profile.subjects : [profile.subject].filter(Boolean)
+
   return {
     name,
     initials: initials || 'EA',
-    subject: profile.subject ?? 'Matiere non precisee',
+    subject: subjects.join(', ') || 'Matiere non precisee',
     level: profile.levels?.[0] ?? 'Niveau non precise',
     country: profile.country ?? 'Pays non precise',
     plan: options?.plan ?? 'free',

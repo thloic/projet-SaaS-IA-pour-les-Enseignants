@@ -1,3 +1,5 @@
+import PublicSharePage from '@/features/share/components/PublicSharePage'
+
 export default function SharePage() {
-  return <div>SharePage</div>
+  return <PublicSharePage />
 }

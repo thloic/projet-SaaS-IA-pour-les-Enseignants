@@ -65,7 +65,7 @@ export default function OnboardingForm({
   const [firstName, setFirstName] = useState(initialFirstName)
   const [lastName, setLastName] = useState(initialLastName)
   const [country, setCountry] = useState('Canada - Quebec')
-  const [subject, setSubject] = useState('Mathematiques')
+  const [subjects, setSubjects] = useState<string[]>(['Mathematiques'])
   const [levels, setLevels] = useState<string[]>([])
   const [gradingSystem, setGradingSystem] = useState<GradingSystem>('20')
   const [language, setLanguage] = useState<ContentLanguage>('fr')
@@ -81,10 +81,40 @@ export default function OnboardingForm({
     )
   }
 
+  function toggleSubject(subject: string) {
+    setSubjects((current) =>
+      current.includes(subject)
+        ? current.filter((item) => item !== subject)
+        : [...current, subject]
+    )
+  }
+
   function canNext() {
     if (step === 0) return firstName.trim().length > 0 && lastName.trim().length > 0
-    if (step === 1) return levels.length > 0
+    if (step === 1) return subjects.length > 0 && levels.length > 0
     return true
+  }
+
+  function notifyIncompleteStep() {
+    if (step === 0) {
+      if (!firstName.trim() && !lastName.trim()) {
+        showToast('Renseignez votre prénom et votre nom pour continuer.', 'error')
+      } else if (!firstName.trim()) {
+        showToast('Renseignez votre prénom pour continuer.', 'error')
+      } else {
+        showToast('Renseignez votre nom pour continuer.', 'error')
+      }
+      return
+    }
+
+    if (step === 1 && subjects.length === 0) {
+      showToast('Sélectionnez au moins une matière pour continuer.', 'error')
+      return
+    }
+
+    if (step === 1 && levels.length === 0) {
+      showToast("Sélectionnez au moins un niveau d’enseignement pour continuer.", 'error')
+    }
   }
 
   async function handleFinish() {
@@ -94,7 +124,7 @@ export default function OnboardingForm({
       firstName,
       lastName,
       country,
-      subject,
+      subjects,
       levels,
       gradingSystem,
       language,
@@ -118,7 +148,7 @@ export default function OnboardingForm({
       } = await supabase.auth.getUser()
 
       if (userError || !user) {
-        throw new Error('Connectez-vous avant de completer votre profil enseignant.')
+        throw new Error('AUTH_REQUIRED')
       }
 
       const { error: profileError } = await supabase.from('teacher_profiles').upsert(
@@ -127,7 +157,8 @@ export default function OnboardingForm({
           first_name: parsed.data.firstName,
           last_name: parsed.data.lastName,
           country: parsed.data.country,
-          subject: parsed.data.subject,
+          subject: parsed.data.subjects[0],
+          subjects: parsed.data.subjects,
           levels: parsed.data.levels,
           grading_system: parsed.data.gradingSystem,
           language: parsed.data.language,
@@ -137,15 +168,18 @@ export default function OnboardingForm({
       )
 
       if (profileError) {
-        throw new Error(profileError.message)
+        throw profileError
       }
 
       showToast('Profil enregistré avec succès. Bienvenue sur EducAssist !', 'success')
       router.push('/dashboard')
       router.refresh()
     } catch (err) {
+      console.error('[onboarding] échec de l’enregistrement du profil', err)
       const message =
-        err instanceof Error ? err.message : 'Une erreur est survenue. Veuillez réessayer.'
+        err instanceof Error && err.message === 'AUTH_REQUIRED'
+          ? 'Votre session a expiré. Reconnectez-vous avant de terminer votre profil.'
+          : "Nous n’avons pas pu enregistrer votre profil pour le moment. Réessayez dans quelques instants."
       setError(message)
       showToast(message, 'error')
     } finally {
@@ -202,7 +236,7 @@ export default function OnboardingForm({
           <h1 className="text-xl font-black">{STEPS[step]}</h1>
 
           {error && (
-            <div className="flex gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+            <div className="flex gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-700 dark:text-rose-300">
               <AlertCircle size={16} className="mt-0.5 shrink-0" />
               <span>{error}</span>
             </div>
@@ -252,24 +286,30 @@ export default function OnboardingForm({
           {step === 1 && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Matiere principale</Label>
+                <Label>
+                  Matières enseignées{' '}
+                  <span className="text-muted-foreground">(plusieurs choix)</span>
+                </Label>
                 <div className="flex flex-wrap gap-2">
                   {SUBJECTS_OPTIONS.map((item) => (
                     <button
                       key={item}
                       type="button"
-                      onClick={() => setSubject(item)}
+                      onClick={() => toggleSubject(item)}
                       className={`rounded-xl border px-3 py-1.5 text-xs font-medium transition-colors ${
-                        subject === item
+                        subjects.includes(item)
                           ? 'text-white border-transparent'
                           : 'border-border text-muted-foreground hover:bg-muted/40'
                       }`}
-                      style={subject === item ? { backgroundColor: BRAND } : {}}
+                      style={subjects.includes(item) ? { backgroundColor: BRAND } : {}}
                     >
                       {item}
                     </button>
                   ))}
                 </div>
+                {subjects.length === 0 && (
+                  <p className="text-xs text-muted-foreground">Sélectionnez au moins une matière.</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>
@@ -376,14 +416,16 @@ export default function OnboardingForm({
               <div />
             )}
             {step < STEPS.length - 1 ? (
-              <Button
-                className="text-white gap-1"
-                style={{ backgroundColor: BRAND }}
-                disabled={!canNext()}
-                onClick={() => setStep((current) => current + 1)}
-              >
-                Suivant <ChevronRight size={14} />
-              </Button>
+              <div onClick={!canNext() ? notifyIncompleteStep : undefined}>
+                <Button
+                  className={`text-white gap-1 ${!canNext() ? 'pointer-events-none' : ''}`}
+                  style={{ backgroundColor: BRAND }}
+                  disabled={!canNext()}
+                  onClick={() => setStep((current) => current + 1)}
+                >
+                  Suivant <ChevronRight size={14} />
+                </Button>
+              </div>
             ) : (
               <Button
                 className="text-white gap-1"

@@ -120,7 +120,13 @@ export async function createDocumentAction(
   _prevState: DocumentActionState,
   formData: FormData
 ): Promise<DocumentActionState> {
-  const user = await getCurrentUser()
+  let user
+  try {
+    user = await getCurrentUser()
+  } catch (error) {
+    console.error('[documents] échec de la vérification de session', error)
+    return { error: 'Impossible de vérifier votre session. Reconnectez-vous puis réessayez.' }
+  }
   if (!user) {
     return { error: 'Vous devez être connecté pour ajouter un document.' }
   }
@@ -149,12 +155,14 @@ export async function createDocumentAction(
     })
 
     if (error) {
-      return { error: error.message }
+      console.error('[documents] insertion Supabase refusée', error)
+      return { error: "Nous n’avons pas pu enregistrer ce document. Réessayez dans quelques instants." }
     }
 
     revalidatePath('/documents')
     return { error: null }
-  } catch {
+  } catch (error) {
+    console.error('[documents] échec inattendu de l’enregistrement', error)
     return { error: 'Une erreur inattendue est survenue lors de l’enregistrement. Veuillez réessayer.' }
   }
 }
@@ -165,7 +173,13 @@ export interface DocumentContentState {
 }
 
 export async function getDocumentContentAction(id: string): Promise<DocumentContentState> {
-  const user = await getCurrentUser()
+  let user
+  try {
+    user = await getCurrentUser()
+  } catch (error) {
+    console.error('[documents] échec de la vérification de session', error)
+    return { content: null, error: 'Impossible de vérifier votre session. Reconnectez-vous puis réessayez.' }
+  }
   if (!user) {
     return { content: null, error: 'Vous devez être connecté.' }
   }
@@ -180,17 +194,25 @@ export async function getDocumentContentAction(id: string): Promise<DocumentCont
       .maybeSingle()
 
     if (error) {
-      return { content: null, error: error.message }
+      console.error('[documents] lecture Supabase refusée', error)
+      return { content: null, error: 'Impossible de charger le contenu de ce document pour le moment.' }
     }
 
     return { content: data?.content_text ?? null, error: null }
-  } catch {
+  } catch (error) {
+    console.error('[documents] échec inattendu du chargement', error)
     return { content: null, error: 'Une erreur inattendue est survenue lors du chargement du contenu.' }
   }
 }
 
 export async function deleteDocumentAction(id: string): Promise<DocumentActionState> {
-  const user = await getCurrentUser()
+  let user
+  try {
+    user = await getCurrentUser()
+  } catch (error) {
+    console.error('[documents] échec de la vérification de session', error)
+    return { error: 'Impossible de vérifier votre session. Reconnectez-vous puis réessayez.' }
+  }
   if (!user) {
     return { error: 'Vous devez être connecté pour supprimer un document.' }
   }
@@ -204,12 +226,14 @@ export async function deleteDocumentAction(id: string): Promise<DocumentActionSt
       .eq('user_id', user.id)
 
     if (error) {
-      return { error: error.message }
+      console.error('[documents] suppression Supabase refusée', error)
+      return { error: 'Impossible de supprimer ce document pour le moment. Réessayez.' }
     }
 
     revalidatePath('/documents')
     return { error: null }
-  } catch {
+  } catch (error) {
+    console.error('[documents] échec inattendu de la suppression', error)
     return { error: 'Une erreur inattendue est survenue lors de la suppression. Veuillez réessayer.' }
   }
 }

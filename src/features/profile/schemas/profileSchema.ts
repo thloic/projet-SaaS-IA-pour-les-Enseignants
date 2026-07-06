@@ -4,7 +4,7 @@ export const profileSchema = z.object({
   firstName: z.string().trim().min(1, 'Le prenom est requis'),
   lastName: z.string().trim().min(1, 'Le nom est requis'),
   country: z.string().trim().min(1, 'Le pays est requis'),
-  subject: z.string().trim().min(1, 'La matiere est requise'),
+  subjects: z.array(z.string().trim().min(1)).min(1, 'Selectionnez au moins une matiere'),
   levels: z.array(z.string().trim().min(1)).min(1, 'Selectionnez au moins un niveau'),
   gradingSystem: z.enum(['20', '10', 'letter']),
   language: z.enum(['fr', 'en']),

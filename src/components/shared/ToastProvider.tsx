@@ -29,7 +29,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const showToast = useCallback(
     (message: string, variant: ToastVariant = 'success') => {
       const id = nextToastId++
-      setToasts((current) => [...current, { id, message, variant }])
+      setToasts((current) => {
+        const withoutDuplicate = current.filter(
+          (toast) => toast.message !== message || toast.variant !== variant
+        )
+        return [...withoutDuplicate, { id, message, variant }]
+      })
       setTimeout(() => dismiss(id), 4000)
     },
     [dismiss]
@@ -38,14 +43,19 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div className="fixed left-1/2 top-1/2 z-[100] flex w-full max-w-sm -translate-x-1/2 -translate-y-1/2 flex-col gap-2 px-4 pointer-events-none">
+      <div
+        className="fixed left-1/2 top-1/2 z-[100] flex w-full max-w-sm -translate-x-1/2 -translate-y-1/2 flex-col gap-2 px-4 pointer-events-none"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
         {toasts.map((toast) => (
           <div
             key={toast.id}
             className={`pointer-events-auto flex items-start gap-2 rounded-xl border px-4 py-3 text-sm shadow-lg backdrop-blur-md animate-in fade-in slide-in-from-bottom-2 ${
               toast.variant === 'success'
-                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
-                : 'bg-rose-500/10 border-rose-500/30 text-rose-200'
+                ? 'bg-emerald-50 border-emerald-300 text-emerald-800 dark:bg-emerald-500/10 dark:border-emerald-500/30 dark:text-emerald-200'
+                : 'bg-rose-50 border-rose-300 text-rose-800 dark:bg-rose-500/10 dark:border-rose-500/30 dark:text-rose-200'
             }`}
           >
             {toast.variant === 'success' ? (

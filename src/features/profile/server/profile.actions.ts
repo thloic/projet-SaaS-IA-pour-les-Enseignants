@@ -14,62 +14,63 @@ export async function updateProfileAction(
   _prevState: UpdateProfileState,
   formData: FormData
 ): Promise<UpdateProfileState> {
-  const user = await getCurrentUser()
-  if (!user) {
-    return { error: 'Vous devez être connecté.', info: null }
-  }
+  try {
+    const user = await getCurrentUser()
+    if (!user) {
+      return { error: 'Votre session a expiré. Reconnectez-vous pour enregistrer vos modifications.', info: null }
+    }
 
-  const parsedProfile = settingsProfileSchema.safeParse({
-    firstName: formData.get('firstName'),
-    lastName: formData.get('lastName'),
-    country: formData.get('country'),
-    subject: formData.get('subject'),
-    gradingSystem: formData.get('gradingSystem'),
-    language: formData.get('language'),
-  })
-
-  if (!parsedProfile.success) {
-    return { error: parsedProfile.error.issues[0]?.message ?? 'Profil invalide.', info: null }
-  }
-
-  const supabase = await createClient()
-
-  const { error: profileError } = await supabase
-    .from('teacher_profiles')
-    .update({
-      first_name: parsedProfile.data.firstName,
-      last_name: parsedProfile.data.lastName,
-      country: parsedProfile.data.country,
-      subject: parsedProfile.data.subject,
-      grading_system: parsedProfile.data.gradingSystem,
-      language: parsedProfile.data.language,
+    const parsedProfile = settingsProfileSchema.safeParse({
+      firstName: formData.get('firstName'),
+      lastName: formData.get('lastName'),
+      country: formData.get('country'),
+      subjects: formData.getAll('subjects'),
+      gradingSystem: formData.get('gradingSystem'),
+      language: formData.get('language'),
     })
-    .eq('user_id', user.id)
 
-  if (profileError) {
-    return { error: profileError.message, info: null }
-  }
-
-  let info: string | null = null
-  const submittedEmail = formData.get('email')
-
-  if (typeof submittedEmail === 'string' && submittedEmail.trim() && submittedEmail.trim() !== user.email) {
-    const parsedEmail = settingsEmailSchema.safeParse({ email: submittedEmail.trim() })
-    if (!parsedEmail.success) {
-      return { error: parsedEmail.error.issues[0]?.message ?? 'Email invalide.', info: null }
+    if (!parsedProfile.success) {
+      return { error: parsedProfile.error.issues[0]?.message ?? 'Vérifiez les informations de votre profil.', info: null }
     }
 
-    const { error: emailError } = await supabase.auth.updateUser({ email: parsedEmail.data.email })
-    if (emailError) {
-      return { error: emailError.message, info: null }
+    const supabase = await createClient()
+    const { error: profileError } = await supabase
+      .from('teacher_profiles')
+      .update({
+        first_name: parsedProfile.data.firstName,
+        last_name: parsedProfile.data.lastName,
+        country: parsedProfile.data.country,
+        subject: parsedProfile.data.subjects[0],
+        subjects: parsedProfile.data.subjects,
+        grading_system: parsedProfile.data.gradingSystem,
+        language: parsedProfile.data.language,
+      })
+      .eq('user_id', user.id)
+
+    if (profileError) throw profileError
+
+    let info: string | null = null
+    const submittedEmail = formData.get('email')
+
+    if (typeof submittedEmail === 'string' && submittedEmail.trim() && submittedEmail.trim() !== user.email) {
+      const parsedEmail = settingsEmailSchema.safeParse({ email: submittedEmail.trim() })
+      if (!parsedEmail.success) {
+        return { error: parsedEmail.error.issues[0]?.message ?? 'Saisissez une adresse email valide.', info: null }
+      }
+
+      const { error: emailError } = await supabase.auth.updateUser({ email: parsedEmail.data.email })
+      if (emailError) throw emailError
+
+      info = `Un email de confirmation a été envoyé à ${parsedEmail.data.email}. Le changement prendra effet une fois confirmé.`
     }
 
-    info = `Un email de confirmation a été envoyé à ${parsedEmail.data.email}. Le changement prendra effet une fois confirmé.`
+    revalidatePath('/dashboard', 'layout')
+    return { error: null, info }
+  } catch (error) {
+    console.error('[settings] échec de la mise à jour du profil', error)
+    return {
+      error: "Nous n’avons pas pu enregistrer vos modifications. Réessayez dans quelques instants.",
+      info: null,
+    }
   }
-
-  // Le layout (dashboard) lit le profil pour la Sidebar/Navbar — on l'invalide
-  // pour que le nouveau prénom/initiales apparaissent immédiatement.
-  revalidatePath('/dashboard', 'layout')
-
-  return { error: null, info }
 }

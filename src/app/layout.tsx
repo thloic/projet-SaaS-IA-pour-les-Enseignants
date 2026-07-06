@@ -3,11 +3,12 @@ import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { ToastProvider } from "@/components/shared/ToastProvider";
 import { ConfirmProvider } from "@/components/shared/ConfirmProvider";
+import { ThemeProvider } from "@/components/shared/ThemeProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "EducAssist",
-  description: "Préparez vos cours en quelques clics grâce à l'IA pédagogique.",
+  description: "Plan lessons, create quizzes, and write report card comments with AI.",
 };
 
 export default function RootLayout({
@@ -17,13 +18,23 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="fr"
-      className={`${GeistSans.variable} ${GeistMono.variable} h-full antialiased`}
+      lang="en"
+      suppressHydrationWarning
+      className={`${GeistSans.variable} ${GeistMono.variable} dark h-full antialiased`}
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('educassist-theme')||'dark';document.documentElement.classList.toggle('dark',t==='dark')}catch(e){}})()`,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">
-        <ToastProvider>
-          <ConfirmProvider>{children}</ConfirmProvider>
-        </ToastProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <ConfirmProvider>{children}</ConfirmProvider>
+          </ToastProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

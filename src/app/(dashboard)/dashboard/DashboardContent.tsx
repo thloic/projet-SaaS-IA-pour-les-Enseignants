@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { useToast } from '@/components/shared/ToastProvider'
 
 const BRAND = '#534AB7'
 
@@ -56,10 +57,10 @@ const quickActions = [
 ]
 
 const stats = [
-  { label: 'Cours générés', value: '12', icon: TrendingUp, color: 'text-emerald-400' },
-  { label: 'Quiz créés', value: '8', icon: ClipboardCheck, color: 'text-sky-400' },
-  { label: 'Bulletins rédigés', value: '34', icon: FileText, color: 'text-amber-400' },
-  { label: 'Temps économisé', value: '6h', icon: Clock, color: 'text-violet-400' },
+  { label: 'Cours générés', value: '12', icon: TrendingUp, color: 'text-emerald-600 dark:text-emerald-400' },
+  { label: 'Quiz créés', value: '8', icon: ClipboardCheck, color: 'text-sky-600 dark:text-sky-400' },
+  { label: 'Bulletins rédigés', value: '34', icon: FileText, color: 'text-amber-600 dark:text-amber-400' },
+  { label: 'Temps économisé', value: '6h', icon: Clock, color: 'text-violet-600 dark:text-violet-400' },
 ]
 
 const historyItems = [
@@ -69,7 +70,7 @@ const historyItems = [
     type: 'Cours',
     date: 'il y a 2h',
     feedback: 'up',
-    badgeColor: 'bg-violet-500/20 text-violet-200 border-violet-500/30',
+    badgeColor: 'bg-violet-500/15 text-violet-700 border-violet-500/30 dark:bg-violet-500/20 dark:text-violet-200',
   },
   {
     title: 'La Révolution française',
@@ -77,7 +78,7 @@ const historyItems = [
     type: 'Quiz',
     date: 'hier',
     feedback: 'down',
-    badgeColor: 'bg-sky-500/20 text-sky-200 border-sky-500/30',
+    badgeColor: 'bg-sky-500/15 text-sky-700 border-sky-500/30 dark:bg-sky-500/20 dark:text-sky-200',
   },
   {
     title: 'Analyse de texte narratif',
@@ -85,7 +86,7 @@ const historyItems = [
     type: 'Cours',
     date: 'il y a 2 jours',
     feedback: 'up',
-    badgeColor: 'bg-violet-500/20 text-violet-200 border-violet-500/30',
+    badgeColor: 'bg-violet-500/15 text-violet-700 border-violet-500/30 dark:bg-violet-500/20 dark:text-violet-200',
   },
   {
     title: 'Écosystèmes & biodiversité',
@@ -93,7 +94,7 @@ const historyItems = [
     type: 'Bulletin',
     date: 'il y a 3 jours',
     feedback: 'up',
-    badgeColor: 'bg-amber-500/20 text-amber-200 border-amber-500/30',
+    badgeColor: 'bg-amber-500/15 text-amber-700 border-amber-500/30 dark:bg-amber-500/20 dark:text-amber-200',
   },
   {
     title: 'Present perfect',
@@ -101,7 +102,7 @@ const historyItems = [
     type: 'Quiz',
     date: 'il y a 5 jours',
     feedback: null,
-    badgeColor: 'bg-sky-500/20 text-sky-200 border-sky-500/30',
+    badgeColor: 'bg-sky-500/15 text-sky-700 border-sky-500/30 dark:bg-sky-500/20 dark:text-sky-200',
   },
 ]
 
@@ -116,12 +117,23 @@ function formatDate(): string {
 
 interface DashboardContentProps {
   firstName: string
+  showWelcome?: boolean
 }
 
-export default function DashboardContent({ firstName }: DashboardContentProps) {
+export default function DashboardContent({ firstName, showWelcome = false }: DashboardContentProps) {
   const router = useRouter()
+  const { showToast } = useToast()
   const containerRef = useRef<HTMLDivElement>(null)
   const formattedDate = useMemo(() => formatDate(), [])
+
+  useEffect(() => {
+    if (!showWelcome) return
+    showToast(
+      `Bienvenue${firstName ? ` ${firstName}` : ''} ! Heureux de vous retrouver sur EducAssist.`,
+      'success'
+    )
+    router.replace('/dashboard', { scroll: false })
+  }, [firstName, router, showToast, showWelcome])
 
   useGSAP(
     () => {
@@ -170,20 +182,20 @@ export default function DashboardContent({ firstName }: DashboardContentProps) {
             key={title}
             className={`action-card group rounded-2xl border p-6 transition-transform hover:-translate-y-1 ${
               style === 'violet'
-                ? 'bg-[#17142a] border-violet-500/30'
+                ? 'bg-violet-50 border-violet-200 dark:bg-[#17142a] dark:border-violet-500/30'
                 : style === 'teal'
-                ? 'bg-[#0f1a18] border-teal-500/30'
-                : 'bg-[#1a1408] border-amber-500/30'
+                ? 'bg-teal-50 border-teal-200 dark:bg-[#0f1a18] dark:border-teal-500/30'
+                : 'bg-amber-50 border-amber-200 dark:bg-[#1a1408] dark:border-amber-500/30'
             }`}
           >
             <div className="flex items-center justify-between">
               <div
                 className={`h-12 w-12 rounded-2xl flex items-center justify-center ${
                   style === 'violet'
-                    ? 'bg-violet-500/20 text-violet-300'
+                    ? 'bg-violet-500/15 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300'
                     : style === 'teal'
-                    ? 'bg-teal-500/20 text-teal-300'
-                    : 'bg-amber-500/20 text-amber-300'
+                    ? 'bg-teal-500/15 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300'
+                    : 'bg-amber-500/15 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'
                 }`}
               >
                 <Icon size={22} />

@@ -7,7 +7,7 @@ export const settingsProfileSchema = profileSchema.pick({
   firstName: true,
   lastName: true,
   country: true,
-  subject: true,
+  subjects: true,
   gradingSystem: true,
   language: true,
 })

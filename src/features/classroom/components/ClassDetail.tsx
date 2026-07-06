@@ -101,27 +101,6 @@ function normalizeHeader(value: string) {
     .trim()
 }
 
-function getStudentSaveErrorMessage(err: unknown) {
-  if (!(err instanceof Error)) return 'Impossible d ajouter cet eleve.'
-
-  const message = err.message
-  const code = 'code' in err && typeof err.code === 'string' ? err.code : null
-  const missingDossierColumn =
-    message.includes('family_language') ||
-    message.includes('intervention_plan') ||
-    message.includes('general_notes')
-
-  if (code === 'PGRST204' && missingDossierColumn) {
-    return 'La base Supabase n est pas a jour : appliquez la migration 005_student_profile_dossier.sql, puis reessayez.'
-  }
-
-  if (message.toLowerCase().includes('row-level security')) {
-    return 'Supabase a bloque l enregistrement par RLS. Verifiez que vous etes connecte et que les migrations du module classe sont appliquees.'
-  }
-
-  return message
-}
-
 export default function ClassDetail({ classId }: ClassDetailProps) {
   const router = useRouter()
   const confirm = useConfirm()
@@ -194,7 +173,8 @@ export default function ClassDetail({ classId }: ClassDetailProps) {
           .map((student) => normalizeStudent(student as StudentProfile))
       )
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Impossible de charger la classe.'
+      console.error('[classroom] échec du chargement de la classe', err)
+      const message = 'Impossible de charger cette classe pour le moment.'
       setError(message)
       showToast(message, 'error')
     } finally {
@@ -221,7 +201,9 @@ export default function ClassDetail({ classId }: ClassDetailProps) {
 
     const parsed = studentSchema.safeParse(form)
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? 'Eleve incomplet.')
+      const message = parsed.error.issues[0]?.message ?? 'Complétez les informations de l’élève.'
+      setError(message)
+      showToast(message, 'error')
       return
     }
 
@@ -234,7 +216,7 @@ export default function ClassDetail({ classId }: ClassDetailProps) {
       } = await supabase.auth.getUser()
 
       if (userError || !user) {
-        throw new Error('Connectez-vous pour ajouter un eleve.')
+        throw new Error('AUTH_REQUIRED')
       }
 
       const needsList = splitNeeds(parsed.data.needs ?? '')
@@ -275,7 +257,11 @@ export default function ClassDetail({ classId }: ClassDetailProps) {
       setForm(emptyStudentForm)
       showToast(`${parsed.data.firstName} ${parsed.data.lastName} ajoute a la classe.`, 'success')
     } catch (err) {
-      const message = getStudentSaveErrorMessage(err)
+      console.error('[classroom] échec de l’ajout de l’élève', err)
+      const message =
+        err instanceof Error && err.message === 'AUTH_REQUIRED'
+          ? 'Votre session a expiré. Reconnectez-vous pour ajouter un élève.'
+          : "Nous n’avons pas pu ajouter cet élève. Réessayez dans quelques instants."
       setError(message)
       showToast(message, 'error')
     } finally {
@@ -348,7 +334,7 @@ export default function ClassDetail({ classId }: ClassDetailProps) {
       setError(null)
       const rows = parseStudentCsv(await file.text())
       if (rows.length === 0) {
-        throw new Error('Aucun eleve valide trouve. Colonnes attendues : prenom, nom, sexe, langue, besoins, pei, notes.')
+        throw new Error('INVALID_CSV')
       }
 
       const supabase = createClient()
@@ -358,7 +344,7 @@ export default function ClassDetail({ classId }: ClassDetailProps) {
       } = await supabase.auth.getUser()
 
       if (userError || !user) {
-        throw new Error('Connectez-vous pour importer des eleves.')
+        throw new Error('AUTH_REQUIRED')
       }
 
       const studentsToInsert = rows.map((row) => ({
@@ -404,7 +390,13 @@ export default function ClassDetail({ classId }: ClassDetailProps) {
       ])
       showToast(`${rows.length} eleve${rows.length > 1 ? 's' : ''} importe${rows.length > 1 ? 's' : ''}.`, 'success')
     } catch (err) {
-      const message = getStudentSaveErrorMessage(err)
+      console.error('[classroom] échec de l’import des élèves', err)
+      const message =
+        err instanceof Error && err.message === 'INVALID_CSV'
+          ? 'Aucun élève valide n’a été trouvé. Vérifiez les colonnes prénom et nom de votre fichier.'
+          : err instanceof Error && err.message === 'AUTH_REQUIRED'
+            ? 'Votre session a expiré. Reconnectez-vous avant d’importer des élèves.'
+            : "Nous n’avons pas pu importer les élèves. Vérifiez le fichier puis réessayez."
       setError(message)
       showToast(message, 'error')
     } finally {
@@ -424,7 +416,9 @@ export default function ClassDetail({ classId }: ClassDetailProps) {
 
     const parsed = studentSchema.safeParse(editForm)
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? 'Profil eleve incomplet.')
+      const message = parsed.error.issues[0]?.message ?? 'Complétez les informations de l’élève.'
+      setError(message)
+      showToast(message, 'error')
       return
     }
 
@@ -461,7 +455,8 @@ export default function ClassDetail({ classId }: ClassDetailProps) {
       setIsEditingStudent(false)
       showToast('Profil eleve mis a jour.', 'success')
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Impossible de modifier cet eleve.'
+      console.error('[classroom] échec de la modification de l’élève', err)
+      const message = 'Impossible de modifier cet élève pour le moment. Réessayez.'
       setError(message)
       showToast(message, 'error')
     } finally {
@@ -496,7 +491,8 @@ export default function ClassDetail({ classId }: ClassDetailProps) {
       setIsEditingStudent(false)
       showToast('Eleve supprime.', 'success')
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Impossible de supprimer cet eleve.'
+      console.error('[classroom] échec de la suppression de l’élève', err)
+      const message = 'Impossible de supprimer cet élève pour le moment. Réessayez.'
       setError(message)
       showToast(message, 'error')
     } finally {
@@ -534,7 +530,7 @@ export default function ClassDetail({ classId }: ClassDetailProps) {
       </section>
 
       {error && (
-        <div className="flex gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+        <div className="flex gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-700 dark:text-rose-300">
           <AlertCircle size={16} className="mt-0.5 shrink-0" />
           <span>{error}</span>
         </div>

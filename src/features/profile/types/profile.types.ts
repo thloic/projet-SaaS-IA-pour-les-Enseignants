@@ -8,6 +8,7 @@ export interface TeacherProfile {
   last_name: string
   country: string
   subject: string
+  subjects: string[]
   levels: string[]
   grading_system: GradingSystem
   language: ContentLanguage
@@ -25,4 +26,8 @@ export interface TeacherIdentity {
   plan: 'free' | 'pro'
   generationsUsed: number
   generationsLimit: number
+}
+
+export function normalizeGradingSystem(value: unknown): GradingSystem {
+  return value === '10' || value === 'letter' ? value : '20'
 }

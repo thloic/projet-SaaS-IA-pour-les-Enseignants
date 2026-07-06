@@ -49,6 +49,7 @@
 }
 
 :root {
+  --page-grid-line: rgba(83, 74, 183, 0.08);
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -84,6 +85,7 @@
 }
 
 .dark {
+  --page-grid-line: rgba(180, 140, 40, 0.12);
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -123,14 +125,15 @@
   }
   html {
     @apply font-sans;
-    background-color: #111008;
+    background-color: var(--background);
     background-image:
-      linear-gradient(rgba(180, 140, 40, 0.15) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(180, 140, 40, 0.15) 1px, transparent 1px);
+      linear-gradient(var(--page-grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--page-grid-line) 1px, transparent 1px);
     background-size: 60px 60px;
+    transition: background-color 300ms ease;
   }
   body {
-    @apply text-foreground;
+    @apply bg-background text-foreground;
     min-height: 100vh;
   }
   h1, h2, h3, h4, h5, h6 {

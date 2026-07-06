@@ -3,7 +3,7 @@
 Ce fichier instruit les agents IA (Copilot, Claude Code, etc.) sur ce projet.
 
 ## Stack
-Next.js 14 · Supabase · LiteLLM + Claude Sonnet 4 · Stripe · Tailwind + shadcn/ui
+Next.js  · Supabase · LiteLLM + Claude code · Stripe · Tailwind + shadcn/ui
 
 ## Commandes utiles
 - `npm run dev` : lancer le serveur de dev

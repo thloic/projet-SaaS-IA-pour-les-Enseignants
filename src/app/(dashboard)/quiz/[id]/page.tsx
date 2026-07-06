@@ -31,10 +31,10 @@ const mockQuestions = [
 type BadgeColor = { label: string; badgeClass: string }
 
 const subjectColors: Record<string, BadgeColor> = {
-  Maths:    { label: 'Maths',    badgeClass: 'bg-violet-500/20 text-violet-300 border-violet-500/30' },
-  Histoire: { label: 'Histoire', badgeClass: 'bg-amber-500/20 text-amber-300 border-amber-500/30'   },
-  Français: { label: 'Français', badgeClass: 'bg-sky-500/20 text-sky-300 border-sky-500/30'         },
-  SVT:      { label: 'SVT',      badgeClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
+  Maths:    { label: 'Maths',    badgeClass: 'bg-violet-500/15 text-violet-700 border-violet-500/30 dark:bg-violet-500/20 dark:text-violet-300' },
+  Histoire: { label: 'Histoire', badgeClass: 'bg-amber-500/15 text-amber-700 border-amber-500/30 dark:bg-amber-500/20 dark:text-amber-300'   },
+  Français: { label: 'Français', badgeClass: 'bg-sky-500/15 text-sky-700 border-sky-500/30 dark:bg-sky-500/20 dark:text-sky-300'         },
+  SVT:      { label: 'SVT',      badgeClass: 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:bg-emerald-500/20 dark:text-emerald-300' },
 }
 
 export default function QuizPage() {
@@ -156,7 +156,7 @@ export default function QuizPage() {
                     <Badge className="text-[10px] border border-border text-muted-foreground bg-muted/40">
                       {q.type === 'multiple_choice' ? 'QCM' : q.type === 'true_false' ? 'V/F' : 'Ouverte'}
                     </Badge>
-                    <Badge className="text-[10px] bg-violet-500/20 text-violet-300 border-violet-500/30">
+                    <Badge className="border-violet-500/30 bg-violet-500/15 text-[10px] text-violet-700 dark:bg-violet-500/20 dark:text-violet-300">
                       {q.points} pt{q.points > 1 ? 's' : ''}
                     </Badge>
                   </div>
@@ -184,4 +184,3 @@ export default function QuizPage() {
     </div>
   )
 }
-

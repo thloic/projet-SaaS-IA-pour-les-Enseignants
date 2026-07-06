@@ -47,7 +47,8 @@ export default function ClassroomHome() {
 
       setClasses((data ?? []) as ClassRoom[])
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Impossible de charger les classes.'
+      console.error('[classroom] échec du chargement des classes', err)
+      const message = 'Impossible de charger vos classes pour le moment.'
       setError(message)
       showToast(message, 'error')
     } finally {
@@ -66,7 +67,9 @@ export default function ClassroomHome() {
 
     const parsed = classSchema.safeParse({ name, level, subject })
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? 'Classe incomplete.')
+      const message = parsed.error.issues[0]?.message ?? 'Complétez les informations de la classe.'
+      setError(message)
+      showToast(message, 'error')
       return
     }
 
@@ -79,7 +82,7 @@ export default function ClassroomHome() {
       } = await supabase.auth.getUser()
 
       if (userError || !user) {
-        throw new Error('Connectez-vous pour creer une classe.')
+        throw new Error('AUTH_REQUIRED')
       }
 
       const { data: createdClass, error: insertError } = await supabase
@@ -103,7 +106,11 @@ export default function ClassroomHome() {
       setClasses((current) => [createdClass as ClassRoom, ...current])
       showToast(`Classe "${parsed.data.name}" enregistree.`, 'success')
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Impossible de creer la classe.'
+      console.error('[classroom] échec de la création de la classe', err)
+      const message =
+        err instanceof Error && err.message === 'AUTH_REQUIRED'
+          ? 'Votre session a expiré. Reconnectez-vous pour créer une classe.'
+          : 'Impossible de créer cette classe pour le moment. Réessayez.'
       setError(message)
       showToast(message, 'error')
     } finally {
@@ -124,7 +131,9 @@ export default function ClassroomHome() {
 
     const parsed = classSchema.safeParse({ name: editName, level: editLevel, subject: editSubject })
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? 'Classe incomplete.')
+      const message = parsed.error.issues[0]?.message ?? 'Complétez les informations de la classe.'
+      setError(message)
+      showToast(message, 'error')
       return
     }
 
@@ -152,7 +161,8 @@ export default function ClassroomHome() {
       setEditingClass(null)
       showToast('Classe mise a jour.', 'success')
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Impossible de modifier la classe.'
+      console.error('[classroom] échec de la modification de la classe', err)
+      const message = 'Impossible de modifier cette classe pour le moment. Réessayez.'
       setError(message)
       showToast(message, 'error')
     } finally {
@@ -179,7 +189,8 @@ export default function ClassroomHome() {
       setClasses((current) => current.filter((classroom) => classroom.id !== item.id))
       showToast('Classe supprimee.', 'success')
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Impossible de supprimer cette classe.'
+      console.error('[classroom] échec de la suppression de la classe', err)
+      const message = 'Impossible de supprimer cette classe pour le moment. Réessayez.'
       setError(message)
       showToast(message, 'error')
     } finally {
@@ -209,7 +220,7 @@ export default function ClassroomHome() {
       </section>
 
       {error && (
-        <div className="flex gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+        <div className="flex gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-700 dark:text-rose-300">
           <AlertCircle size={16} className="mt-0.5 shrink-0" />
           <span>{error}</span>
         </div>

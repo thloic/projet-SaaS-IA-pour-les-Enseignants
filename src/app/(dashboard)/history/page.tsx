@@ -34,9 +34,9 @@ const mockHistory: HistoryEntry[] = [
 ]
 
 const TYPE_LABELS: Record<EntryType, { label: string; icon: React.ElementType; class: string }> = {
-  course:   { label: 'Cours',    icon: BookOpen,      class: 'bg-violet-500/20 text-violet-300 border-violet-500/30' },
-  quiz:     { label: 'Quiz',     icon: ClipboardList, class: 'bg-teal-500/20 text-teal-300 border-teal-500/30'       },
-  bulletin: { label: 'Bulletin', icon: MessageSquare, class: 'bg-amber-500/20 text-amber-300 border-amber-500/30'   },
+  course:   { label: 'Cours',    icon: BookOpen,      class: 'bg-violet-500/15 text-violet-700 border-violet-500/30 dark:bg-violet-500/20 dark:text-violet-300' },
+  quiz:     { label: 'Quiz',     icon: ClipboardList, class: 'bg-teal-500/15 text-teal-700 border-teal-500/30 dark:bg-teal-500/20 dark:text-teal-300'       },
+  bulletin: { label: 'Bulletin', icon: MessageSquare, class: 'bg-amber-500/15 text-amber-700 border-amber-500/30 dark:bg-amber-500/20 dark:text-amber-300'   },
 }
 
 const ALL_SUBJECTS = ['Tous', ...Array.from(new Set(mockHistory.map((e) => e.subject)))]
@@ -170,4 +170,3 @@ export default function HistoryPage() {
     </div>
   )
 }
-

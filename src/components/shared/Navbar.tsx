@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Bell, Search, Menu, Settings, LogOut, User, Sun, Moon } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/components/shared/ToastProvider'
+import { useConfirm } from '@/components/shared/ConfirmProvider'
 import type { TeacherIdentity } from '@/features/profile/types/profile.types'
 
 const BRAND = '#534AB7'
@@ -17,17 +19,36 @@ interface NavbarProps {
 
 export default function Navbar({ onMenuToggle, isDark = true, onThemeToggle, teacher }: NavbarProps) {
   const router = useRouter()
+  const { showToast } = useToast()
+  const confirm = useConfirm()
   const [profileOpen, setProfileOpen] = useState(false)
   const [isSigningOut, setIsSigningOut] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   async function handleSignOut() {
     setProfileOpen(false)
+    const accepted = await confirm({
+      title: 'Se déconnecter ?',
+      message: 'Vous devrez vous reconnecter pour accéder à votre espace EducAssist.',
+      confirmLabel: 'Se déconnecter',
+      cancelLabel: 'Rester connecté',
+    })
+    if (!accepted) return
+
     setIsSigningOut(true)
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push('/login')
-    router.refresh()
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+      showToast('Vous êtes maintenant déconnecté.', 'success')
+      router.push('/login')
+      router.refresh()
+    } catch (error) {
+      console.error('[auth] échec de la déconnexion', error)
+      showToast('Impossible de vous déconnecter pour le moment. Réessayez.', 'error')
+    } finally {
+      setIsSigningOut(false)
+    }
   }
 
   useEffect(() => {
@@ -131,4 +152,3 @@ export default function Navbar({ onMenuToggle, isDark = true, onThemeToggle, tea
     </header>
   )
 }
-

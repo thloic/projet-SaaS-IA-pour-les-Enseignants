@@ -1,5 +1,6 @@
 import { getCurrentUser, getCurrentTeacherProfile } from '@/features/profile/server/profile'
 import SettingsForm from '@/features/profile/components/SettingsForm'
+import { normalizeGradingSystem } from '@/features/profile/types/profile.types'
 
 export default async function SettingsPage() {
   const [user, profile] = await Promise.all([getCurrentUser(), getCurrentTeacherProfile()])
@@ -10,8 +11,14 @@ export default async function SettingsPage() {
       initialLastName={profile?.last_name ?? ''}
       initialEmail={user?.email ?? ''}
       initialCountry={profile?.country ?? ''}
-      initialSubject={profile?.subject ?? ''}
-      initialGradingSystem={profile?.grading_system ?? '20'}
+      initialSubjects={
+        profile?.subjects?.length
+          ? profile.subjects
+          : profile?.subject
+            ? [profile.subject]
+            : ['Mathématiques']
+      }
+      initialGradingSystem={normalizeGradingSystem(profile?.grading_system)}
       initialLanguage={profile?.language ?? 'fr'}
       generationsUsed={0}
       generationsLimit={3}

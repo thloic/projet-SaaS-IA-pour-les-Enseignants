@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Navbar from '@/components/shared/Navbar'
 import Sidebar from '@/components/shared/Sidebar'
+import { useTheme } from '@/components/shared/ThemeProvider'
 import type { TeacherIdentity } from '@/features/profile/types/profile.types'
 
 interface DashboardShellProps {
@@ -13,7 +14,7 @@ interface DashboardShellProps {
 export default function DashboardShell({ teacher, children }: DashboardShellProps) {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [isDark, setIsDark] = useState(true)
+  const { isDark, toggleTheme } = useTheme()
 
   return (
     <div className={`min-h-screen bg-background text-foreground ${isDark ? 'dark' : ''}`}>
@@ -32,7 +33,7 @@ export default function DashboardShell({ teacher, children }: DashboardShellProp
         <Navbar
           onMenuToggle={() => setMobileOpen((v) => !v)}
           isDark={isDark}
-          onThemeToggle={() => setIsDark((v) => !v)}
+          onThemeToggle={toggleTheme}
           teacher={teacher}
         />
         <main className="flex-1 px-4 py-6 lg:px-8 lg:py-8 pb-24 lg:pb-8">{children}</main>

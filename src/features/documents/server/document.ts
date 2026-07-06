@@ -7,15 +7,16 @@ export async function listMyDocuments(): Promise<SourceDocumentListItem[]> {
   if (!user) return []
 
   const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('source_documents')
-    .select('id, user_id, title, source_type, original_filename, file_type, created_at, updated_at')
-    .order('created_at', { ascending: false })
+  try {
+    const { data, error } = await supabase
+      .from('source_documents')
+      .select('id, user_id, title, source_type, original_filename, file_type, created_at, updated_at')
+      .order('created_at', { ascending: false })
 
-  if (error) {
-    // Capté par error.tsx au niveau de la route.
-    throw new Error(`Impossible de charger vos documents : ${error.message}`)
+    if (error) throw error
+    return data ?? []
+  } catch (error) {
+    console.error('[documents] échec du chargement de la liste', error)
+    throw new Error('Impossible de charger vos documents pour le moment.')
   }
-
-  return data ?? []
 }

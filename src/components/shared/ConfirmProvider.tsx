@@ -43,14 +43,24 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
       {children}
       {pending && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 space-y-4 shadow-xl">
+          <div
+            className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 space-y-4 shadow-xl"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="confirm-dialog-title"
+            aria-describedby="confirm-dialog-description"
+          >
             <div className="flex items-start gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-500/10 text-rose-400">
                 <AlertTriangle size={18} />
               </div>
               <div className="min-w-0">
-                <h2 className="font-bold">{pending.title ?? 'Confirmer la suppression'}</h2>
-                <p className="mt-1 text-sm text-muted-foreground">{pending.message}</p>
+                <h2 id="confirm-dialog-title" className="font-bold">
+                  {pending.title ?? 'Confirmer la suppression'}
+                </h2>
+                <p id="confirm-dialog-description" className="mt-1 text-sm text-muted-foreground">
+                  {pending.message}
+                </p>
               </div>
             </div>
             <div className="flex justify-end gap-2">

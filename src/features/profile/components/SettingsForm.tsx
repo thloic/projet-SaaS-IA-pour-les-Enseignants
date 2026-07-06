@@ -24,7 +24,7 @@ interface SettingsFormProps {
   initialLastName: string
   initialEmail: string
   initialCountry: string
-  initialSubject: string
+  initialSubjects: string[]
   initialGradingSystem: GradingSystem
   initialLanguage: ContentLanguage
   generationsUsed: number
@@ -38,7 +38,7 @@ export default function SettingsForm({
   initialLastName,
   initialEmail,
   initialCountry,
-  initialSubject,
+  initialSubjects,
   initialGradingSystem,
   initialLanguage,
   generationsUsed,
@@ -50,19 +50,34 @@ export default function SettingsForm({
   const [lastName, setLastName] = useState(initialLastName)
   const [email, setEmail] = useState(initialEmail)
   const [country, setCountry] = useState(initialCountry)
-  const [subject, setSubject] = useState(initialSubject)
+  const [subjects, setSubjects] = useState<string[]>(initialSubjects)
   const [gradingSystem, setGradingSystem] = useState<GradingSystem>(initialGradingSystem)
   const [language, setLanguage] = useState<ContentLanguage>(initialLanguage)
 
+  function toggleSubject(subject: string) {
+    setSubjects((current) =>
+      current.includes(subject)
+        ? current.filter((item) => item !== subject)
+        : [...current, subject]
+    )
+  }
+
   const [, formAction, isPending] = useActionState(
     async (prevState: UpdateProfileState, formData: FormData) => {
-      const result = await updateProfileAction(prevState, formData)
-      if (result.error) {
-        showToast(result.error, 'error')
-      } else {
-        showToast(result.info ?? 'Modifications enregistrées', 'success')
+      try {
+        const result = await updateProfileAction(prevState, formData)
+        if (result.error) {
+          showToast(result.error, 'error')
+        } else {
+          showToast(result.info ?? 'Modifications enregistrées', 'success')
+        }
+        return result
+      } catch (error) {
+        console.error('[settings] action de mise à jour indisponible', error)
+        const message = "Nous n’avons pas pu enregistrer vos modifications. Réessayez dans quelques instants."
+        showToast(message, 'error')
+        return { error: message, info: null }
       }
-      return result
     },
     initialActionState
   )
@@ -83,6 +98,9 @@ export default function SettingsForm({
       <form action={formAction} className="space-y-8">
         <input type="hidden" name="gradingSystem" value={gradingSystem} />
         <input type="hidden" name="language" value={language} />
+        {subjects.map((subject) => (
+          <input key={subject} type="hidden" name="subjects" value={subject} />
+        ))}
 
         {/* Section 1 — Profile */}
         <div className="space-y-4">
@@ -141,7 +159,7 @@ export default function SettingsForm({
                 Changer l’email nécessite une confirmation par lien envoyé à la nouvelle adresse.
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Pays</Label>
                 <select
@@ -156,17 +174,29 @@ export default function SettingsForm({
                 </select>
               </div>
               <div className="space-y-2">
-                <Label>Matière</Label>
-                <select
-                  name="subject"
-                  className="w-full rounded-xl bg-muted/40 border border-border px-3 py-2.5 text-sm outline-none"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                >
-                  {SUBJECTS_OPTIONS.map((s) => (
-                    <option key={s} value={s}>{s}</option>
+                <Label>Matières enseignées</Label>
+                <div className="flex flex-wrap gap-2">
+                  {SUBJECTS_OPTIONS.map((subject) => (
+                    <button
+                      key={subject}
+                      type="button"
+                      onClick={() => toggleSubject(subject)}
+                      className={`rounded-xl border px-3 py-1.5 text-xs font-medium transition-colors ${
+                        subjects.includes(subject)
+                          ? 'border-transparent text-white'
+                          : 'border-border text-muted-foreground hover:bg-muted/40'
+                      }`}
+                      style={subjects.includes(subject) ? { backgroundColor: BRAND } : {}}
+                    >
+                      {subject}
+                    </button>
                   ))}
-                </select>
+                </div>
+                {subjects.length === 0 && (
+                  <p className="text-xs text-rose-600 dark:text-rose-300">
+                    Sélectionnez au moins une matière avant d’enregistrer.
+                  </p>
+                )}
               </div>
             </div>
           </div>
