@@ -2,10 +2,11 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Brain, ChevronRight, ChevronLeft, Check, AlertCircle } from 'lucide-react'
+import { ChevronRight, ChevronLeft, Check, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import BrandLogo from '@/components/shared/BrandLogo'
 import { createClient } from '@/lib/supabase/client'
 import { profileSchema } from '@/features/profile/schemas/profileSchema'
 import { useToast } from '@/components/shared/ToastProvider'
@@ -190,11 +191,8 @@ export default function OnboardingForm({
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
-        <div className="flex items-center gap-2 justify-center mb-8">
-          <div className="rounded-xl p-2" style={{ backgroundColor: BRAND }}>
-            <Brain className="text-white" size={22} />
-          </div>
-          <span className="font-black text-xl">EducAssist</span>
+        <div className="flex justify-center mb-8">
+          <BrandLogo className="h-12 w-40" priority />
         </div>
 
         <div className="flex items-center gap-2 justify-center mb-8">

@@ -1,12 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowLeft, Brain } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import type { PublicLocale } from '@/features/marketing/hooks/usePublicLocale'
+import BrandLogo from '@/components/shared/BrandLogo'
 import ThemeToggle from '@/components/shared/ThemeToggle'
 import { useTheme } from '@/components/shared/ThemeProvider'
-
-const BRAND = '#534AB7'
 
 interface PublicPageShellProps {
   locale: PublicLocale
@@ -43,11 +42,8 @@ export default function PublicPageShell({
 
       <header className="relative z-10 border-b border-[#534AB7]/15 bg-[#F5F3FF]/80 backdrop-blur-xl dark:border-white/10 dark:bg-[#080711]/75">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 sm:px-8">
-          <Link href="/" className="flex items-center gap-2.5 font-black">
-            <span className="rounded-lg p-1.5" style={{ backgroundColor: BRAND }}>
-              <Brain size={19} />
-            </span>
-            EducAssist
+          <Link href="/" className="flex items-center">
+            <BrandLogo className="h-10 w-32" priority />
           </Link>
           <div className="flex items-center gap-3">
             <ThemeToggle />

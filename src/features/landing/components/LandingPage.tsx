@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
 import {
-  Brain,
   Moon,
   Sun,
   BookOpen,
@@ -16,6 +15,7 @@ import {
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import BrandLogo from '@/components/shared/BrandLogo'
 import {
   landingTranslations,
   type LandingLocale,
@@ -109,11 +109,8 @@ export default function LandingPage() {
         }`}
       >
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="rounded-lg p-1.5" style={{ backgroundColor: BRAND }}>
-              <Brain className="text-white" size={20} />
-            </div>
-            <span className="font-black text-xl tracking-tight">EducAssist</span>
+          <Link href="/" className="flex items-center">
+            <BrandLogo className="h-10 w-32" priority />
           </Link>
 
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
@@ -556,10 +553,9 @@ export default function LandingPage() {
             <div className="absolute bottom-0 left-1/2 h-32 w-px -translate-x-1/2 bg-gradient-to-b from-[#C8A032]/50 to-transparent" />
 
             <div
-              className="relative mb-7 flex h-20 w-20 items-center justify-center rounded-[24px] border border-[#7F77DD]/40 shadow-[0_0_60px_rgba(83,74,183,0.35)]"
-              style={{ background: 'linear-gradient(145deg, #6259C8, #342E82)' }}
+              className="relative mb-7 rounded-[24px] border border-[#7F77DD]/40 shadow-[0_0_60px_rgba(83,74,183,0.35)]"
             >
-              <Brain size={36} className="text-white" />
+              <BrandLogo variant="mark" className="h-20 w-20 rounded-[24px]" />
               <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-[#C8A032] shadow-[0_0_18px_rgba(200,160,50,0.9)]" />
             </div>
             <p className="mb-4 text-xs font-bold tracking-[0.28em] text-[#C8A032]">
@@ -632,12 +628,7 @@ export default function LandingPage() {
           </div>
 
           <div className={`flex flex-col items-center justify-between gap-4 border-t px-6 py-7 text-center sm:flex-row sm:px-8 sm:text-left ${footerBorder}`}>
-            <div className="flex items-center gap-2.5">
-              <div className="rounded-lg p-1.5" style={{ backgroundColor: BRAND }}>
-                <Brain className="text-white" size={16} />
-              </div>
-              <span className="font-bold">EducAssist</span>
-            </div>
+            <BrandLogo className="h-10 w-32" />
             <p className={`text-xs ${dark ? 'text-white/40' : 'text-gray-500'}`}>
               {t.footer.copyright}
             </p>

@@ -2,7 +2,6 @@
 
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  Brain,
   Home,
   FileText,
   BookOpen,
@@ -18,6 +17,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import BrandLogo from '@/components/shared/BrandLogo'
 import type { TeacherIdentity } from '@/features/profile/types/profile.types'
 
 const BRAND = '#534AB7'
@@ -69,15 +69,10 @@ export default function Sidebar({ collapsed, mobileOpen, onMobileClose, onToggle
               collapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'
             }`}
           >
-            <div className="rounded-lg p-1.5 shrink-0" style={{ backgroundColor: BRAND }}>
-              <Brain className="text-white" size={18} />
-            </div>
-            <span className="font-black text-base whitespace-nowrap">EducAssist</span>
+            <BrandLogo className="h-10 w-32" priority />
           </div>
           {collapsed && (
-            <div className="mx-auto rounded-lg p-1.5 shrink-0" style={{ backgroundColor: BRAND }}>
-              <Brain className="text-white" size={18} />
-            </div>
+            <BrandLogo variant="mark" className="mx-auto h-9 w-9" priority />
           )}
           <button
             onClick={onToggle}
@@ -190,10 +185,7 @@ export default function Sidebar({ collapsed, mobileOpen, onMobileClose, onToggle
           <aside className="relative z-10 flex h-full w-72 max-w-[85vw] flex-col border-r border-border bg-card shadow-xl">
             <div className="flex h-16 items-center justify-between px-4">
               <div className="flex items-center gap-2">
-                <div className="rounded-lg p-1.5 shrink-0" style={{ backgroundColor: BRAND }}>
-                  <Brain className="text-white" size={18} />
-                </div>
-                <span className="font-black text-base whitespace-nowrap">EducAssist</span>
+                <BrandLogo className="h-10 w-32" priority />
               </div>
               <button
                 onClick={onMobileClose}

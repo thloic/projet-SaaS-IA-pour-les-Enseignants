@@ -3,11 +3,12 @@
 import { useRef, useState } from 'react'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
-import { Brain, FileText, Sparkles, Target, BarChart2, CheckCircle2 } from 'lucide-react'
+import { FileText, Sparkles, Target, BarChart2, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import BrandLogo from '@/components/shared/BrandLogo'
 import { createClient } from '@/lib/supabase/client'
 import { magicLinkSchema } from '@/features/auth/schemas/authSchema'
 import { getAuthCallbackErrorMessage, getAuthErrorMessage } from '@/features/auth/utils/authError'
@@ -125,12 +126,7 @@ export default function LoginForm() {
       >
         {/* Logo */}
         <div className="auth-animate flex items-center gap-3">
-          <div className="bg-white/20 rounded-xl p-2">
-            <Brain className="text-white" size={28} />
-          </div>
-          <span className="text-white font-bold text-2xl tracking-tight">
-            EducAssist
-          </span>
+          <BrandLogo className="h-16 w-52 rounded-xl shadow-lg" priority />
         </div>
 
         {/* Bubbles */}
@@ -165,10 +161,7 @@ export default function LoginForm() {
         <div className="auth-animate w-full max-w-md space-y-6">
           {/* Mobile logo */}
           <div className="flex items-center gap-2 lg:hidden">
-            <Brain size={22} style={{ color: BRAND }} />
-            <span className="font-bold text-xl" style={{ color: BRAND }}>
-              EducAssist
-            </span>
+            <BrandLogo className="h-12 w-40" priority />
           </div>
 
           <div className="space-y-1">
