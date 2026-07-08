@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import QuizButton from '@/features/quiz/components/QuizButton'
 import {
   createDocumentAction,
   deleteDocumentAction,
@@ -448,6 +449,7 @@ function DocumentListItem({ doc, isExpanded, onToggleExpand }: DocumentListItemP
       >
         <Sparkles size={14} /> Adapter en 5 versions — bientôt disponible
       </button>
+      <QuizButton sourceDocumentId={doc.id} />
     </div>
   )
 }

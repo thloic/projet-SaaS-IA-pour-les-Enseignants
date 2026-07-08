@@ -159,9 +159,17 @@ test('createLiteLLMClient reads environment configuration', () => {
   })
 })
 
-test('prompt builders are current placeholders', () => {
+test('prompt builders expose placeholders and quiz JSON instructions', () => {
   assert.equal(buildCoursePrompt(), '')
-  assert.equal(buildQuizPrompt(), '')
+  const quizPrompt = buildQuizPrompt({
+    content: 'Cours sur les fractions',
+    gradingSystem: 'percentage',
+    questionCount: 5,
+    subject: 'Mathématiques',
+    level: 'Secondaire',
+  })
+  assert.match(quizPrompt, /objet JSON valide/)
+  assert.match(quizPrompt, /percentage/)
   assert.equal(buildBulletinPrompt(), '')
   assert.equal(buildVariantPrompt(), '')
 })
