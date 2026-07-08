@@ -12,12 +12,20 @@ import {
   updateProfileAction,
   type UpdateProfileState,
 } from '@/features/profile/server/profile.actions'
-import type { GradingSystem, ContentLanguage } from '@/features/profile/types/profile.types'
+import { defaultGrading, type GradingSystem, type ContentLanguage } from '@/features/profile/types/profile.types'
 
 const BRAND = '#534AB7'
 
-const COUNTRIES = ['Sénégal', "Côte d'Ivoire", 'Cameroun', 'Mali', 'Bénin', 'Togo', 'Burkina Faso', 'Guinée', 'Madagascar', 'Congo', 'France', 'Autre']
+const COUNTRIES = ['Canada', 'Sénégal', "Côte d'Ivoire", 'Cameroun', 'Mali', 'Bénin', 'Togo', 'Burkina Faso', 'Guinée', 'Madagascar', 'Congo', 'France', 'Autre']
+const CANADA_PROVINCES = ['Quebec', 'Ontario']
 const SUBJECTS_OPTIONS = ['Mathématiques', 'Français', 'Histoire-Géographie', 'SVT', 'Physique-Chimie', 'Anglais', 'Espagnol', 'Philosophie', 'Arts', 'EPS', 'Technologie', 'Autre']
+const GRADING_OPTIONS = [
+  ['percentage', 'Pourcentage (100 %)'],
+  ['letter_ca', 'Lettres (A → R)'],
+  ['levels', 'Niveaux 1 – 4'],
+  ['20', 'Sur 20'],
+  ['10', 'Sur 10'],
+] as const
 
 interface SettingsFormProps {
   initialFirstName: string
@@ -33,6 +41,12 @@ interface SettingsFormProps {
 
 const initialActionState: UpdateProfileState = { error: null, info: null }
 
+function parseCountry(value: string) {
+  if (value === 'Canada - Ontario') return { countryName: 'Canada', province: 'Ontario' }
+  if (value === 'Canada - Quebec') return { countryName: 'Canada', province: 'Quebec' }
+  return { countryName: value || 'Canada', province: 'Quebec' }
+}
+
 export default function SettingsForm({
   initialFirstName,
   initialLastName,
@@ -45,22 +59,54 @@ export default function SettingsForm({
   generationsLimit,
 }: SettingsFormProps) {
   const { showToast } = useToast()
+  const initialCountryParts = parseCountry(initialCountry)
+  const initialKnownSubjects = initialSubjects.filter((subject) => subject !== 'Autre' && SUBJECTS_OPTIONS.includes(subject))
+  const initialCustomSubject = initialSubjects.find((subject) => subject !== 'Autre' && !SUBJECTS_OPTIONS.includes(subject)) ?? ''
 
   const [firstName, setFirstName] = useState(initialFirstName)
   const [lastName, setLastName] = useState(initialLastName)
   const [email, setEmail] = useState(initialEmail)
-  const [country, setCountry] = useState(initialCountry)
-  const [subjects, setSubjects] = useState<string[]>(initialSubjects)
+  const [countryName, setCountryName] = useState(initialCountryParts.countryName)
+  const [province, setProvince] = useState(initialCountryParts.province)
+  const [subjects, setSubjects] = useState<string[]>(initialKnownSubjects)
+  const [customSubjectEnabled, setCustomSubjectEnabled] = useState(Boolean(initialCustomSubject))
+  const [customSubject, setCustomSubject] = useState(initialCustomSubject)
   const [gradingSystem, setGradingSystem] = useState<GradingSystem>(initialGradingSystem)
   const [language, setLanguage] = useState<ContentLanguage>(initialLanguage)
 
   function toggleSubject(subject: string) {
+    if (subject === 'Autre') {
+      setCustomSubjectEnabled((current) => !current)
+      return
+    }
+
     setSubjects((current) =>
       current.includes(subject)
         ? current.filter((item) => item !== subject)
         : [...current, subject]
     )
   }
+
+  function getCountryValue(nextCountryName = countryName, nextProvince = province) {
+    return nextCountryName === 'Canada' ? `Canada - ${nextProvince}` : nextCountryName
+  }
+
+  function getNormalizedSubjects() {
+    const custom = customSubject.trim()
+    return customSubjectEnabled && custom ? [...subjects, custom] : subjects
+  }
+
+  function handleCountryChange(nextCountryName: string) {
+    setCountryName(nextCountryName)
+    setGradingSystem(defaultGrading(getCountryValue(nextCountryName, province)))
+  }
+
+  function handleProvinceChange(nextProvince: string) {
+    setProvince(nextProvince)
+    setGradingSystem(defaultGrading(getCountryValue(countryName, nextProvince)))
+  }
+
+  const normalizedSubjects = getNormalizedSubjects()
 
   const [, formAction, isPending] = useActionState(
     async (prevState: UpdateProfileState, formData: FormData) => {
@@ -96,9 +142,10 @@ export default function SettingsForm({
       </div>
 
       <form action={formAction} className="space-y-8">
+        <input type="hidden" name="country" value={getCountryValue()} />
         <input type="hidden" name="gradingSystem" value={gradingSystem} />
         <input type="hidden" name="language" value={language} />
-        {subjects.map((subject) => (
+        {normalizedSubjects.map((subject) => (
           <input key={subject} type="hidden" name="subjects" value={subject} />
         ))}
 
@@ -163,16 +210,31 @@ export default function SettingsForm({
               <div className="space-y-2">
                 <Label>Pays</Label>
                 <select
-                  name="country"
                   className="w-full rounded-xl bg-muted/40 border border-border px-3 py-2.5 text-sm outline-none"
-                  value={country}
-                  onChange={(e) => setCountry(e.target.value)}
+                  value={countryName}
+                  onChange={(e) => handleCountryChange(e.target.value)}
                 >
                   {COUNTRIES.map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
               </div>
+              {countryName === 'Canada' && (
+                <div className="space-y-2">
+                  <Label>Province</Label>
+                  <select
+                    className="w-full rounded-xl bg-muted/40 border border-border px-3 py-2.5 text-sm outline-none"
+                    value={province}
+                    onChange={(e) => handleProvinceChange(e.target.value)}
+                  >
+                    {CANADA_PROVINCES.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>Matières enseignées</Label>
                 <div className="flex flex-wrap gap-2">
@@ -182,17 +244,25 @@ export default function SettingsForm({
                       type="button"
                       onClick={() => toggleSubject(subject)}
                       className={`rounded-xl border px-3 py-1.5 text-xs font-medium transition-colors ${
-                        subjects.includes(subject)
+                        subject === 'Autre' ? customSubjectEnabled : subjects.includes(subject)
                           ? 'border-transparent text-white'
                           : 'border-border text-muted-foreground hover:bg-muted/40'
                       }`}
-                      style={subjects.includes(subject) ? { backgroundColor: BRAND } : {}}
+                      style={(subject === 'Autre' ? customSubjectEnabled : subjects.includes(subject)) ? { backgroundColor: BRAND } : {}}
                     >
                       {subject}
                     </button>
                   ))}
                 </div>
-                {subjects.length === 0 && (
+                {customSubjectEnabled && (
+                  <Input
+                    value={customSubject}
+                    onChange={(e) => setCustomSubject(e.target.value)}
+                    placeholder="Saisissez votre matière"
+                    className="bg-muted/40"
+                  />
+                )}
+                {normalizedSubjects.length === 0 && (
                   <p className="text-xs text-rose-600 dark:text-rose-300">
                     Sélectionnez au moins une matière avant d’enregistrer.
                   </p>
@@ -211,8 +281,8 @@ export default function SettingsForm({
           <div className="rounded-2xl border border-border bg-muted/20 p-5 space-y-5">
             <div className="space-y-2">
               <Label>Système de notation</Label>
-              <div className="flex gap-2">
-                {([['20', 'Sur 20'], ['10', 'Sur 10'], ['letter', 'Lettres A–F']] as const).map(([v, l]) => (
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {GRADING_OPTIONS.map(([v, l]) => (
                   <button
                     key={v}
                     type="button"

@@ -8,8 +8,9 @@ export const settingsProfileSchema = profileSchema.pick({
   lastName: true,
   country: true,
   subjects: true,
-  gradingSystem: true,
   language: true,
+}).extend({
+  gradingSystem: z.enum(['20', '10', 'letter', 'percentage', 'letter_ca', 'levels']),
 })
 
 export const settingsEmailSchema = z.object({

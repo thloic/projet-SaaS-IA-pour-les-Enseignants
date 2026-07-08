@@ -1,4 +1,4 @@
-export type GradingSystem = '20' | '10' | 'letter'
+export type GradingSystem = '20' | '10' | 'letter' | 'percentage' | 'letter_ca' | 'levels'
 export type ContentLanguage = 'fr' | 'en'
 
 export interface TeacherProfile {
@@ -29,5 +29,20 @@ export interface TeacherIdentity {
 }
 
 export function normalizeGradingSystem(value: unknown): GradingSystem {
-  return value === '10' || value === 'letter' ? value : '20'
+  return value === '10' ||
+    value === 'letter' ||
+    value === 'percentage' ||
+    value === 'letter_ca' ||
+    value === 'levels'
+    ? value
+    : '20'
+}
+
+// Limitation connue : le primaire ontarien utilise lettres/niveaux, pas le pourcentage.
+//  On suggère 'percentage' par défaut pour tout le Canada (suggestion surchargeable).
+//  Affinage par niveau scolaire à traiter ultérieurement.
+export function defaultGrading(country: string): GradingSystem {
+  if (country.startsWith('Canada')) return 'percentage'
+  if (country === 'France') return '20'
+  return '20'
 }

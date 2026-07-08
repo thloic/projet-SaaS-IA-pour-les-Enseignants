@@ -1,16 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronRight, ChevronLeft, Check, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import BrandLogo from '@/components/shared/BrandLogo'
-import { createClient } from '@/lib/supabase/client'
-import { profileSchema } from '@/features/profile/schemas/profileSchema'
 import { useToast } from '@/components/shared/ToastProvider'
-import type { ContentLanguage, GradingSystem } from '@/features/profile/types/profile.types'
+import { saveOnboardingProfileAction } from '@/features/profile/server/profile.actions'
+import { createClient } from '@/lib/supabase/client'
+import { defaultGrading, type ContentLanguage, type GradingSystem } from '@/features/profile/types/profile.types'
 
 const BRAND = '#534AB7'
 
@@ -39,8 +39,7 @@ const SUBJECTS_OPTIONS = [
 ]
 
 const COUNTRIES = [
-  'Canada - Quebec',
-  'Canada - Ontario',
+  'Canada',
   'France',
   'Senegal',
   "Cote d'Ivoire",
@@ -48,6 +47,14 @@ const COUNTRIES = [
   'Togo',
   'Autre',
 ]
+const CANADA_PROVINCES = ['Quebec', 'Ontario']
+const GRADING_OPTIONS = [
+  ['percentage', 'Pourcentage (100 %)'],
+  ['letter_ca', 'Lettres (A → R)'],
+  ['levels', 'Niveaux 1 – 4'],
+  ['20', 'Sur 20'],
+  ['10', 'Sur 10'],
+] as const
 
 const STEPS = ['Votre profil', 'Votre enseignement', 'Preferences']
 
@@ -65,14 +72,19 @@ export default function OnboardingForm({
   const [step, setStep] = useState(0)
   const [firstName, setFirstName] = useState(initialFirstName)
   const [lastName, setLastName] = useState(initialLastName)
-  const [country, setCountry] = useState('Canada - Quebec')
+  const [countryName, setCountryName] = useState('Canada')
+  const [province, setProvince] = useState('Quebec')
   const [subjects, setSubjects] = useState<string[]>(['Mathematiques'])
+  const [customSubjectEnabled, setCustomSubjectEnabled] = useState(false)
+  const [customSubject, setCustomSubject] = useState('')
   const [levels, setLevels] = useState<string[]>([])
-  const [gradingSystem, setGradingSystem] = useState<GradingSystem>('20')
+  const [gradingSystem, setGradingSystem] = useState<GradingSystem>('percentage')
   const [language, setLanguage] = useState<ContentLanguage>('fr')
   const [styleNotes, setStyleNotes] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Ref synchrone pour bloquer les doubles appels avant que React re-render le bouton disabled
+  const isSavingRef = useRef(false)
 
   function toggleLevel(level: string) {
     setLevels((current) =>
@@ -83,6 +95,11 @@ export default function OnboardingForm({
   }
 
   function toggleSubject(subject: string) {
+    if (subject === 'Autre') {
+      setCustomSubjectEnabled((current) => !current)
+      return
+    }
+
     setSubjects((current) =>
       current.includes(subject)
         ? current.filter((item) => item !== subject)
@@ -90,9 +107,29 @@ export default function OnboardingForm({
     )
   }
 
+  function getCountryValue(nextCountryName = countryName, nextProvince = province) {
+    return nextCountryName === 'Canada' ? `Canada - ${nextProvince}` : nextCountryName
+  }
+
+  function getNormalizedSubjects() {
+    const custom = customSubject.trim()
+    return customSubjectEnabled && custom ? [...subjects, custom] : subjects
+  }
+
+  function handleCountryChange(nextCountryName: string) {
+    setCountryName(nextCountryName)
+    const nextCountry = getCountryValue(nextCountryName, province)
+    setGradingSystem(defaultGrading(nextCountry))
+  }
+
+  function handleProvinceChange(nextProvince: string) {
+    setProvince(nextProvince)
+    setGradingSystem(defaultGrading(getCountryValue(countryName, nextProvince)))
+  }
+
   function canNext() {
     if (step === 0) return firstName.trim().length > 0 && lastName.trim().length > 0
-    if (step === 1) return subjects.length > 0 && levels.length > 0
+    if (step === 1) return getNormalizedSubjects().length > 0 && levels.length > 0
     return true
   }
 
@@ -108,82 +145,78 @@ export default function OnboardingForm({
       return
     }
 
-    if (step === 1 && subjects.length === 0) {
+    if (step === 1 && getNormalizedSubjects().length === 0) {
       showToast('Sélectionnez au moins une matière pour continuer.', 'error')
       return
     }
 
     if (step === 1 && levels.length === 0) {
-      showToast("Sélectionnez au moins un niveau d’enseignement pour continuer.", 'error')
+      showToast("Sélectionnez au moins un niveau d'enseignement pour continuer.", 'error')
     }
   }
 
   async function handleFinish() {
+    if (isSavingRef.current) return
+    isSavingRef.current = true
+    setIsSaving(true)
     setError(null)
 
-    const parsed = profileSchema.safeParse({
-      firstName,
-      lastName,
-      country,
-      subjects,
-      levels,
-      gradingSystem,
-      language,
-      styleNotes,
-    })
-
-    if (!parsed.success) {
-      const message = parsed.error.issues[0]?.message ?? 'Profil incomplet.'
-      setError(message)
-      showToast(message, 'error')
-      return
-    }
-
-    setIsSaving(true)
-
     try {
-      const supabase = createClient()
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser()
+      const result = await saveOnboardingProfileAction({
+        firstName,
+        lastName,
+        country: getCountryValue(),
+        subjects: getNormalizedSubjects(),
+        levels,
+        gradingSystem,
+        language,
+        styleNotes,
+      })
 
-      if (userError || !user) {
-        throw new Error('AUTH_REQUIRED')
-      }
+      console.log('[onboarding:client] save result', {
+        hasError: Boolean(result.error),
+        redirectTo: result.redirectTo ?? null,
+        error: result.error,
+      })
 
-      const { error: profileError } = await supabase.from('teacher_profiles').upsert(
-        {
-          user_id: user.id,
-          first_name: parsed.data.firstName,
-          last_name: parsed.data.lastName,
-          country: parsed.data.country,
-          subject: parsed.data.subjects[0],
-          subjects: parsed.data.subjects,
-          levels: parsed.data.levels,
-          grading_system: parsed.data.gradingSystem,
-          language: parsed.data.language,
-          style_notes: parsed.data.styleNotes || null,
-        },
-        { onConflict: 'user_id' }
-      )
-
-      if (profileError) {
-        throw profileError
+      if (result.error) {
+        showToast(result.error, 'error')
+        if (result.redirectTo) {
+          console.log('[onboarding:client] invalid session redirect scheduled', {
+            redirectTo: result.redirectTo,
+          })
+          const supabase = createClient()
+          const { error: signOutError } = await supabase.auth.signOut()
+          console.log('[onboarding:client] browser signOut finished', {
+            error: signOutError
+              ? {
+                  name: signOutError.name,
+                  message: signOutError.message,
+                  status: signOutError.status,
+                }
+              : null,
+          })
+          setTimeout(() => {
+            console.log('[onboarding:client] redirecting after invalid session', {
+              redirectTo: result.redirectTo,
+            })
+            router.push(result.redirectTo!)
+            router.refresh()
+          }, 2000)
+          return
+        }
+        isSavingRef.current = false
+        setIsSaving(false)
+        return
       }
 
       showToast('Profil enregistré avec succès. Bienvenue sur EducAssist !', 'success')
       router.push('/dashboard')
-      router.refresh()
     } catch (err) {
-      console.error('[onboarding] échec de l’enregistrement du profil', err)
-      const message =
-        err instanceof Error && err.message === 'AUTH_REQUIRED'
-          ? 'Votre session a expiré. Reconnectez-vous avant de terminer votre profil.'
-          : "Nous n’avons pas pu enregistrer votre profil pour le moment. Réessayez dans quelques instants."
-      setError(message)
+      const message = "Nous n'avons pas pu enregistrer votre profil. Réessayez dans quelques instants."
+      console.error("[onboarding] erreur inattendue", err)
       showToast(message, 'error')
-    } finally {
+      isSavingRef.current = false
       setIsSaving(false)
     }
   }
@@ -268,8 +301,8 @@ export default function OnboardingForm({
                 <Label>Pays / province de reference</Label>
                 <select
                   className="w-full rounded-xl bg-muted/40 border border-border px-3 py-2.5 text-sm outline-none"
-                  value={country}
-                  onChange={(event) => setCountry(event.target.value)}
+                  value={countryName}
+                  onChange={(event) => handleCountryChange(event.target.value)}
                 >
                   {COUNTRIES.map((item) => (
                     <option key={item} value={item}>
@@ -278,6 +311,22 @@ export default function OnboardingForm({
                   ))}
                 </select>
               </div>
+              {countryName === 'Canada' && (
+                <div className="space-y-2">
+                  <Label>Province</Label>
+                  <select
+                    className="w-full rounded-xl bg-muted/40 border border-border px-3 py-2.5 text-sm outline-none"
+                    value={province}
+                    onChange={(event) => handleProvinceChange(event.target.value)}
+                  >
+                    {CANADA_PROVINCES.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           )}
 
@@ -295,17 +344,25 @@ export default function OnboardingForm({
                       type="button"
                       onClick={() => toggleSubject(item)}
                       className={`rounded-xl border px-3 py-1.5 text-xs font-medium transition-colors ${
-                        subjects.includes(item)
+                        item === 'Autre' ? customSubjectEnabled : subjects.includes(item)
                           ? 'text-white border-transparent'
                           : 'border-border text-muted-foreground hover:bg-muted/40'
                       }`}
-                      style={subjects.includes(item) ? { backgroundColor: BRAND } : {}}
+                      style={(item === 'Autre' ? customSubjectEnabled : subjects.includes(item)) ? { backgroundColor: BRAND } : {}}
                     >
                       {item}
                     </button>
                   ))}
                 </div>
-                {subjects.length === 0 && (
+                {customSubjectEnabled && (
+                  <Input
+                    value={customSubject}
+                    onChange={(event) => setCustomSubject(event.target.value)}
+                    placeholder="Saisissez votre matière"
+                    className="bg-muted/40"
+                  />
+                )}
+                {getNormalizedSubjects().length === 0 && (
                   <p className="text-xs text-muted-foreground">Sélectionnez au moins une matière.</p>
                 )}
               </div>
@@ -341,12 +398,8 @@ export default function OnboardingForm({
             <div className="space-y-5">
               <div className="space-y-2">
                 <Label>Systeme de notation</Label>
-                <div className="flex gap-2">
-                  {([
-                    ['20', 'Sur 20'],
-                    ['10', 'Sur 10'],
-                    ['letter', 'Lettres A-F'],
-                  ] as const).map(([value, label]) => (
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {GRADING_OPTIONS.map(([value, label]) => (
                     <button
                       key={value}
                       type="button"
