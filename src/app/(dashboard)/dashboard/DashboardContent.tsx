@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useGSAP } from '@gsap/react'
@@ -14,126 +15,117 @@ import {
   MessageSquare,
   Search,
   TrendingUp,
-  ThumbsDown,
-  ThumbsUp,
-  Eye,
-  Download,
-  Share2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/shared/ToastProvider'
+import { useAppLocale } from '@/features/i18n/AppLocaleProvider'
+import QuizActions from '@/features/quiz/components/QuizActions'
+import type { QuizListItem } from '@/features/quiz/types/quiz.types'
 
 const BRAND = '#534AB7'
 
 const quickActions = [
   {
-    title: 'Nouveau cours',
-    description: 'Cours complet en moins de 2 min',
+    titleKey: 'courseTitle',
+    descriptionKey: 'courseDescription',
     icon: BookOpen,
     href: '/generate',
-    badge: 'IA',
+    badgeKey: 'ai',
     style: 'violet',
-    cta: 'Commencer',
+    ctaKey: 'courseCta',
   },
   {
-    title: 'Quiz & QCM',
-    description: 'Généré depuis vos cours',
+    titleKey: 'quizTitle',
+    descriptionKey: 'quizDescription',
     icon: ClipboardList,
     href: '/quiz',
-    badge: 'Auto',
+    badgeKey: 'auto',
     style: 'teal',
-    cta: 'Créer',
+    ctaKey: 'quizCta',
   },
   {
-    title: 'Commentaire bulletin',
-    description: 'Personnalisé en 5 secondes',
+    titleKey: 'bulletinTitle',
+    descriptionKey: 'bulletinDescription',
     icon: MessageSquare,
     href: '/bulletin',
-    badge: 'Rapide',
+    badgeKey: 'fast',
     style: 'amber',
-    cta: 'Rédiger',
+    ctaKey: 'bulletinCta',
   },
-]
-
-const stats = [
-  { label: 'Cours générés', value: '12', icon: TrendingUp, color: 'text-emerald-600 dark:text-emerald-400' },
-  { label: 'Quiz créés', value: '8', icon: ClipboardCheck, color: 'text-sky-600 dark:text-sky-400' },
-  { label: 'Bulletins rédigés', value: '34', icon: FileText, color: 'text-amber-600 dark:text-amber-400' },
-  { label: 'Temps économisé', value: '6h', icon: Clock, color: 'text-violet-600 dark:text-violet-400' },
-]
-
-const historyItems = [
-  {
-    title: 'Théorème de Pythagore',
-    subject: 'Maths · 3ème',
-    type: 'Cours',
-    date: 'il y a 2h',
-    feedback: 'up',
-    badgeColor: 'bg-violet-500/15 text-violet-700 border-violet-500/30 dark:bg-violet-500/20 dark:text-violet-200',
-  },
-  {
-    title: 'La Révolution française',
-    subject: 'Histoire · 4ème',
-    type: 'Quiz',
-    date: 'hier',
-    feedback: 'down',
-    badgeColor: 'bg-sky-500/15 text-sky-700 border-sky-500/30 dark:bg-sky-500/20 dark:text-sky-200',
-  },
-  {
-    title: 'Analyse de texte narratif',
-    subject: 'Français · 5ème',
-    type: 'Cours',
-    date: 'il y a 2 jours',
-    feedback: 'up',
-    badgeColor: 'bg-violet-500/15 text-violet-700 border-violet-500/30 dark:bg-violet-500/20 dark:text-violet-200',
-  },
-  {
-    title: 'Écosystèmes & biodiversité',
-    subject: 'SVT · 6ème',
-    type: 'Bulletin',
-    date: 'il y a 3 jours',
-    feedback: 'up',
-    badgeColor: 'bg-amber-500/15 text-amber-700 border-amber-500/30 dark:bg-amber-500/20 dark:text-amber-200',
-  },
-  {
-    title: 'Present perfect',
-    subject: 'Anglais · 4ème',
-    type: 'Quiz',
-    date: 'il y a 5 jours',
-    feedback: null,
-    badgeColor: 'bg-sky-500/15 text-sky-700 border-sky-500/30 dark:bg-sky-500/20 dark:text-sky-200',
-  },
-]
-
-function formatDate(): string {
-  const now = new Date()
-  return now.toLocaleDateString('fr-FR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  })
-}
+] as const
 
 interface DashboardContentProps {
   firstName: string
+  teacherName: string
+  recentQuizzes: QuizListItem[]
   showWelcome?: boolean
+  showDeletedFeedback?: boolean
 }
 
-export default function DashboardContent({ firstName, showWelcome = false }: DashboardContentProps) {
+export default function DashboardContent({
+  firstName,
+  teacherName,
+  recentQuizzes,
+  showWelcome = false,
+  showDeletedFeedback = false,
+}: DashboardContentProps) {
   const router = useRouter()
   const { showToast } = useToast()
+  const { locale, t } = useAppLocale()
   const containerRef = useRef<HTMLDivElement>(null)
-  const formattedDate = useMemo(() => formatDate(), [])
+  const formattedDate = useMemo(() => {
+    const now = new Date()
+    return now.toLocaleDateString(locale === 'fr' ? 'fr-FR' : 'en-US', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    })
+  }, [locale])
+  const stats = useMemo(
+    () => [
+      {
+        label: t.dashboard.stats.lessons,
+        value: '12',
+        icon: TrendingUp,
+        color: 'text-emerald-600 dark:text-emerald-400',
+      },
+      {
+        label: t.dashboard.stats.quizzes,
+        value: String(recentQuizzes.length),
+        icon: ClipboardCheck,
+        color: 'text-sky-600 dark:text-sky-400',
+      },
+      {
+        label: t.dashboard.stats.reports,
+        value: '34',
+        icon: FileText,
+        color: 'text-amber-600 dark:text-amber-400',
+      },
+      {
+        label: t.dashboard.stats.savedTime,
+        value: '6h',
+        icon: Clock,
+        color: 'text-violet-600 dark:text-violet-400',
+      },
+    ],
+    [recentQuizzes.length, t]
+  )
 
   useEffect(() => {
     if (!showWelcome) return
     showToast(
-      `Bienvenue${firstName ? ` ${firstName}` : ''} ! Heureux de vous retrouver sur EducAssist.`,
+      `${t.common.welcome}${firstName ? ` ${firstName}` : ''} ! ${t.dashboard.welcomeBack}`,
       'success'
     )
     router.replace('/dashboard', { scroll: false })
-  }, [firstName, router, showToast, showWelcome])
+  }, [firstName, router, showToast, showWelcome, t])
+
+  useEffect(() => {
+    if (!showDeletedFeedback) return
+    showToast(t.dashboard.deleted, 'success')
+    router.replace('/dashboard', { scroll: false })
+  }, [router, showDeletedFeedback, showToast, t])
 
   useGSAP(
     () => {
@@ -152,15 +144,15 @@ export default function DashboardContent({ firstName, showWelcome = false }: Das
   )
 
   return (
-    <div ref={containerRef} className="space-y-8 pb-20 lg:pb-6">
+    <div ref={containerRef} className="mx-auto w-full max-w-7xl space-y-6 pb-20 sm:space-y-8 lg:pb-6">
       {/* Header */}
-      <section className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-black">
-            Bonjour {firstName || 'enseignant·e'} 👋
+      <section className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0 space-y-1">
+          <h1 className="break-words text-2xl font-black sm:text-3xl">
+            {t.dashboard.hello} {firstName || t.dashboard.fallbackName}
           </h1>
-          <p className="text-muted-foreground capitalize">
-            {formattedDate} · Que préparez-vous aujourd&apos;hui ?
+          <p className="text-sm text-muted-foreground capitalize sm:text-base">
+            {formattedDate} · {t.dashboard.todayPrompt}
           </p>
         </div>
         <div className="relative w-full max-w-md">
@@ -170,17 +162,17 @@ export default function DashboardContent({ firstName, showWelcome = false }: Das
           />
           <input
             className="w-full rounded-xl bg-muted/40 border border-border px-9 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-            placeholder="Rechercher un cours, un quiz, un bulletin..."
+            placeholder={t.dashboard.searchPlaceholder}
           />
         </div>
       </section>
 
       {/* Quick Actions */}
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {quickActions.map(({ title, description, icon: Icon, href, badge, style, cta }) => (
+        {quickActions.map(({ titleKey, descriptionKey, icon: Icon, href, badgeKey, style, ctaKey }) => (
           <div
-            key={title}
-            className={`action-card group rounded-2xl border p-6 transition-transform hover:-translate-y-1 ${
+            key={titleKey}
+            className={`action-card group min-w-0 rounded-2xl border p-4 transition-transform hover:-translate-y-1 sm:p-6 ${
               style === 'violet'
                 ? 'bg-violet-50 border-violet-200 dark:bg-[#17142a] dark:border-violet-500/30'
                 : style === 'teal'
@@ -204,87 +196,86 @@ export default function DashboardContent({ firstName, showWelcome = false }: Das
                 className="text-[10px]"
                 style={{ backgroundColor: BRAND, color: 'white' }}
               >
-                {badge}
+                {t.dashboard.badges[badgeKey]}
               </Badge>
             </div>
             <div className="mt-5 space-y-2">
-              <h3 className="text-lg font-bold">{title}</h3>
-              <p className="text-sm text-muted-foreground">{description}</p>
+              <h3 className="break-words text-lg font-bold">{t.dashboard.quickActions[titleKey]}</h3>
+              <p className="text-sm text-muted-foreground">{t.dashboard.quickActions[descriptionKey]}</p>
             </div>
-            <Button
-              className="mt-6"
-              style={{ backgroundColor: BRAND, color: 'white' }}
-              onClick={() => router.push(href)}
-            >
-              {cta}
+            <Button asChild className="mt-6 w-full sm:w-auto" style={{ backgroundColor: BRAND, color: 'white' }}>
+              <Link href={href}>{t.dashboard.quickActions[ctaKey]}</Link>
             </Button>
           </div>
         ))}
       </section>
 
       {/* Stats */}
-      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <section className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         {stats.map(({ label, value, icon: Icon, color }) => (
           <div
             key={label}
-            className="stat-card rounded-2xl border border-border bg-card/40 p-4 flex items-center gap-3"
+            className="stat-card flex min-w-0 items-center gap-3 rounded-2xl border border-border bg-card/40 p-4"
           >
             <div className={`h-10 w-10 rounded-xl bg-muted/40 flex items-center justify-center ${color}`}>
               <Icon size={18} />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-xl font-bold">{value}</p>
-              <p className="text-xs text-muted-foreground">{label}</p>
+              <p className="break-words text-xs text-muted-foreground">{label}</p>
             </div>
           </div>
         ))}
       </section>
 
       {/* History */}
-      <section className="rounded-2xl border border-border bg-card/40 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
+      <section className="rounded-2xl border border-border bg-card/40 p-3 sm:p-6">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-2">
             <History size={18} className="text-muted-foreground" />
-            <h2 className="text-lg font-bold">Historique récent</h2>
+            <h2 className="min-w-0 break-words text-lg font-bold">{t.dashboard.recentHistory}</h2>
           </div>
-          <Button variant="outline" size="sm" onClick={() => router.push('/history')}>
-            Voir tout
+          <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
+            <Link href="/history">{t.dashboard.viewAll}</Link>
           </Button>
         </div>
 
-        <div className="space-y-3">
-          {historyItems.map((item) => (
-            <div
-              key={item.title}
-              className="flex flex-col gap-3 rounded-xl border border-border/60 bg-muted/30 px-4 py-3 transition-colors hover:bg-muted/50 lg:flex-row lg:items-center"
-            >
-              <div className="flex-1">
-                <p className="font-semibold">{item.title}</p>
-                <p className="text-xs text-muted-foreground">{item.subject}</p>
+        {recentQuizzes.length === 0 ? (
+          <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">
+            {t.dashboard.noQuizzes}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {recentQuizzes.slice(0, 5).map((quiz) => (
+              <div
+                key={quiz.id}
+                className="flex min-w-0 flex-col gap-3 rounded-xl border border-border/60 bg-muted/30 px-3 py-3 transition-colors hover:bg-muted/50 sm:px-4 lg:flex-row lg:items-center"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="break-words font-semibold sm:truncate">{quiz.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                  {quiz.subject} · {quiz.question_count} {t.quiz.questions} · {quiz.total_points} {t.quiz.points}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground lg:shrink-0">
+                  <span>{new Date(quiz.created_at).toLocaleDateString(locale === 'fr' ? 'fr-FR' : 'en-US')}</span>
+                  <Badge className="border bg-sky-500/15 text-sky-700 border-sky-500/30 dark:bg-sky-500/20 dark:text-sky-200">
+                    Quiz
+                  </Badge>
+                </div>
+                <div className="w-full lg:w-auto lg:shrink-0">
+                  <QuizActions
+                    quiz={quiz}
+                    teacherName={teacherName}
+                    redirectTo="/dashboard"
+                    compact
+                    showPdf={false}
+                  />
+                </div>
               </div>
-              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                <span>{item.date}</span>
-                <Badge className={`border ${item.badgeColor}`}>{item.type}</Badge>
-              </div>
-              <div className="flex items-center gap-2">
-                {item.feedback === 'up' && <ThumbsUp size={16} className="text-emerald-400" />}
-                {item.feedback === 'down' && <ThumbsDown size={16} className="text-rose-400" />}
-                {!item.feedback && <ThumbsUp size={16} className="text-muted-foreground" />}
-              </div>
-              <div className="flex items-center gap-2">
-                <button className="p-2 rounded-lg border border-border hover:bg-muted/60">
-                  <Eye size={16} />
-                </button>
-                <button className="p-2 rounded-lg border border-border hover:bg-muted/60">
-                  <Download size={16} />
-                </button>
-                <button className="p-2 rounded-lg border border-border hover:bg-muted/60">
-                  <Share2 size={16} />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   )

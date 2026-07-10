@@ -1,14 +1,13 @@
-import { ClipboardList } from 'lucide-react'
 import { listMyDocuments } from '@/features/documents/server/document'
 import type { SourceDocumentListItem } from '@/features/documents/types/document.types'
 import { getCurrentTeacherProfile } from '@/features/profile/server/profile'
 import QuizGeneratorForm from '@/features/quiz/components/QuizGeneratorForm'
 import QuizList from '@/features/quiz/components/QuizList'
+import QuizListHeading from '@/features/quiz/components/QuizListHeading'
+import QuizPageIntro from '@/features/quiz/components/QuizPageIntro'
 import QuizPageFeedback from '@/features/quiz/components/QuizPageFeedback'
 import { listMyQuizzes } from '@/features/quiz/server/quiz'
 import type { QuizListItem } from '@/features/quiz/types/quiz.types'
-
-const BRAND = '#534AB7'
 
 export default async function QuizIndexPage({
   searchParams,
@@ -37,20 +36,7 @@ export default async function QuizIndexPage({
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 px-1 pb-20 sm:space-y-8 sm:px-0 lg:pb-6">
       <QuizPageFeedback deleted={params.deleted === '1'} />
-      <div className="flex items-start gap-3">
-        <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:h-11 sm:w-11 sm:rounded-2xl"
-          style={{ backgroundColor: `${BRAND}20` }}
-        >
-          <ClipboardList size={20} style={{ color: BRAND }} />
-        </div>
-        <div className="min-w-0">
-          <h1 className="text-xl font-black sm:text-2xl">Quiz & QCM</h1>
-          <p className="text-sm text-muted-foreground">
-            Générez un quiz à partir d’un document source ou d’un texte collé.
-          </p>
-        </div>
-      </div>
+      <QuizPageIntro />
 
       {loadError && (
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-200">
@@ -65,11 +51,7 @@ export default async function QuizIndexPage({
       />
 
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-muted-foreground">
-          {quizzes.length === 0
-            ? 'Aucun quiz généré pour l’instant'
-            : `${quizzes.length} quiz récent${quizzes.length > 1 ? 's' : ''}`}
-        </h2>
+        <QuizListHeading count={quizzes.length} />
 
         <QuizList quizzes={quizzes} teacherName={teacherName} />
       </section>

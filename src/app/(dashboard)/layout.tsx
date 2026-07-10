@@ -1,9 +1,14 @@
 import { getCurrentTeacherProfile, profileToTeacherIdentity } from '@/features/profile/server/profile'
 import DashboardShell from '@/components/shared/DashboardShell'
+import { AppLocaleProvider } from '@/features/i18n/AppLocaleProvider'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const profile = await getCurrentTeacherProfile()
   const teacher = profile ? profileToTeacherIdentity(profile) : null
 
-  return <DashboardShell teacher={teacher}>{children}</DashboardShell>
+  return (
+    <AppLocaleProvider initialLocale={teacher?.language ?? 'en'}>
+      <DashboardShell teacher={teacher}>{children}</DashboardShell>
+    </AppLocaleProvider>
+  )
 }

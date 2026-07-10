@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/shared/ToastProvider'
+import { useAppLocale } from '@/features/i18n/AppLocaleProvider'
 import {
   updateProfileAction,
   type UpdateProfileState,
@@ -59,6 +60,7 @@ export default function SettingsForm({
   generationsLimit,
 }: SettingsFormProps) {
   const { showToast } = useToast()
+  const { setLocale, t } = useAppLocale()
   const initialCountryParts = parseCountry(initialCountry)
   const initialKnownSubjects = initialSubjects.filter((subject) => subject !== 'Autre' && SUBJECTS_OPTIONS.includes(subject))
   const initialCustomSubject = initialSubjects.find((subject) => subject !== 'Autre' && !SUBJECTS_OPTIONS.includes(subject)) ?? ''
@@ -115,12 +117,12 @@ export default function SettingsForm({
         if (result.error) {
           showToast(result.error, 'error')
         } else {
-          showToast(result.info ?? 'Modifications enregistrées', 'success')
+          showToast(result.info ?? t.settings.saved, 'success')
         }
         return result
       } catch (error) {
         console.error('[settings] action de mise à jour indisponible', error)
-        const message = "Nous n’avons pas pu enregistrer vos modifications. Réessayez dans quelques instants."
+        const message = "We could not save your changes. Please try again in a few moments."
         showToast(message, 'error')
         return { error: message, info: null }
       }
@@ -129,15 +131,15 @@ export default function SettingsForm({
   )
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
+    <div className="mx-auto w-full max-w-2xl min-w-0 space-y-8">
       {/* Header */}
-      <div className="flex items-center gap-3">
+      <div className="flex min-w-0 items-center gap-3">
         <div className="h-11 w-11 rounded-2xl flex items-center justify-center bg-muted/40">
           <Settings size={22} className="text-muted-foreground" />
         </div>
-        <div>
-          <h1 className="text-2xl font-black">Paramètres</h1>
-          <p className="text-sm text-muted-foreground">Gérez votre profil et vos préférences</p>
+        <div className="min-w-0">
+          <h1 className="break-words text-2xl font-black">{t.settings.title}</h1>
+          <p className="text-sm text-muted-foreground">{t.settings.subtitle}</p>
         </div>
       </div>
 
@@ -153,7 +155,7 @@ export default function SettingsForm({
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <User size={16} style={{ color: BRAND }} />
-            <h2 className="font-bold text-sm uppercase tracking-wider" style={{ color: BRAND }}>Profil enseignant</h2>
+            <h2 className="font-bold text-sm uppercase tracking-wider" style={{ color: BRAND }}>{t.settings.teacherProfile}</h2>
           </div>
           <div className="rounded-2xl border border-border bg-muted/20 p-5 space-y-4">
             {/* Avatar */}
@@ -170,9 +172,9 @@ export default function SettingsForm({
               </div>
             </div>
             <Separator />
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="firstName">Prénom</Label>
+                <Label htmlFor="firstName">{t.onboarding.firstName}</Label>
                 <Input
                   id="firstName"
                   name="firstName"
@@ -182,7 +184,7 @@ export default function SettingsForm({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="lastName">Nom</Label>
+                <Label htmlFor="lastName">{t.onboarding.lastName}</Label>
                 <Input
                   id="lastName"
                   name="lastName"
@@ -203,12 +205,12 @@ export default function SettingsForm({
                 className="bg-muted/40"
               />
               <p className="text-xs text-muted-foreground">
-                Changer l’email nécessite une confirmation par lien envoyé à la nouvelle adresse.
+                {t.settings.emailNotice}
               </p>
             </div>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Pays</Label>
+                <Label>{t.settings.country}</Label>
                 <select
                   className="w-full rounded-xl bg-muted/40 border border-border px-3 py-2.5 text-sm outline-none"
                   value={countryName}
@@ -221,7 +223,7 @@ export default function SettingsForm({
               </div>
               {countryName === 'Canada' && (
                 <div className="space-y-2">
-                  <Label>Province</Label>
+                  <Label>{t.settings.province}</Label>
                   <select
                     className="w-full rounded-xl bg-muted/40 border border-border px-3 py-2.5 text-sm outline-none"
                     value={province}
@@ -236,7 +238,7 @@ export default function SettingsForm({
                 </div>
               )}
               <div className="space-y-2">
-                <Label>Matières enseignées</Label>
+                <Label>{t.settings.subjects}</Label>
                 <div className="flex flex-wrap gap-2">
                   {SUBJECTS_OPTIONS.map((subject) => (
                     <button
@@ -258,13 +260,13 @@ export default function SettingsForm({
                   <Input
                     value={customSubject}
                     onChange={(e) => setCustomSubject(e.target.value)}
-                    placeholder="Saisissez votre matière"
+                    placeholder={t.settings.customSubject}
                     className="bg-muted/40"
                   />
                 )}
                 {normalizedSubjects.length === 0 && (
                   <p className="text-xs text-rose-600 dark:text-rose-300">
-                    Sélectionnez au moins une matière avant d’enregistrer.
+                    {t.settings.missingSubject}
                   </p>
                 )}
               </div>
@@ -276,11 +278,11 @@ export default function SettingsForm({
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Globe size={16} style={{ color: BRAND }} />
-            <h2 className="font-bold text-sm uppercase tracking-wider" style={{ color: BRAND }}>Préférences</h2>
+            <h2 className="font-bold text-sm uppercase tracking-wider" style={{ color: BRAND }}>{t.settings.preferences}</h2>
           </div>
           <div className="rounded-2xl border border-border bg-muted/20 p-5 space-y-5">
             <div className="space-y-2">
-              <Label>Système de notation</Label>
+              <Label>{t.settings.grading}</Label>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {GRADING_OPTIONS.map(([v, l]) => (
                   <button
@@ -298,14 +300,17 @@ export default function SettingsForm({
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Langue des contenus générés</Label>
-              <div className="flex gap-2">
+              <Label>{t.settings.contentLanguage}</Label>
+              <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
                 {([['fr', '🇫🇷 Français'], ['en', '🇬🇧 English']] as const).map(([v, l]) => (
                   <button
                     key={v}
                     type="button"
-                    onClick={() => setLanguage(v)}
-                    className={`flex-1 rounded-xl border px-3 py-2.5 text-xs font-medium transition-colors ${
+                    onClick={() => {
+                      setLanguage(v)
+                      setLocale(v)
+                    }}
+                    className={`min-h-10 rounded-xl border px-3 py-2.5 text-xs font-medium transition-colors ${
                       language === v ? 'text-white border-transparent' : 'border-border text-muted-foreground hover:bg-muted/40'
                     }`}
                     style={language === v ? { backgroundColor: BRAND } : {}}
@@ -322,14 +327,14 @@ export default function SettingsForm({
         <Button
           type="submit"
           disabled={isPending}
-          className="w-full h-11 text-white font-bold gap-2"
+          className="h-auto min-h-11 w-full whitespace-normal text-white font-bold gap-2"
           style={{ backgroundColor: BRAND }}
         >
           {isPending ? (
-            'Enregistrement…'
+            t.settings.saving
           ) : (
             <>
-              <Save size={16} /> Enregistrer les modifications
+              <Save size={16} /> {t.settings.save}
             </>
           )}
         </Button>
@@ -342,7 +347,7 @@ export default function SettingsForm({
           <h2 className="font-bold text-sm uppercase tracking-wider" style={{ color: BRAND }}>Plan & Facturation</h2>
         </div>
         <div className="rounded-2xl border border-border bg-muted/20 p-5 space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="font-semibold flex items-center gap-2">
                 Plan Free

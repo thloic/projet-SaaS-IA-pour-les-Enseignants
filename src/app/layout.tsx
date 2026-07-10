@@ -4,6 +4,7 @@ import { GeistMono } from "geist/font/mono";
 import { ToastProvider } from "@/components/shared/ToastProvider";
 import { ConfirmProvider } from "@/components/shared/ConfirmProvider";
 import { ThemeProvider } from "@/components/shared/ThemeProvider";
+import { AppLocaleProvider } from "@/features/i18n/AppLocaleProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -31,9 +32,11 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
-          <ToastProvider>
-            <ConfirmProvider>{children}</ConfirmProvider>
-          </ToastProvider>
+          <AppLocaleProvider>
+            <ToastProvider>
+              <ConfirmProvider>{children}</ConfirmProvider>
+            </ToastProvider>
+          </AppLocaleProvider>
         </ThemeProvider>
       </body>
     </html>

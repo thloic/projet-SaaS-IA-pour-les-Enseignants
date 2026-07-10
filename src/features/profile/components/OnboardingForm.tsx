@@ -11,6 +11,7 @@ import { useToast } from '@/components/shared/ToastProvider'
 import { saveOnboardingProfileAction } from '@/features/profile/server/profile.actions'
 import { createClient } from '@/lib/supabase/client'
 import { defaultGrading, type ContentLanguage, type GradingSystem } from '@/features/profile/types/profile.types'
+import { appTranslations } from '@/features/i18n/appTranslations'
 
 const BRAND = '#534AB7'
 
@@ -56,8 +57,6 @@ const GRADING_OPTIONS = [
   ['10', 'Sur 10'],
 ] as const
 
-const STEPS = ['Votre profil', 'Votre enseignement', 'Preferences']
-
 interface OnboardingFormProps {
   initialFirstName?: string
   initialLastName?: string
@@ -79,10 +78,11 @@ export default function OnboardingForm({
   const [customSubject, setCustomSubject] = useState('')
   const [levels, setLevels] = useState<string[]>([])
   const [gradingSystem, setGradingSystem] = useState<GradingSystem>('percentage')
-  const [language, setLanguage] = useState<ContentLanguage>('fr')
+  const [language, setLanguage] = useState<ContentLanguage>('en')
   const [styleNotes, setStyleNotes] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const t = appTranslations[language]
   // Ref synchrone pour bloquer les doubles appels avant que React re-render le bouton disabled
   const isSavingRef = useRef(false)
 
@@ -136,22 +136,22 @@ export default function OnboardingForm({
   function notifyIncompleteStep() {
     if (step === 0) {
       if (!firstName.trim() && !lastName.trim()) {
-        showToast('Renseignez votre prénom et votre nom pour continuer.', 'error')
+        showToast(t.onboarding.missingName, 'error')
       } else if (!firstName.trim()) {
-        showToast('Renseignez votre prénom pour continuer.', 'error')
+        showToast(t.onboarding.missingFirstName, 'error')
       } else {
-        showToast('Renseignez votre nom pour continuer.', 'error')
+        showToast(t.onboarding.missingLastName, 'error')
       }
       return
     }
 
     if (step === 1 && getNormalizedSubjects().length === 0) {
-      showToast('Sélectionnez au moins une matière pour continuer.', 'error')
+      showToast(t.onboarding.missingSubject, 'error')
       return
     }
 
     if (step === 1 && levels.length === 0) {
-      showToast("Sélectionnez au moins un niveau d'enseignement pour continuer.", 'error')
+      showToast(t.onboarding.missingLevel, 'error')
     }
   }
 
@@ -210,10 +210,10 @@ export default function OnboardingForm({
         return
       }
 
-      showToast('Profil enregistré avec succès. Bienvenue sur EducAssist !', 'success')
+      showToast(t.onboarding.saved, 'success')
       router.push('/dashboard')
     } catch (err) {
-      const message = "Nous n'avons pas pu enregistrer votre profil. Réessayez dans quelques instants."
+      const message = t.onboarding.saveError
       console.error("[onboarding] erreur inattendue", err)
       showToast(message, 'error')
       isSavingRef.current = false
@@ -222,15 +222,15 @@ export default function OnboardingForm({
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-lg">
+    <div className="flex min-h-screen items-center justify-center px-3 py-4 sm:p-4">
+      <div className="w-full max-w-lg min-w-0">
         <div className="flex justify-center mb-8">
           <BrandLogo className="h-12 w-40" priority />
         </div>
 
-        <div className="flex items-center gap-2 justify-center mb-8">
-          {STEPS.map((label, index) => (
-            <div key={label} className="flex items-center gap-2">
+        <div className="mb-8 flex items-start justify-center gap-1.5 overflow-x-auto px-1 sm:gap-2">
+          {t.onboarding.steps.map((label, index) => (
+            <div key={label} className="flex shrink-0 items-center gap-1.5 sm:gap-2">
               <div className="flex flex-col items-center gap-1">
                 <div
                   className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
@@ -252,7 +252,7 @@ export default function OnboardingForm({
                   {label}
                 </span>
               </div>
-              {index < STEPS.length - 1 && (
+              {index < t.onboarding.steps.length - 1 && (
                 <div
                   className={`h-px w-8 sm:w-12 mb-4 ${
                     index < step ? 'bg-emerald-500' : 'bg-border'
@@ -263,8 +263,8 @@ export default function OnboardingForm({
           ))}
         </div>
 
-        <div className="rounded-3xl border border-border bg-card/60 backdrop-blur-sm p-8 space-y-6">
-          <h1 className="text-xl font-black">{STEPS[step]}</h1>
+        <div className="space-y-6 rounded-3xl border border-border bg-card/60 p-4 backdrop-blur-sm sm:p-8">
+          <h1 className="text-xl font-black">{t.onboarding.steps[step]}</h1>
 
           {error && (
             <div className="flex gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-700 dark:text-rose-300">
@@ -275,9 +275,9 @@ export default function OnboardingForm({
 
           {step === 0 && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">Prenom</Label>
+                  <Label htmlFor="firstName">{t.onboarding.firstName}</Label>
                   <Input
                     id="firstName"
                     placeholder="Marie"
@@ -287,7 +287,7 @@ export default function OnboardingForm({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="lastName">Nom</Label>
+                  <Label htmlFor="lastName">{t.onboarding.lastName}</Label>
                   <Input
                     id="lastName"
                     placeholder="Dupont"
@@ -298,7 +298,7 @@ export default function OnboardingForm({
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Pays / province de reference</Label>
+                <Label>{t.onboarding.country}</Label>
                 <select
                   className="w-full rounded-xl bg-muted/40 border border-border px-3 py-2.5 text-sm outline-none"
                   value={countryName}
@@ -313,7 +313,7 @@ export default function OnboardingForm({
               </div>
               {countryName === 'Canada' && (
                 <div className="space-y-2">
-                  <Label>Province</Label>
+                  <Label>{t.onboarding.province}</Label>
                   <select
                     className="w-full rounded-xl bg-muted/40 border border-border px-3 py-2.5 text-sm outline-none"
                     value={province}
@@ -334,8 +334,8 @@ export default function OnboardingForm({
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>
-                  Matières enseignées{' '}
-                  <span className="text-muted-foreground">(plusieurs choix)</span>
+                  {t.onboarding.subjects}{' '}
+                  <span className="text-muted-foreground">({t.onboarding.multiple})</span>
                 </Label>
                 <div className="flex flex-wrap gap-2">
                   {SUBJECTS_OPTIONS.map((item) => (
@@ -358,17 +358,17 @@ export default function OnboardingForm({
                   <Input
                     value={customSubject}
                     onChange={(event) => setCustomSubject(event.target.value)}
-                    placeholder="Saisissez votre matière"
+                    placeholder={t.onboarding.customSubject}
                     className="bg-muted/40"
                   />
                 )}
                 {getNormalizedSubjects().length === 0 && (
-                  <p className="text-xs text-muted-foreground">Sélectionnez au moins une matière.</p>
+                  <p className="text-xs text-muted-foreground">{t.onboarding.noSubject}</p>
                 )}
               </div>
               <div className="space-y-2">
                 <Label>
-                  Niveaux enseignes <span className="text-muted-foreground">(plusieurs choix)</span>
+                  {t.onboarding.levels} <span className="text-muted-foreground">({t.onboarding.multiple})</span>
                 </Label>
                 <div className="flex flex-wrap gap-2">
                   {LEVELS_OPTIONS.map((item) => (
@@ -388,7 +388,7 @@ export default function OnboardingForm({
                   ))}
                 </div>
                 {levels.length === 0 && (
-                  <p className="text-xs text-muted-foreground">Selectionnez au moins un niveau.</p>
+                  <p className="text-xs text-muted-foreground">{t.onboarding.noLevel}</p>
                 )}
               </div>
             </div>
@@ -397,7 +397,7 @@ export default function OnboardingForm({
           {step === 2 && (
             <div className="space-y-5">
               <div className="space-y-2">
-                <Label>Systeme de notation</Label>
+                <Label>{t.onboarding.grading}</Label>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {GRADING_OPTIONS.map(([value, label]) => (
                     <button
@@ -417,8 +417,8 @@ export default function OnboardingForm({
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Langue des contenus generes</Label>
-                <div className="flex gap-2">
+                <Label>{t.onboarding.contentLanguage}</Label>
+                <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
                   {([
                     ['fr', 'Francais'],
                     ['en', 'English'],
@@ -427,7 +427,7 @@ export default function OnboardingForm({
                       key={value}
                       type="button"
                       onClick={() => setLanguage(value)}
-                      className={`flex-1 rounded-xl border px-3 py-2.5 text-xs font-medium transition-colors ${
+                      className={`min-h-10 rounded-xl border px-3 py-2.5 text-xs font-medium transition-colors ${
                         language === value
                           ? 'text-white border-transparent'
                           : 'border-border text-muted-foreground hover:bg-muted/40'
@@ -440,19 +440,19 @@ export default function OnboardingForm({
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="styleNotes">Style pedagogique</Label>
+                <Label htmlFor="styleNotes">{t.onboarding.style}</Label>
                 <textarea
                   id="styleNotes"
                   value={styleNotes}
                   onChange={(event) => setStyleNotes(event.target.value)}
-                  placeholder="Ex : consignes tres structurees, ton bienveillant, exemples concrets..."
+                  placeholder={t.onboarding.stylePlaceholder}
                   className="min-h-24 w-full rounded-xl bg-muted/40 border border-border px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
             </div>
           )}
 
-          <div className="flex items-center justify-between pt-2">
+          <div className="flex flex-col-reverse gap-2 pt-2 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between">
             {step > 0 ? (
               <Button
                 variant="ghost"
@@ -461,37 +461,37 @@ export default function OnboardingForm({
                 className="gap-1"
                 disabled={isSaving}
               >
-                <ChevronLeft size={14} /> Retour
+                <ChevronLeft size={14} /> {t.onboarding.back}
               </Button>
             ) : (
               <div />
             )}
-            {step < STEPS.length - 1 ? (
+            {step < t.onboarding.steps.length - 1 ? (
               <div onClick={!canNext() ? notifyIncompleteStep : undefined}>
                 <Button
-                  className={`text-white gap-1 ${!canNext() ? 'pointer-events-none' : ''}`}
+                  className={`w-full gap-1 text-white min-[420px]:w-auto ${!canNext() ? 'pointer-events-none' : ''}`}
                   style={{ backgroundColor: BRAND }}
                   disabled={!canNext()}
                   onClick={() => setStep((current) => current + 1)}
                 >
-                  Suivant <ChevronRight size={14} />
+                  {t.onboarding.next} <ChevronRight size={14} />
                 </Button>
               </div>
             ) : (
               <Button
-                className="text-white gap-1"
+                className="w-full gap-1 text-white min-[420px]:w-auto"
                 style={{ backgroundColor: BRAND }}
                 onClick={handleFinish}
                 disabled={isSaving}
               >
-                <Check size={14} /> {isSaving ? 'Enregistrement...' : 'Commencer'}
+                <Check size={14} /> {isSaving ? t.onboarding.saving : t.onboarding.start}
               </Button>
             )}
           </div>
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-4">
-          Vous pourrez modifier ces informations dans vos parametres.
+          {t.onboarding.footer}
         </p>
       </div>
     </div>

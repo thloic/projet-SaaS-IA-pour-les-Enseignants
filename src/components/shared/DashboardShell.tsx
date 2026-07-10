@@ -17,7 +17,7 @@ export default function DashboardShell({ teacher, children }: DashboardShellProp
   const { isDark, toggleTheme } = useTheme()
 
   return (
-    <div className={`min-h-screen bg-background text-foreground ${isDark ? 'dark' : ''}`}>
+    <div className={`min-h-screen w-full overflow-x-clip bg-background text-foreground ${isDark ? 'dark' : ''}`}>
       <Sidebar
         collapsed={collapsed}
         mobileOpen={mobileOpen}
@@ -36,7 +36,9 @@ export default function DashboardShell({ teacher, children }: DashboardShellProp
           onThemeToggle={toggleTheme}
           teacher={teacher}
         />
-        <main className="flex-1 px-4 py-6 lg:px-8 lg:py-8 pb-24 lg:pb-8">{children}</main>
+        <main className="min-w-0 flex-1 px-3 py-5 pb-24 sm:px-4 sm:py-6 lg:px-8 lg:py-8 lg:pb-8">
+          {children}
+        </main>
       </div>
     </div>
   )

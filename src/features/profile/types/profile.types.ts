@@ -23,6 +23,7 @@ export interface TeacherIdentity {
   subject: string
   level: string
   country: string
+  language: ContentLanguage
   plan: 'free' | 'pro'
   generationsUsed: number
   generationsLimit: number

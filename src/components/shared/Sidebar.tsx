@@ -1,6 +1,7 @@
 'use client'
 
-import { usePathname, useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import {
   Home,
   FileText,
@@ -18,20 +19,10 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import BrandLogo from '@/components/shared/BrandLogo'
+import { useAppLocale } from '@/features/i18n/AppLocaleProvider'
 import type { TeacherIdentity } from '@/features/profile/types/profile.types'
 
 const BRAND = '#534AB7'
-
-const navItems = [
-  { label: 'Accueil', href: '/dashboard', icon: Home },
-  { label: 'Documents', href: '/documents', icon: FileText },
-  { label: 'Nouveau cours', href: '/generate', icon: BookOpen, isNew: true },
-  { label: 'Classe', href: '/classroom', icon: UsersRound },
-  { label: 'Quiz & QCM', href: '/quiz', icon: ClipboardList },
-  { label: 'Bulletins', href: '/bulletin', icon: MessageSquare },
-  { label: 'Historique', href: '/history', icon: History },
-  { label: 'Paramètres', href: '/settings', icon: Settings },
-]
 
 function progressColor(used: number, limit: number) {
   if (used >= limit) return 'bg-red-500'
@@ -49,16 +40,26 @@ interface SidebarProps {
 
 export default function Sidebar({ collapsed, mobileOpen, onMobileClose, onToggle, teacher }: SidebarProps) {
   const pathname = usePathname()
-  const router = useRouter()
+  const { t } = useAppLocale()
   const generationsUsed = teacher?.generationsUsed ?? 0
   const generationsLimit = teacher?.generationsLimit ?? 3
   const progress = (generationsUsed / generationsLimit) * 100
+  const navItems = [
+    { label: t.nav.dashboard, href: '/dashboard', icon: Home },
+    { label: t.nav.documents, href: '/documents', icon: FileText },
+    { label: t.nav.generate, href: '/generate', icon: BookOpen, isNew: true },
+    { label: t.nav.classroom, href: '/classroom', icon: UsersRound },
+    { label: t.nav.quiz, href: '/quiz', icon: ClipboardList },
+    { label: t.nav.bulletin, href: '/bulletin', icon: MessageSquare },
+    { label: t.nav.history, href: '/history', icon: History },
+    { label: t.nav.settings, href: '/settings', icon: Settings },
+  ]
 
   return (
     <>
       {/* Desktop sidebar */}
       <aside
-        className={`hidden lg:flex flex-col fixed inset-y-0 left-0 z-30 border-r border-border bg-card/60 backdrop-blur-sm transition-all duration-300 ${
+        className={`fixed inset-y-0 left-0 z-30 hidden flex-col border-r border-border bg-card/60 backdrop-blur-sm transition-all duration-300 lg:flex ${
           collapsed ? 'w-16' : 'w-60'
         }`}
       >
@@ -77,7 +78,7 @@ export default function Sidebar({ collapsed, mobileOpen, onMobileClose, onToggle
           <button
             onClick={onToggle}
             className="shrink-0 rounded-lg border border-border p-1 text-muted-foreground hover:text-foreground transition-colors"
-            aria-label={collapsed ? 'Agrandir la sidebar' : 'Réduire la sidebar'}
+            aria-label={collapsed ? t.common.expandSidebar : t.common.collapseSidebar}
           >
             {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
           </button>
@@ -97,7 +98,7 @@ export default function Sidebar({ collapsed, mobileOpen, onMobileClose, onToggle
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold">{teacher?.name ?? 'Bienvenue'}</p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {teacher ? `${teacher.subject} · ${teacher.level}` : 'Profil incomplet'}
+                    {teacher ? `${teacher.subject} · ${teacher.level}` : t.common.incompleteProfile}
                   </p>
                 </div>
               </div>
@@ -110,11 +111,11 @@ export default function Sidebar({ collapsed, mobileOpen, onMobileClose, onToggle
           {navItems.map(({ label, href, icon: Icon, isNew }) => {
             const active = pathname === href
             return (
-              <button
+              <Link
                 key={label}
-                onClick={() => router.push(href)}
+                href={href}
                 title={collapsed ? label : undefined}
-                className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+            className={`flex w-full min-w-0 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
                   active
                     ? 'bg-primary/10 text-primary'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
@@ -123,18 +124,18 @@ export default function Sidebar({ collapsed, mobileOpen, onMobileClose, onToggle
                 <Icon size={18} className="shrink-0" />
                 {!collapsed && (
                   <>
-                    <span className="flex-1 text-left">{label}</span>
+                    <span className="min-w-0 flex-1 truncate text-left">{label}</span>
                     {isNew && (
                       <Badge
                         className="text-[10px] px-1.5"
                         style={{ backgroundColor: BRAND, color: 'white' }}
                       >
-                        Nouveau
+                        {t.common.new}
                       </Badge>
                     )}
                   </>
                 )}
-              </button>
+              </Link>
             )
           })}
         </nav>
@@ -145,12 +146,12 @@ export default function Sidebar({ collapsed, mobileOpen, onMobileClose, onToggle
             <div className="rounded-2xl border border-border bg-muted/30 p-3 space-y-3">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <Crown size={13} className="text-amber-400" />
-                Plan Free
+                {t.common.freePlan}
               </div>
               <div>
                 <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
                   <span>
-                    {generationsUsed}/{generationsLimit} générations
+                    {generationsUsed}/{generationsLimit} {t.common.generations}
                   </span>
                   <span>{Math.round(progress)}%</span>
                 </div>
@@ -168,7 +169,7 @@ export default function Sidebar({ collapsed, mobileOpen, onMobileClose, onToggle
                 className="w-full text-white text-xs h-8"
                 style={{ backgroundColor: BRAND }}
               >
-                Passer au Pro
+                {t.common.upgrade}
               </Button>
             </div>
           </div>
@@ -180,9 +181,9 @@ export default function Sidebar({ collapsed, mobileOpen, onMobileClose, onToggle
           <button
             className="absolute inset-0 bg-black/50"
             onClick={onMobileClose}
-            aria-label="Fermer le menu"
+            aria-label={t.common.closeMenu}
           />
-          <aside className="relative z-10 flex h-full w-72 max-w-[85vw] flex-col border-r border-border bg-card shadow-xl">
+          <aside className="relative z-10 flex h-full w-72 max-w-[min(85vw,20rem)] flex-col border-r border-border bg-card shadow-xl">
             <div className="flex h-16 items-center justify-between px-4">
               <div className="flex items-center gap-2">
                 <BrandLogo className="h-10 w-32" priority />
@@ -190,7 +191,7 @@ export default function Sidebar({ collapsed, mobileOpen, onMobileClose, onToggle
               <button
                 onClick={onMobileClose}
                 className="rounded-lg border border-border p-2 text-muted-foreground hover:text-foreground"
-                aria-label="Fermer la sidebar"
+                aria-label={t.common.closeMenu}
               >
                 <X size={16} />
               </button>
@@ -208,7 +209,7 @@ export default function Sidebar({ collapsed, mobileOpen, onMobileClose, onToggle
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold">{teacher?.name ?? 'Bienvenue'}</p>
                     <p className="truncate text-xs text-muted-foreground">
-                      {teacher ? `${teacher.subject} · ${teacher.level}` : 'Profil incomplet'}
+                      {teacher ? `${teacher.subject} · ${teacher.level}` : t.common.incompleteProfile}
                     </p>
                   </div>
                 </div>
@@ -219,29 +220,29 @@ export default function Sidebar({ collapsed, mobileOpen, onMobileClose, onToggle
               {navItems.map(({ label, href, icon: Icon, isNew }) => {
                 const active = pathname === href
                 return (
-                  <button
+                  <Link
                     key={label}
+                    href={href}
                     onClick={() => {
                       onMobileClose()
-                      router.push(href)
                     }}
-                    className={`w-full flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors ${
+                    className={`flex w-full min-w-0 items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors ${
                       active
                         ? 'bg-primary/10 text-primary'
                         : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
                     }`}
                   >
                     <Icon size={18} className="shrink-0" />
-                    <span className="flex-1 text-left">{label}</span>
+                    <span className="min-w-0 flex-1 truncate text-left">{label}</span>
                     {isNew && (
                       <Badge
                         className="text-[10px] px-1.5"
                         style={{ backgroundColor: BRAND, color: 'white' }}
                       >
-                        Nouveau
+                        {t.common.new}
                       </Badge>
                     )}
-                  </button>
+                  </Link>
                 )
               })}
             </nav>
@@ -250,21 +251,21 @@ export default function Sidebar({ collapsed, mobileOpen, onMobileClose, onToggle
       )}
 
       {/* Mobile bottom navigation */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/80 backdrop-blur-md">
-        <div className="grid grid-cols-6 gap-1 px-2 py-2">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/90 backdrop-blur-md lg:hidden">
+        <div className="flex gap-1 overflow-x-auto px-2 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
           {navItems.slice(0, 6).map(({ label, href, icon: Icon }) => {
             const active = pathname === href
             return (
-              <button
+              <Link
                 key={label}
-                onClick={() => router.push(href)}
-                className={`flex flex-col items-center gap-1 rounded-xl py-2 text-xs transition-colors ${
+                href={href}
+                className={`flex min-w-16 flex-1 shrink-0 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[11px] transition-colors ${
                   active ? 'text-primary' : 'text-muted-foreground'
                 }`}
               >
                 <Icon size={18} />
                 <span className="truncate w-full text-center">{label}</span>
-              </button>
+              </Link>
             )
           })}
         </div>

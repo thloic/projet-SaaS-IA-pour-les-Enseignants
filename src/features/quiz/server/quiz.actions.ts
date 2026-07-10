@@ -190,6 +190,7 @@ export async function deleteQuizAction(
   formData: FormData
 ): Promise<DeleteQuizState> {
   const quizId = String(formData.get('quizId') ?? '')
+  const redirectTo = String(formData.get('redirectTo') ?? '/quiz')
   if (!quizId) {
     return { error: 'Quiz introuvable.' }
   }
@@ -218,5 +219,8 @@ export async function deleteQuizAction(
     return { error: 'Le quiz n’a pas pu être supprimé.' }
   }
 
-  redirect('/quiz?deleted=1')
+  const safeRedirectTo =
+    redirectTo.startsWith('/') && !redirectTo.startsWith('//') ? redirectTo : '/quiz'
+  const separator = safeRedirectTo.includes('?') ? '&' : '?'
+  redirect(`${safeRedirectTo}${separator}deleted=1`)
 }

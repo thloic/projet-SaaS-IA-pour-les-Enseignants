@@ -87,6 +87,7 @@ export function profileToTeacherIdentity(
     subject: subjects.join(', ') || 'Matiere non precisee',
     level: profile.levels?.[0] ?? 'Niveau non precise',
     country: profile.country ?? 'Pays non precise',
+    language: profile.language === 'fr' || profile.language === 'en' ? profile.language : 'en',
     plan: options?.plan ?? 'free',
     generationsUsed: options?.generationsUsed ?? 0,
     generationsLimit: options?.generationsLimit ?? 3,
