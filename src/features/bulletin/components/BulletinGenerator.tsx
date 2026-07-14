@@ -1,11 +1,17 @@
 'use client'
 
-import { useState } from 'react'
-import { MessageSquare, Sparkles, Copy, Check, RefreshCw } from 'lucide-react'
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
+import { AlertCircle, Check, Copy, MessageSquare, RefreshCw, Sparkles, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/shared/ToastProvider'
+import {
+  deleteBulletinAction,
+  generateBulletinAction,
+  type BulletinCommentListItem,
+} from '@/features/bulletin/server/bulletin.actions'
 
 const BRAND = '#534AB7'
 
@@ -19,35 +25,47 @@ const TONES: { value: Tone; label: string; desc: string }[] = [
 
 const SUBJECTS = ['Mathématiques', 'Français', 'Histoire-Géo', 'SVT', 'Physique-Chimie', 'Anglais', 'Espagnol', 'Philosophie', 'EPS', 'Arts plastiques']
 
-const mockComments: Record<Tone, string> = {
-  bienveillant: "Amara est une élève sérieuse et investie qui fait preuve d'une belle curiosité pour les mathématiques. Elle a su maîtriser les notions d'algèbre abordées ce trimestre avec rigueur et persévérance. Son attitude positive en classe est appréciée par ses camarades et ses enseignants. Nous l'encourageons à continuer sur cette belle lancée.",
-  encourageant: "Amara réalise un trimestre prometteur ! Ses résultats en mathématiques témoignent d'une réelle progression. Elle peut encore gagner en rapidité lors des évaluations, mais sa méthode de travail est solide. En continuant à s'entraîner régulièrement, elle a tous les atouts pour atteindre un excellent niveau. Bravo !",
-  factuel: "Amara obtient une moyenne de 14/20 en mathématiques ce trimestre. Elle maîtrise les notions du programme mais commet encore des erreurs dans les exercices de géométrie. Les exercices d'application et de raisonnement sont bien réalisés. Des progrès sont attendus sur la précision des calculs.",
+interface BulletinGeneratorProps {
+  initialBulletins: BulletinCommentListItem[]
+  loadError: string | null
 }
 
-export default function BulletinGenerator() {
+export default function BulletinGenerator({ initialBulletins, loadError }: BulletinGeneratorProps) {
+  const router = useRouter()
   const { showToast } = useToast()
   const [studentName, setStudentName] = useState('')
   const [subject, setSubject] = useState('Mathématiques')
   const [grade, setGrade] = useState('')
   const [observations, setObservations] = useState('')
   const [tone, setTone] = useState<Tone>('bienveillant')
-  const [isLoading, setIsLoading] = useState(false)
   const [result, setResult] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [copiedHistoryId, setCopiedHistoryId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [isGeneratePending, startGenerateTransition] = useTransition()
+  const [isDeletePending, startDeleteTransition] = useTransition()
 
-  function handleGenerate(e: React.FormEvent) {
-    e.preventDefault()
-    if (!studentName.trim()) {
-      showToast("Indiquez le prénom de l’élève avant de générer le commentaire.", 'error')
-      return
-    }
-    setIsLoading(true)
+  function handleGenerate(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
     setResult(null)
-    setTimeout(() => {
-      setIsLoading(false)
-      setResult(mockComments[tone])
-    }, 1600)
+    setError(null)
+
+    const formData = new FormData(event.currentTarget)
+    startGenerateTransition(async () => {
+      const nextState = await generateBulletinAction({ error: null, comment: null }, formData)
+      if (nextState.error) {
+        setError(nextState.error)
+        showToast(nextState.error, 'error')
+        return
+      }
+
+      if (nextState.comment) {
+        setResult(nextState.comment)
+        showToast('Commentaire généré et enregistré.', 'success')
+        router.refresh()
+      }
+    })
   }
 
   function handleCopy() {
@@ -58,12 +76,35 @@ export default function BulletinGenerator() {
     })
   }
 
+  function handleHistoryCopy(item: BulletinCommentListItem) {
+    navigator.clipboard.writeText(item.comment).then(() => {
+      setCopiedHistoryId(item.id)
+      setTimeout(() => setCopiedHistoryId(null), 2000)
+    })
+  }
+
   function handleReset() {
     setResult(null)
     setStudentName('')
     setGrade('')
     setObservations('')
   }
+
+  function handleDelete(item: BulletinCommentListItem) {
+    setDeletingId(item.id)
+    startDeleteTransition(async () => {
+      const deleteState = await deleteBulletinAction(item.id)
+      setDeletingId(null)
+      if (deleteState.error) {
+        showToast(deleteState.error, 'error')
+        return
+      }
+      showToast('Commentaire supprimé.', 'success')
+      router.refresh()
+    })
+  }
+
+  const isSubmitDisabled = isGeneratePending || !studentName.trim() || !grade.trim()
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
@@ -80,6 +121,13 @@ export default function BulletinGenerator() {
         </div>
       </div>
 
+      {loadError && (
+        <div className="flex gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-200">
+          <AlertCircle size={14} className="mt-0.5 shrink-0" />
+          <span>{loadError}</span>
+        </div>
+      )}
+
       <form onSubmit={handleGenerate} className="space-y-5" noValidate>
         {/* Student + Subject */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -87,6 +135,7 @@ export default function BulletinGenerator() {
             <Label htmlFor="studentName">Prénom de l&apos;élève</Label>
             <Input
               id="studentName"
+              name="student_name"
               placeholder="Ex : Amara"
               value={studentName}
               onChange={(e) => setStudentName(e.target.value)}
@@ -97,6 +146,7 @@ export default function BulletinGenerator() {
           <div className="space-y-2">
             <Label>Matière</Label>
             <select
+              name="subject"
               className="w-full rounded-xl bg-muted/40 border border-border px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
@@ -113,9 +163,11 @@ export default function BulletinGenerator() {
           <Label htmlFor="grade">Note obtenue (facultatif)</Label>
           <Input
             id="grade"
+            name="grade"
             placeholder="Ex : 14/20 ou Bien"
             value={grade}
             onChange={(e) => setGrade(e.target.value)}
+            required
             className="bg-muted/40"
           />
         </div>
@@ -125,7 +177,9 @@ export default function BulletinGenerator() {
           <Label htmlFor="observations">Observations libres</Label>
           <textarea
             id="observations"
+            name="observations"
             rows={3}
+            maxLength={500}
             placeholder="Points forts, difficultés, comportement, participation…"
             value={observations}
             onChange={(e) => setObservations(e.target.value)}
@@ -136,6 +190,7 @@ export default function BulletinGenerator() {
         {/* Tone selector */}
         <div className="space-y-3">
           <Label>Ton du commentaire</Label>
+          <input type="hidden" name="tone" value={tone} />
           <div className="grid grid-cols-3 gap-2">
             {TONES.map(({ value, label, desc }) => (
               <button
@@ -159,18 +214,24 @@ export default function BulletinGenerator() {
 
         <div
           onClick={
-            !isLoading && !studentName.trim()
-              ? () => showToast("Indiquez le prénom de l’élève avant de générer le commentaire.", 'error')
+            !isGeneratePending && isSubmitDisabled
+              ? () =>
+                  showToast(
+                    !studentName.trim()
+                      ? "Indiquez le prénom de l’élève avant de générer le commentaire."
+                      : 'Indiquez la note ou l’appréciation avant de générer le commentaire.',
+                    'error'
+                  )
               : undefined
           }
         >
           <Button
             type="submit"
-            className={`w-full h-12 text-base text-white font-bold flex items-center gap-2 ${!studentName.trim() ? 'pointer-events-none' : ''}`}
+            className={`w-full h-12 text-base text-white font-bold flex items-center gap-2 ${isSubmitDisabled ? 'pointer-events-none' : ''}`}
             style={{ backgroundColor: BRAND }}
-            disabled={isLoading || !studentName.trim()}
+            disabled={isSubmitDisabled}
           >
-            {isLoading ? (
+            {isGeneratePending ? (
               <><Sparkles size={18} className="animate-spin" /> Génération…</>
             ) : (
               <><Sparkles size={18} /> Générer le commentaire</>
@@ -178,6 +239,13 @@ export default function BulletinGenerator() {
           </Button>
         </div>
       </form>
+
+      {error && (
+        <div className="flex gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-700 dark:text-rose-300">
+          <AlertCircle size={14} className="mt-0.5 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
 
       {/* Result */}
       {result && (
@@ -203,6 +271,62 @@ export default function BulletinGenerator() {
           </div>
         </div>
       )}
+
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <MessageSquare size={17} className="text-muted-foreground" />
+          <h2 className="text-lg font-bold">Historique des commentaires</h2>
+        </div>
+
+        {initialBulletins.length === 0 ? (
+          <div className="rounded-2xl border border-border bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
+            Aucun commentaire généré pour le moment.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {initialBulletins.map((item) => (
+              <article key={item.id} className="space-y-3 rounded-2xl border border-border bg-muted/20 p-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <h3 className="font-semibold">{item.student_name}</h3>
+                    <p className="text-xs text-muted-foreground">
+                      {item.subject} · {item.grade} · {new Date(item.created_at).toLocaleDateString('fr-FR')}
+                    </p>
+                  </div>
+                  <span className="w-fit rounded-full border border-border px-2 py-1 text-[11px] text-muted-foreground">
+                    {item.tone}
+                  </span>
+                </div>
+                <p className="text-sm leading-relaxed">{item.comment}</p>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="gap-2 sm:flex-1"
+                    onClick={() => handleHistoryCopy(item)}
+                  >
+                    {copiedHistoryId === item.id ? (
+                      <><Check size={15} className="text-emerald-400" /> Copié !</>
+                    ) : (
+                      <><Copy size={15} /> Copier</>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    className="gap-2 sm:w-auto"
+                    disabled={isDeletePending && deletingId === item.id}
+                    onClick={() => handleDelete(item)}
+                  >
+                    <Trash2 size={15} />
+                    {isDeletePending && deletingId === item.id ? 'Suppression…' : 'Supprimer'}
+                  </Button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   )
 }

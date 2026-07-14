@@ -19,16 +19,11 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import BrandLogo from '@/components/shared/BrandLogo'
+import GenerationCounter from '@/components/shared/GenerationCounter'
 import { useAppLocale } from '@/features/i18n/AppLocaleProvider'
 import type { TeacherIdentity } from '@/features/profile/types/profile.types'
 
 const BRAND = '#534AB7'
-
-function progressColor(used: number, limit: number) {
-  if (used >= limit) return 'bg-red-500'
-  if (used >= limit - 1) return 'bg-amber-400'
-  return 'bg-emerald-400'
-}
 
 interface SidebarProps {
   collapsed: boolean
@@ -43,7 +38,6 @@ export default function Sidebar({ collapsed, mobileOpen, onMobileClose, onToggle
   const { t } = useAppLocale()
   const generationsUsed = teacher?.generationsUsed ?? 0
   const generationsLimit = teacher?.generationsLimit ?? 3
-  const progress = (generationsUsed / generationsLimit) * 100
   const navItems = [
     { label: t.nav.dashboard, href: '/dashboard', icon: Home },
     { label: t.nav.documents, href: '/documents', icon: FileText },
@@ -148,23 +142,11 @@ export default function Sidebar({ collapsed, mobileOpen, onMobileClose, onToggle
                 <Crown size={13} className="text-amber-400" />
                 {t.common.freePlan}
               </div>
-              <div>
-                <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
-                  <span>
-                    {generationsUsed}/{generationsLimit} {t.common.generations}
-                  </span>
-                  <span>{Math.round(progress)}%</span>
-                </div>
-                <div className="h-1.5 rounded-full bg-muted">
-                  <div
-                    className={`h-1.5 rounded-full transition-all ${progressColor(
-                      generationsUsed,
-                      generationsLimit
-                    )}`}
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-              </div>
+              <GenerationCounter
+                used={generationsUsed}
+                limit={generationsLimit}
+                label={t.common.generations}
+              />
               <Button
                 className="w-full text-white text-xs h-8"
                 style={{ backgroundColor: BRAND }}

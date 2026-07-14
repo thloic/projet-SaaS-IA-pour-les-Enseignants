@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { checkAndIncrementUsage, decrementUsage } from '@/features/billing/server/usage'
 import { getCurrentTeacherProfile, getCurrentUser } from '@/features/profile/server/profile'
 import { generatedQuizSchema, quizGenerationInputSchema, quizUpdateSchema } from '@/features/quiz/schemas/quizSchema'
 import { generateQuizFromContent } from '@/features/quiz/server/quizGeneration.service'
@@ -23,6 +24,15 @@ export interface DeleteQuizState {
 
 const GENERIC_GENERATION_ERROR = 'La génération du quiz a échoué, réessayez dans un instant.'
 const GENERIC_SAVE_ERROR = 'Le quiz n’a pas pu être enregistré, réessayez dans un instant.'
+const QUIZ_LIMIT_ERROR = 'Vous avez atteint votre limite de 3 générations gratuites ce mois-ci.'
+
+async function refundQuizGeneration(userId: string) {
+  try {
+    await decrementUsage(userId)
+  } catch (error) {
+    console.error('[quiz] remboursement du quota impossible', error)
+  }
+}
 
 export async function generateQuizAction(
   _prevState: GenerateQuizState,
@@ -52,7 +62,15 @@ export async function generateQuizAction(
     return { error: 'Terminez votre profil enseignant avant de générer un quiz.', quizId: null }
   }
 
+  let shouldRefundUsage = false
+
   try {
+    const usage = await checkAndIncrementUsage(user.id)
+    if (!usage.allowed) {
+      return { error: QUIZ_LIMIT_ERROR, quizId: null }
+    }
+
+    shouldRefundUsage = true
     const supabase = await createClient()
     let sourceText = parsedInput.data.pastedText?.trim() ?? ''
     let sourceDocumentId: string | null = null
@@ -67,10 +85,14 @@ export async function generateQuizAction(
 
       if (error) {
         console.error('[quiz] lecture document source refusee', error)
+        await refundQuizGeneration(user.id)
+        shouldRefundUsage = false
         return { error: GENERIC_GENERATION_ERROR, quizId: null }
       }
 
       if (!data) {
+        await refundQuizGeneration(user.id)
+        shouldRefundUsage = false
         return { error: 'Ce document source est introuvable ou inaccessible.', quizId: null }
       }
 
@@ -79,6 +101,8 @@ export async function generateQuizAction(
     }
 
     if (!sourceText) {
+      await refundQuizGeneration(user.id)
+      shouldRefundUsage = false
       return { error: 'Ajoutez un contenu de cours avant de générer le quiz.', quizId: null }
     }
 
@@ -93,6 +117,8 @@ export async function generateQuizAction(
     const validatedQuiz = generatedQuizSchema.safeParse(generatedQuiz)
     if (!validatedQuiz.success) {
       console.error('[quiz] validation du quiz genere echouee', validatedQuiz.error.flatten())
+      await refundQuizGeneration(user.id)
+      shouldRefundUsage = false
       return { error: GENERIC_GENERATION_ERROR, quizId: null }
     }
 
@@ -114,13 +140,20 @@ export async function generateQuizAction(
 
     if (insertError || !inserted || inserted.user_id !== user.id) {
       console.error('[quiz] insertion refusee', insertError)
+      await refundQuizGeneration(user.id)
+      shouldRefundUsage = false
       return { error: GENERIC_SAVE_ERROR, quizId: null }
     }
 
+    shouldRefundUsage = false
     revalidatePath('/quiz')
     revalidatePath(`/quiz/${inserted.id}`)
+    revalidatePath('/dashboard', 'layout')
     return { error: null, quizId: inserted.id }
   } catch (error) {
+    if (shouldRefundUsage) {
+      await refundQuizGeneration(user.id)
+    }
     console.error('[quiz] echec generation', error)
     return { error: GENERIC_GENERATION_ERROR, quizId: null }
   }

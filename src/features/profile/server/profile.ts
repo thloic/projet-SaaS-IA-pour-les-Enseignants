@@ -1,6 +1,7 @@
 import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import type { User } from '@supabase/supabase-js'
+import { getUsage } from '@/features/billing/server/usage'
 import type { TeacherIdentity, TeacherProfile } from '@/features/profile/types/profile.types'
 
 // cache() mémorise le résultat pour la durée d'une seule requête : si layout
@@ -70,16 +71,20 @@ export const getCurrentTeacherProfile = cache(async (): Promise<TeacherProfile |
   }
 })
 
-export function profileToTeacherIdentity(
+export async function profileToTeacherIdentity(
   profile: TeacherProfile,
   options?: { generationsUsed?: number; generationsLimit?: number; plan?: 'free' | 'pro' }
-): TeacherIdentity {
+): Promise<TeacherIdentity> {
   const firstName = profile.first_name ?? ''
   const lastName = profile.last_name ?? ''
   const name = `${firstName} ${lastName}`.trim() || 'Enseignant'
   const initials = `${firstName[0] ?? ''}${lastName[0] ?? ''}`.toUpperCase()
 
   const subjects = profile.subjects?.length ? profile.subjects : [profile.subject].filter(Boolean)
+  const usage =
+    typeof options?.generationsUsed === 'number' && typeof options?.generationsLimit === 'number'
+      ? { used: options.generationsUsed, limit: options.generationsLimit }
+      : await getUsage(profile.user_id)
 
   return {
     name,
@@ -89,7 +94,7 @@ export function profileToTeacherIdentity(
     country: profile.country ?? 'Pays non precise',
     language: profile.language === 'fr' || profile.language === 'en' ? profile.language : 'en',
     plan: options?.plan ?? 'free',
-    generationsUsed: options?.generationsUsed ?? 0,
-    generationsLimit: options?.generationsLimit ?? 3,
+    generationsUsed: usage.used,
+    generationsLimit: usage.limit,
   }
 }
