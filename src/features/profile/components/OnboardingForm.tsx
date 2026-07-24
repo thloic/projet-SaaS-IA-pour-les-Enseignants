@@ -12,10 +12,13 @@ import { saveOnboardingProfileAction } from '@/features/profile/server/profile.a
 import { createClient } from '@/lib/supabase/client'
 import { defaultGrading, type ContentLanguage, type GradingSystem } from '@/features/profile/types/profile.types'
 import { appTranslations } from '@/features/i18n/appTranslations'
+import { QUEBEC_LEVELS, ONTARIO_LEVELS } from '@/lib/constants/gradeLevels'
 
 const BRAND = '#534AB7'
 
-const LEVELS_OPTIONS = [
+// Repli utilise quand le pays/province n'a pas de table de correspondance dediee
+// (le contenu fourni par le client ne couvre que le Quebec et l'Ontario).
+const GENERIC_LEVELS_OPTIONS = [
   'Primaire',
   'Secondaire 1er cycle',
   'Secondaire 2e cycle',
@@ -23,6 +26,11 @@ const LEVELS_OPTIONS = [
   'Universitaire',
   'Formation professionnelle',
 ]
+
+function getLevelsOptions(nextCountryName: string, nextProvince: string) {
+  if (nextCountryName !== 'Canada') return GENERIC_LEVELS_OPTIONS
+  return nextProvince === 'Ontario' ? ONTARIO_LEVELS : QUEBEC_LEVELS
+}
 
 const SUBJECTS_OPTIONS = [
   'Mathematiques',
@@ -120,11 +128,15 @@ export default function OnboardingForm({
     setCountryName(nextCountryName)
     const nextCountry = getCountryValue(nextCountryName, province)
     setGradingSystem(defaultGrading(nextCountry))
+    // Les options de niveau dependent du pays/province : on reinitialise la
+    // selection pour eviter de garder des niveaux qui n'existent plus dans la nouvelle liste.
+    setLevels([])
   }
 
   function handleProvinceChange(nextProvince: string) {
     setProvince(nextProvince)
     setGradingSystem(defaultGrading(getCountryValue(countryName, nextProvince)))
+    setLevels([])
   }
 
   function canNext() {
@@ -371,7 +383,7 @@ export default function OnboardingForm({
                   {t.onboarding.levels} <span className="text-muted-foreground">({t.onboarding.multiple})</span>
                 </Label>
                 <div className="flex flex-wrap gap-2">
-                  {LEVELS_OPTIONS.map((item) => (
+                  {getLevelsOptions(countryName, province).map((item) => (
                     <button
                       key={item}
                       type="button"
