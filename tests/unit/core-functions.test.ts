@@ -6,6 +6,14 @@ import { magicLinkSchema } from '../../src/features/auth/schemas/authSchema.ts'
 import { classSchema, observationSchema, studentSchema } from '../../src/features/classroom/schemas/classroomSchema.ts'
 import { contactSchema } from '../../src/features/contact/schemas/contactSchema.ts'
 import { documentSchema } from '../../src/features/documents/schemas/documentSchema.ts'
+import {
+  adaptationGenerationInputSchema,
+  generatedVariantSchema,
+} from '../../src/features/adaptation/schemas/adaptationSchema.ts'
+import {
+  resolveStudentVariant,
+  summarizeAnonymousNeeds,
+} from '../../src/features/adaptation/utils/resolveStudentNeeds.ts'
 import { buildDocx } from '../../src/features/export/utils/buildDocx.ts'
 import { buildPdf } from '../../src/features/export/utils/buildPdf.ts'
 import { profileSchema } from '../../src/features/profile/schemas/profileSchema.ts'
@@ -159,8 +167,19 @@ test('createLiteLLMClient reads environment configuration', () => {
   })
 })
 
-test('prompt builders expose placeholders and quiz JSON instructions', () => {
-  assert.equal(buildCoursePrompt(), '')
+test('prompt builders expose structured generation instructions', () => {
+  const coursePrompt = buildCoursePrompt(
+    {
+      subject: 'Mathématiques',
+      level: 'Secondaire',
+      topic: 'Fractions',
+      duration_minutes: 60,
+      activities: ['Exercices'],
+    },
+    { country: 'Canada - Québec', gradingSystem: 'percentage', language: 'fr' }
+  )
+  assert.match(coursePrompt.userPrompt, /Objectifs pédagogiques/)
+
   const quizPrompt = buildQuizPrompt({
     content: 'Cours sur les fractions',
     gradingSystem: 'percentage',
@@ -170,8 +189,88 @@ test('prompt builders expose placeholders and quiz JSON instructions', () => {
   })
   assert.match(quizPrompt, /objet JSON valide/)
   assert.match(quizPrompt, /percentage/)
-  assert.equal(buildBulletinPrompt(), '')
-  assert.equal(buildVariantPrompt(), '')
+
+  const bulletinPrompt = buildBulletinPrompt({
+    input: {
+      student_name: 'Awa',
+      subject: 'Français',
+      grade: '14/20',
+      tone: 'encourageant',
+    },
+    teacherProfile: {
+      subject: 'Français',
+      gradingSystem: '20',
+      language: 'fr',
+    },
+  })
+  assert.match(bulletinPrompt.systemPrompt, /JSON strict/)
+
+  const variantPrompt = buildVariantPrompt({
+    sourceContent: 'Cours complet sur les fractions et exercices associés.',
+    sourceTitle: 'Les fractions',
+    subject: 'Mathématiques',
+    level: 'Secondaire',
+    language: 'fr',
+    variantType: 'dys',
+    anonymousNeeds: ['dys: 2'],
+  })
+  assert.match(variantPrompt.userPrompt, /police lisible/i)
+  assert.match(variantPrompt.systemPrompt, /objet JSON valide/)
+})
+
+test('adaptation schemas and anonymous student mapping are deterministic', () => {
+  assert.equal(
+    adaptationGenerationInputSchema.safeParse({
+      sourceType: 'paste',
+      title: 'Fractions',
+      pastedText: 'Un contenu pédagogique suffisamment détaillé pour être adapté.',
+      subject: 'Mathématiques',
+      level: 'Secondaire',
+      studentIds: [],
+    }).success,
+    true
+  )
+  assert.equal(
+    adaptationGenerationInputSchema.safeParse({
+      sourceType: 'course',
+      title: 'Fractions',
+      subject: 'Mathématiques',
+      level: 'Secondaire',
+    }).success,
+    false
+  )
+
+  assert.equal(resolveStudentVariant(['Dyslexie']), 'dys')
+  assert.equal(resolveStudentVariant(['Trouble de concentration']), 'adhd')
+  assert.equal(resolveStudentVariant([], true), 'support')
+  assert.deepEqual(
+    summarizeAnonymousNeeds([
+      { needs: ['Dyslexie'], interventionPlan: false },
+      { needs: ['Dyslexie'], interventionPlan: false },
+      { needs: ['Haut potentiel'], interventionPlan: false },
+    ]),
+    ['dys: 2', 'enrichment: 1']
+  )
+
+  assert.equal(
+    generatedVariantSchema.safeParse({
+      title: 'Les fractions adaptées',
+      summary: 'Une progression adaptée qui conserve les objectifs essentiels du cours.',
+      learningObjectives: ['Comprendre la notion de fraction.'],
+      sections: [
+        {
+          heading: 'Découverte',
+          content: 'Observer une représentation concrète puis expliquer les parts égales.',
+          instructions: ['Observe le schéma.'],
+        },
+      ],
+      exercises: [],
+      accommodations: ['Utiliser des consignes courtes et explicites.'],
+      teacherNotes: [],
+      visualSupports: [],
+    }).success,
+    true
+  )
 })
 
 test('export builders are current placeholders', () => {

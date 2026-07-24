@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { startTransition, useActionState, useRef, useState } from 'react'
 import {
   FileText,
@@ -441,14 +442,12 @@ function DocumentListItem({ doc, isExpanded, onToggleExpand }: DocumentListItemP
           {isLoadingContent ? 'Chargement du contenu…' : content}
         </div>
       )}
-      <button
-        type="button"
-        disabled
-        title="Disponible prochainement"
-        className="flex items-center gap-2 rounded-xl border border-dashed border-border px-3 py-2 text-xs font-medium text-muted-foreground opacity-60 cursor-not-allowed"
+      <Link
+        href={`/adaptations/new?sourceType=document&sourceId=${doc.id}`}
+        className="flex items-center gap-2 rounded-xl border border-primary/25 bg-primary/5 px-3 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/10"
       >
-        <Sparkles size={14} /> Adapter en 5 versions — bientôt disponible
-      </button>
+        <Sparkles size={14} /> Adapter en 5 versions
+      </Link>
       <QuizButton sourceDocumentId={doc.id} />
     </div>
   )

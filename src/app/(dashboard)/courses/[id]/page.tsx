@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, Clock } from 'lucide-react'
+import { ArrowLeft, Clock, WandSparkles } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import MarkdownContent from '@/features/generation/components/MarkdownContent'
@@ -22,11 +22,20 @@ export default async function CoursePage({
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 pb-20 lg:pb-6">
-      <Button asChild variant="outline" size="sm">
-        <Link href="/generate">
-          <ArrowLeft size={15} /> Retour aux cours
-        </Link>
-      </Button>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Button asChild variant="outline" size="sm">
+          <Link href="/generate">
+            <ArrowLeft size={15} /> Retour aux cours
+          </Link>
+        </Button>
+        {course.status === 'complete' && (
+          <Button asChild size="sm">
+            <Link href={`/adaptations/new?sourceType=course&sourceId=${course.id}`}>
+              <WandSparkles size={15} /> Adapter en 5 versions
+            </Link>
+          </Button>
+        )}
+      </div>
 
       <header className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">

@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Settings,
   Crown,
+  WandSparkles,
   X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -41,6 +42,7 @@ export default function Sidebar({ collapsed, mobileOpen, onMobileClose, onToggle
   const navItems = [
     { label: t.nav.dashboard, href: '/dashboard', icon: Home },
     { label: t.nav.documents, href: '/documents', icon: FileText },
+    { label: t.nav.adaptations, href: '/adaptations', icon: WandSparkles, isNew: true },
     { label: t.nav.generate, href: '/generate', icon: BookOpen, isNew: true },
     { label: t.nav.classroom, href: '/classroom', icon: UsersRound },
     { label: t.nav.quiz, href: '/quiz', icon: ClipboardList },
@@ -103,7 +105,7 @@ export default function Sidebar({ collapsed, mobileOpen, onMobileClose, onToggle
         {/* Nav */}
         <nav className="flex-1 px-2 space-y-0.5 overflow-y-auto">
           {navItems.map(({ label, href, icon: Icon, isNew }) => {
-            const active = pathname === href
+            const active = pathname === href || pathname.startsWith(`${href}/`)
             return (
               <Link
                 key={label}
@@ -200,7 +202,7 @@ export default function Sidebar({ collapsed, mobileOpen, onMobileClose, onToggle
 
             <nav className="flex-1 px-2 space-y-0.5 overflow-y-auto">
               {navItems.map(({ label, href, icon: Icon, isNew }) => {
-                const active = pathname === href
+                const active = pathname === href || pathname.startsWith(`${href}/`)
                 return (
                   <Link
                     key={label}
@@ -236,7 +238,7 @@ export default function Sidebar({ collapsed, mobileOpen, onMobileClose, onToggle
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/90 backdrop-blur-md lg:hidden">
         <div className="flex gap-1 overflow-x-auto px-2 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
           {navItems.slice(0, 6).map(({ label, href, icon: Icon }) => {
-            const active = pathname === href
+            const active = pathname === href || pathname.startsWith(`${href}/`)
             return (
               <Link
                 key={label}

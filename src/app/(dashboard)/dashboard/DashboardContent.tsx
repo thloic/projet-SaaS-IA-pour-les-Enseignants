@@ -15,6 +15,7 @@ import {
   MessageSquare,
   Search,
   TrendingUp,
+  WandSparkles,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -26,6 +27,15 @@ import type { QuizListItem } from '@/features/quiz/types/quiz.types'
 const BRAND = '#534AB7'
 
 const quickActions = [
+  {
+    titleKey: 'adaptationTitle',
+    descriptionKey: 'adaptationDescription',
+    icon: WandSparkles,
+    href: '/adaptations/new',
+    badgeKey: 'ai',
+    style: 'emerald',
+    ctaKey: 'adaptationCta',
+  },
   {
     titleKey: 'courseTitle',
     descriptionKey: 'courseDescription',
@@ -168,7 +178,7 @@ export default function DashboardContent({
       </section>
 
       {/* Quick Actions */}
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {quickActions.map(({ titleKey, descriptionKey, icon: Icon, href, badgeKey, style, ctaKey }) => (
           <div
             key={titleKey}
@@ -177,6 +187,8 @@ export default function DashboardContent({
                 ? 'bg-violet-50 border-violet-200 dark:bg-[#17142a] dark:border-violet-500/30'
                 : style === 'teal'
                 ? 'bg-teal-50 border-teal-200 dark:bg-[#0f1a18] dark:border-teal-500/30'
+                : style === 'emerald'
+                ? 'bg-emerald-50 border-emerald-200 dark:bg-[#101a16] dark:border-emerald-500/30'
                 : 'bg-amber-50 border-amber-200 dark:bg-[#1a1408] dark:border-amber-500/30'
             }`}
           >
@@ -187,6 +199,8 @@ export default function DashboardContent({
                     ? 'bg-violet-500/15 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300'
                     : style === 'teal'
                     ? 'bg-teal-500/15 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300'
+                    : style === 'emerald'
+                    ? 'bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
                     : 'bg-amber-500/15 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'
                 }`}
               >
