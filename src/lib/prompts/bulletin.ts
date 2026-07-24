@@ -1,8 +1,8 @@
-import type { BulletinInput } from '@/features/bulletin/schemas/bulletinSchema'
+import type { BulletinGenerationInput } from '@/features/bulletin/schemas/bulletinSchema'
 import type { GradingSystem, ContentLanguage } from '@/features/profile/types/profile.types'
 
 interface BuildBulletinPromptInput {
-  input: BulletinInput
+  input: BulletinGenerationInput
   teacherProfile: {
     subject?: string | null
     subjects?: string[] | null
@@ -12,7 +12,7 @@ interface BuildBulletinPromptInput {
   validationError?: string
 }
 
-const toneInstructions: Record<BulletinInput['tone'], string> = {
+const toneInstructions: Record<BulletinGenerationInput['tone'], string> = {
   bienveillant:
     'Ton bienveillant : chaleureux, humain, attentif à la personne, valorise les qualités et les efforts sans exagération.',
   encourageant:

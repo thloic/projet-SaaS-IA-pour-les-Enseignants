@@ -5,6 +5,7 @@ import { checkAndIncrementUsage, decrementUsage } from '@/features/billing/serve
 import { bulletinInputSchema } from '@/features/bulletin/schemas/bulletinSchema'
 import { generateBulletinComment } from '@/features/bulletin/server/bulletinGeneration.service'
 import { getCurrentTeacherProfile, getCurrentUser } from '@/features/profile/server/profile'
+import { listClassStudents } from '@/features/classroom/server/classroom.actions'
 import { createClient } from '@/lib/supabase/server'
 
 export interface GenerateBulletinState {
@@ -20,6 +21,8 @@ export interface DeleteBulletinState {
 export interface BulletinCommentListItem {
   id: string
   student_name: string
+  class_id: string | null
+  student_id: string | null
   subject: string
   grade: string
   observations: string | null
@@ -31,6 +34,7 @@ export interface BulletinCommentListItem {
 const GENERIC_GENERATION_ERROR = 'La génération du commentaire a échoué, réessayez dans un instant.'
 const GENERIC_SAVE_ERROR = 'Le commentaire n’a pas pu être enregistré, réessayez dans un instant.'
 const BULLETIN_LIMIT_ERROR = 'Vous avez atteint votre limite de 3 générations gratuites ce mois-ci.'
+const INVALID_STUDENT_ERROR = 'Cet élève ne fait pas partie de la classe sélectionnée.'
 
 async function refundBulletinGeneration(userId: string) {
   try {
@@ -45,7 +49,8 @@ export async function generateBulletinAction(
   formData: FormData
 ): Promise<GenerateBulletinState> {
   const parsed = bulletinInputSchema.safeParse({
-    student_name: formData.get('student_name'),
+    class_id: formData.get('class_id'),
+    student_id: formData.get('student_id'),
     subject: formData.get('subject'),
     grade: formData.get('grade'),
     observations: formData.get('observations') || undefined,
@@ -69,6 +74,16 @@ export async function generateBulletinAction(
     return { error: 'Terminez votre profil enseignant avant de générer un commentaire.', comment: null }
   }
 
+  // listClassStudents scope deja la requete a l'utilisateur courant : si
+  // l'eleve n'apparait pas dans cette liste, soit la classe n'est pas la
+  // sienne, soit l'eleve n'appartient pas a cette classe.
+  const classStudents = await listClassStudents(parsed.data.class_id)
+  const student = classStudents.find((item) => item.id === parsed.data.student_id)
+  if (!student) {
+    return { error: INVALID_STUDENT_ERROR, comment: null }
+  }
+  const studentName = `${student.first_name} ${student.last_name}`.trim()
+
   let usage
   try {
     usage = await checkAndIncrementUsage(user.id)
@@ -83,7 +98,13 @@ export async function generateBulletinAction(
 
   try {
     const generated = await generateBulletinComment({
-      input: parsed.data,
+      input: {
+        student_name: studentName,
+        subject: parsed.data.subject,
+        grade: parsed.data.grade,
+        observations: parsed.data.observations,
+        tone: parsed.data.tone,
+      },
       teacherProfile: {
         subject: profile.subject,
         subjects: profile.subjects,
@@ -95,7 +116,9 @@ export async function generateBulletinAction(
     const supabase = await createClient()
     const { error: insertError } = await supabase.from('bulletin_comments').insert({
       user_id: user.id,
-      student_name: parsed.data.student_name,
+      student_name: studentName,
+      class_id: parsed.data.class_id,
+      student_id: parsed.data.student_id,
       subject: parsed.data.subject,
       grade: parsed.data.grade,
       observations: parsed.data.observations ?? null,
@@ -130,7 +153,7 @@ export async function listMyBulletins(): Promise<BulletinCommentListItem[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('bulletin_comments')
-    .select('id, student_name, subject, grade, observations, tone, comment, created_at')
+    .select('id, student_name, class_id, student_id, subject, grade, observations, tone, comment, created_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
     .limit(20)

@@ -1,5 +1,6 @@
 import BulletinGenerator from '@/features/bulletin/components/BulletinGenerator'
 import { listMyBulletins, type BulletinCommentListItem } from '@/features/bulletin/server/bulletin.actions'
+import { listMyClasses } from '@/features/classroom/server/classroom.actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,5 +15,7 @@ export default async function BulletinPage() {
     loadError = 'Impossible de charger vos commentaires pour le moment.'
   }
 
-  return <BulletinGenerator initialBulletins={bulletins} loadError={loadError} />
+  const classes = await listMyClasses()
+
+  return <BulletinGenerator initialBulletins={bulletins} loadError={loadError} classes={classes} />
 }

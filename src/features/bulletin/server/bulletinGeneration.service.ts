@@ -3,11 +3,11 @@ import 'server-only'
 import { anthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import { buildBulletinPrompt } from '@/lib/prompts/bulletin'
-import { generatedBulletinSchema, type BulletinInput, type GeneratedBulletin } from '@/features/bulletin/schemas/bulletinSchema'
+import { generatedBulletinSchema, type BulletinGenerationInput, type GeneratedBulletin } from '@/features/bulletin/schemas/bulletinSchema'
 import type { ContentLanguage, GradingSystem } from '@/features/profile/types/profile.types'
 
 interface GenerateBulletinCommentInput {
-  input: BulletinInput
+  input: BulletinGenerationInput
   teacherProfile: {
     subject?: string | null
     subjects?: string[] | null

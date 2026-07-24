@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useCallback, useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { AlertCircle, Check, Copy, MessageSquare, RefreshCw, Sparkles, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,6 +13,8 @@ import {
   generateBulletinAction,
   type BulletinCommentListItem,
 } from '@/features/bulletin/server/bulletin.actions'
+import { listClassStudents, type ClassListItem } from '@/features/classroom/server/classroom.actions'
+import type { StudentProfile } from '@/features/classroom/types/classroom.types'
 
 const BRAND = '#534AB7'
 
@@ -28,12 +31,16 @@ const SUBJECTS = ['Mathématiques', 'Français', 'Histoire-Géo', 'SVT', 'Physiq
 interface BulletinGeneratorProps {
   initialBulletins: BulletinCommentListItem[]
   loadError: string | null
+  classes: ClassListItem[]
 }
 
-export default function BulletinGenerator({ initialBulletins, loadError }: BulletinGeneratorProps) {
+export default function BulletinGenerator({ initialBulletins, loadError, classes }: BulletinGeneratorProps) {
   const router = useRouter()
   const { showToast } = useToast()
-  const [studentName, setStudentName] = useState('')
+  const [classId, setClassId] = useState('')
+  const [studentId, setStudentId] = useState('')
+  const [students, setStudents] = useState<StudentProfile[]>([])
+  const [isLoadingStudents, setIsLoadingStudents] = useState(false)
   const [subject, setSubject] = useState('Mathématiques')
   const [grade, setGrade] = useState('')
   const [observations, setObservations] = useState('')
@@ -45,6 +52,39 @@ export default function BulletinGenerator({ initialBulletins, loadError }: Bulle
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [isGeneratePending, startGenerateTransition] = useTransition()
   const [isDeletePending, startDeleteTransition] = useTransition()
+
+  const loadStudentsForClass = useCallback(
+    async (nextClassId: string) => {
+      if (!nextClassId) {
+        setStudents([])
+        return
+      }
+
+      setIsLoadingStudents(true)
+      try {
+        const result = await listClassStudents(nextClassId)
+        setStudents(result)
+      } catch (fetchError) {
+        console.error('[bulletin] chargement des élèves impossible', fetchError)
+        showToast('Impossible de charger les élèves de cette classe.', 'error')
+      } finally {
+        setIsLoadingStudents(false)
+      }
+    },
+    [showToast]
+  )
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadStudentsForClass(classId)
+  }, [classId, loadStudentsForClass])
+
+  function handleClassChange(nextClassId: string) {
+    setClassId(nextClassId)
+    setStudentId('')
+    const selectedClass = classes.find((item) => item.id === nextClassId)
+    if (selectedClass) setSubject(selectedClass.subject)
+  }
 
   function handleGenerate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -85,7 +125,8 @@ export default function BulletinGenerator({ initialBulletins, loadError }: Bulle
 
   function handleReset() {
     setResult(null)
-    setStudentName('')
+    setClassId('')
+    setStudentId('')
     setGrade('')
     setObservations('')
   }
@@ -104,7 +145,8 @@ export default function BulletinGenerator({ initialBulletins, loadError }: Bulle
     })
   }
 
-  const isSubmitDisabled = isGeneratePending || !studentName.trim() || !grade.trim()
+  const isSubmitDisabled =
+    isGeneratePending || classes.length === 0 || !classId || !studentId || !grade.trim()
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
@@ -129,20 +171,61 @@ export default function BulletinGenerator({ initialBulletins, loadError }: Bulle
       )}
 
       <form onSubmit={handleGenerate} className="space-y-5" noValidate>
-        {/* Student + Subject */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="studentName">Prénom de l&apos;élève</Label>
-            <Input
-              id="studentName"
-              name="student_name"
-              placeholder="Ex : Amara"
-              value={studentName}
-              onChange={(e) => setStudentName(e.target.value)}
-              required
-              className="bg-muted/40"
-            />
+        {classes.length === 0 ? (
+          <div className="flex flex-col gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-3 text-sm text-amber-700 dark:text-amber-200">
+            <span>
+              Vous n&apos;avez pas encore créé de classe. Créez-en une pour pouvoir associer un commentaire à un élève.
+            </span>
+            <Link href="/classroom" className="font-semibold underline underline-offset-2">
+              Aller au module Classe
+            </Link>
           </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="classId">Classe</Label>
+              <select
+                id="classId"
+                name="class_id"
+                className="w-full rounded-xl bg-muted/40 border border-border px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                value={classId}
+                onChange={(e) => handleClassChange(e.target.value)}
+              >
+                <option value="">Sélectionnez une classe</option>
+                {classes.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="studentId">Élève</Label>
+              <select
+                id="studentId"
+                name="student_id"
+                className="w-full rounded-xl bg-muted/40 border border-border px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-60"
+                value={studentId}
+                onChange={(e) => setStudentId(e.target.value)}
+                disabled={!classId || isLoadingStudents}
+              >
+                <option value="">
+                  {!classId
+                    ? 'Choisissez d’abord une classe'
+                    : isLoadingStudents
+                      ? 'Chargement…'
+                      : students.length === 0
+                        ? 'Aucun élève dans cette classe'
+                        : 'Sélectionnez un élève'}
+                </option>
+                {students.map((s) => (
+                  <option key={s.id} value={s.id}>{s.first_name} {s.last_name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+
+        {/* Subject + Grade */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label>Matière</Label>
             <select
@@ -156,20 +239,18 @@ export default function BulletinGenerator({ initialBulletins, loadError }: Bulle
               ))}
             </select>
           </div>
-        </div>
-
-        {/* Grade */}
-        <div className="space-y-2">
-          <Label htmlFor="grade">Note obtenue (facultatif)</Label>
-          <Input
-            id="grade"
-            name="grade"
-            placeholder="Ex : 14/20 ou Bien"
-            value={grade}
-            onChange={(e) => setGrade(e.target.value)}
-            required
-            className="bg-muted/40"
-          />
+          <div className="space-y-2">
+            <Label htmlFor="grade">Note obtenue (facultatif)</Label>
+            <Input
+              id="grade"
+              name="grade"
+              placeholder="Ex : 14/20 ou Bien"
+              value={grade}
+              onChange={(e) => setGrade(e.target.value)}
+              required
+              className="bg-muted/40"
+            />
+          </div>
         </div>
 
         {/* Observations */}
@@ -217,9 +298,13 @@ export default function BulletinGenerator({ initialBulletins, loadError }: Bulle
             !isGeneratePending && isSubmitDisabled
               ? () =>
                   showToast(
-                    !studentName.trim()
-                      ? "Indiquez le prénom de l’élève avant de générer le commentaire."
-                      : 'Indiquez la note ou l’appréciation avant de générer le commentaire.',
+                    classes.length === 0
+                      ? 'Créez une classe avant de générer un commentaire.'
+                      : !classId
+                        ? 'Sélectionnez une classe avant de générer le commentaire.'
+                        : !studentId
+                          ? 'Sélectionnez un élève avant de générer le commentaire.'
+                          : 'Indiquez la note ou l’appréciation avant de générer le commentaire.',
                     'error'
                   )
               : undefined
