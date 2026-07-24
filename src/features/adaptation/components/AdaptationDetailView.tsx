@@ -22,6 +22,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/shared/ToastProvider'
+import ExportButton from '@/features/export/components/ExportButton'
 import AdaptationContent from '@/features/adaptation/components/AdaptationContent'
 import {
   createAdaptationShareAction,
@@ -262,6 +263,12 @@ export default function AdaptationDetailView({ adaptation }: AdaptationDetailVie
               {isRegenerating ? <Loader2 className="animate-spin" /> : <RefreshCw />}
               Régénérer cette version
             </Button>
+            <ExportButton
+              source="adaptation_variant"
+              sourceId={adaptation.id}
+              variantType={activeType}
+              disabled={activeVariant?.status !== 'complete'}
+            />
           </div>
 
           <div className="space-y-2 rounded-xl border border-border bg-card/50 p-3">

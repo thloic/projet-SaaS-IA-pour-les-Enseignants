@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import MarkdownContent from '@/features/generation/components/MarkdownContent'
 import { getMyCourse } from '@/features/generation/server/courses'
+import ExportButton from '@/features/export/components/ExportButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,11 +30,16 @@ export default async function CoursePage({
           </Link>
         </Button>
         {course.status === 'complete' && (
-          <Button asChild size="sm">
-            <Link href={`/adaptations/new?sourceType=course&sourceId=${course.id}`}>
-              <WandSparkles size={15} /> Adapter en 5 versions
-            </Link>
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="w-56">
+              <ExportButton source="course" sourceId={course.id} />
+            </div>
+            <Button asChild size="sm">
+              <Link href={`/adaptations/new?sourceType=course&sourceId=${course.id}`}>
+                <WandSparkles size={15} /> Adapter en 5 versions
+              </Link>
+            </Button>
+          </div>
         )}
       </div>
 
