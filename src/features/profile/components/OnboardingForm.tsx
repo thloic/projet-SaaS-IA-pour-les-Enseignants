@@ -237,7 +237,7 @@ export default function OnboardingForm({
     <div className="flex min-h-screen items-center justify-center px-3 py-4 sm:p-4">
       <div className="w-full max-w-lg min-w-0">
         <div className="flex justify-center mb-8">
-          <BrandLogo className="h-12 w-40" priority />
+          <BrandLogo className="h-16 w-16" priority />
         </div>
 
         <div className="mb-8 flex items-start justify-center gap-1.5 overflow-x-auto px-1 sm:gap-2">

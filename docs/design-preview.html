@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>EducAssist — Design System Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;900&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --brand: #534AB7;
+    --brand-soft: rgba(83, 74, 183, 0.10);
+    --bg: #ffffff;
+    --fg: #171717;
+    --muted: #f5f5f7;
+    --muted-fg: #6b6b73;
+    --card: #ffffff;
+    --border: #e6e6ea;
+    --success: #10b981;
+    --success-soft: rgba(16, 185, 129, 0.12);
+    --warning: #f59e0b;
+    --warning-soft: rgba(245, 158, 11, 0.12);
+    --error: #dc2626;
+    --error-soft: rgba(220, 38, 38, 0.12);
+    --grid-line: rgba(83, 74, 183, 0.07);
+    --radius-lg: 18px;
+    --radius-xl: 22px;
+    --radius-2xl: 28px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121214;
+      --fg: #f2f2f4;
+      --muted: #1c1c20;
+      --muted-fg: #a1a1aa;
+      --card: #1a1a1e;
+      --border: rgba(255,255,255,0.08);
+      --grid-line: rgba(180, 140, 40, 0.10);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Geist', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+  h1, h2, h3 { font-weight: 900; margin: 0; }
+  section { max-width: 1080px; margin: 0 auto; padding: 64px 24px; }
+  section + section { border-top: 1px solid var(--border); }
+  .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--brand); margin-bottom: 12px; }
+  .hero-name { font-size: 56px; line-height: 1.05; margin-bottom: 8px; }
+  .specimen-row { display: grid; grid-template-columns: 140px 1fr; gap: 24px; align-items: baseline; padding: 20px 0; border-bottom: 1px solid var(--border); }
+  .specimen-label { font-size: 12px; color: var(--muted-fg); font-weight: 600; }
+  .body-sample { font-size: 16px; line-height: 1.6; color: var(--fg); max-width: 60ch; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 10px 12px; font-size: 14px; }
+  th { color: var(--muted-fg); font-weight: 600; border-bottom: 1px solid var(--border); }
+  td { border-bottom: 1px solid var(--border); }
+  code { font-family: 'Geist Mono', monospace; background: var(--muted); padding: 2px 6px; border-radius: 6px; font-size: 13px; }
+  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; margin: 24px 0 40px; }
+  .swatch { border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border); }
+  .swatch-color { height: 64px; }
+  .swatch-label { padding: 10px 12px; font-size: 12px; background: var(--card); }
+  .swatch-label b { display: block; font-size: 13px; }
+  .components { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 32px; }
+  .btn { font-family: inherit; font-weight: 700; font-size: 14px; padding: 10px 18px; border-radius: 12px; border: none; cursor: pointer; }
+  .btn-primary { background: var(--brand); color: white; }
+  .btn-secondary { background: var(--muted); color: var(--fg); border: 1px solid var(--border); }
+  .btn-ghost { background: transparent; color: var(--muted-fg); }
+  .input { font-family: inherit; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--muted); font-size: 14px; min-width: 220px; }
+  .input:focus { outline: 2px solid var(--brand); outline-offset: 1px; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; padding: 5px 11px; border-radius: 999px; }
+  .badge-success { background: var(--success-soft); color: var(--success); }
+  .badge-warning { background: var(--warning-soft); color: var(--warning); }
+  .badge-error { background: var(--error-soft); color: var(--error); }
+  .badge-neutral { background: var(--muted); color: var(--muted-fg); }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-2xl); padding: 24px; }
+
+  /* mockup */
+  .mock { display: grid; grid-template-columns: 220px 1fr; border: 1px solid var(--border); border-radius: var(--radius-2xl); overflow: hidden; margin-top: 24px; }
+  .mock-sidebar { background: var(--muted); padding: 24px 16px; border-right: 1px solid var(--border); }
+  .mock-logo { font-weight: 900; color: var(--brand); margin-bottom: 28px; font-size: 15px; }
+  .mock-nav a { display: block; padding: 9px 12px; border-radius: 10px; font-size: 13px; color: var(--muted-fg); margin-bottom: 4px; text-decoration: none; }
+  .mock-nav a.active { background: var(--brand-soft); color: var(--brand); font-weight: 700; }
+  .mock-main { padding: 28px; background: var(--bg); }
+  .mock-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .student-row { display: grid; grid-template-columns: 44px 1fr 120px; align-items: center; gap: 14px; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-lg); margin-bottom: 10px; }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--brand-soft); color: var(--brand); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; }
+  .student-name { font-weight: 600; font-size: 14px; }
+  .student-sub { font-size: 12px; color: var(--muted-fg); }
+  .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 18px; }
+  .summary-card { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; }
+  .summary-count { font-size: 28px; font-weight: 900; margin: 4px 0; }
+  .progress-bar { height: 8px; border-radius: 999px; background: var(--muted); overflow: hidden; margin-top: 10px; }
+  .progress-fill { height: 100%; background: var(--brand); width: 64%; border-radius: 999px; }
+</style>
+</head>
+<body>
+
+<section>
+  <div class="eyebrow">Display / Hero</div>
+  <div class="hero-name">EducAssist</div>
+  <div class="body-sample" style="font-size:18px;color:var(--muted-fg)">L'assistant pédagogique qui comprend votre programme, vos élèves et votre réalité.</div>
+</section>
+
+<section>
+  <div class="eyebrow">Specimen typographique — Geist</div>
+  <div class="specimen-row">
+    <div class="specimen-label">Display 900</div>
+    <div style="font-size:40px;font-weight:900;">Correction IA</div>
+  </div>
+  <div class="specimen-row">
+    <div class="specimen-label">Heading 700</div>
+    <div style="font-size:22px;font-weight:700;">Lot de correction — Classe 4e B</div>
+  </div>
+  <div class="specimen-row">
+    <div class="specimen-label">Body 400</div>
+    <div class="body-sample">Chaque copie est relue puis validée en un clic. Le commentaire ne contient jamais de formulation négative directe — les difficultés sont reformulées en axes de progrès.</div>
+  </div>
+  <div class="specimen-row">
+    <div class="specimen-label">Data / tabular</div>
+    <table>
+      <thead><tr><th>Catégorie</th><th>Élèves concernés</th></tr></thead>
+      <tbody>
+        <tr><td>Syntaxe</td><td>12 / 28</td></tr>
+        <tr><td>Compréhension</td><td>7 / 28</td></tr>
+        <tr><td>Méthode</td><td>4 / 28</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="specimen-row">
+    <div class="specimen-label">Code / Mono</div>
+    <code>status: 'validated' | 'generating' | 'failed'</code>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">Palette</div>
+  <div class="swatches">
+    <div class="swatch"><div class="swatch-color" style="background:var(--brand)"></div><div class="swatch-label"><b>Brand</b>#534AB7</div></div>
+    <div class="swatch"><div class="swatch-color" style="background:var(--success)"></div><div class="swatch-label"><b>Succès</b>#10B981</div></div>
+    <div class="swatch"><div class="swatch-color" style="background:var(--warning)"></div><div class="swatch-label"><b>En cours</b>#F59E0B</div></div>
+    <div class="swatch"><div class="swatch-color" style="background:var(--error)"></div><div class="swatch-label"><b>Échec</b>#DC2626</div></div>
+    <div class="swatch"><div class="swatch-color" style="background:var(--muted);border-bottom:1px solid var(--border)"></div><div class="swatch-label"><b>Muted</b>surfaces</div></div>
+  </div>
+
+  <div class="eyebrow">Composants</div>
+  <div class="components">
+    <button class="btn btn-primary">Lancer la correction</button>
+    <button class="btn btn-secondary">Enregistrer le lot</button>
+    <button class="btn btn-ghost">Annuler</button>
+    <input class="input" placeholder="Coller le texte de la copie…" />
+  </div>
+  <div class="components">
+    <span class="badge badge-success">✓ Validée</span>
+    <span class="badge badge-warning">● En cours</span>
+    <span class="badge badge-error">✕ Échec</span>
+    <span class="badge badge-neutral">Brouillon</span>
+  </div>
+  <div class="card" style="max-width:360px">
+    <div style="font-weight:700;margin-bottom:6px">Erreur de syntaxe</div>
+    <div style="font-size:14px;color:var(--muted-fg)">« il ont regardé » → accord sujet-verbe à revoir.</div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">Mockup — Import du lot de correction</div>
+  <div class="mock">
+    <div class="mock-sidebar">
+      <div class="mock-logo">EducAssist</div>
+      <div class="mock-nav">
+        <a>Tableau de bord</a>
+        <a class="active">Correction IA</a>
+        <a>Adapte Leçon</a>
+        <a>Classes</a>
+        <a>Bulletin</a>
+      </div>
+    </div>
+    <div class="mock-main">
+      <div class="mock-header">
+        <h3 style="font-size:20px;">Nouvelle correction — Classe 4e B</h3>
+        <button class="btn btn-primary">Lancer la correction (24)</button>
+      </div>
+      <div class="progress-bar"><div class="progress-fill"></div></div>
+      <div style="font-size:12px;color:var(--muted-fg);margin:8px 0 20px;">18 sur 28 copies traitées</div>
+
+      <div class="student-row">
+        <div class="avatar">AL</div>
+        <div><div class="student-name">Amara Leclerc</div><div class="student-sub">Copie collée · 412 mots</div></div>
+        <span class="badge badge-success">✓ Validée</span>
+      </div>
+      <div class="student-row">
+        <div class="avatar">TB</div>
+        <div><div class="student-name">Théo Bernier</div><div class="student-sub">Fichier importé · dissertation.pdf</div></div>
+        <span class="badge badge-warning">● En cours</span>
+      </div>
+      <div class="student-row">
+        <div class="avatar">SN</div>
+        <div><div class="student-name">Sofia Nguyen</div><div class="student-sub">Aucune copie renseignée</div></div>
+        <span class="badge badge-neutral">Ignorée</span>
+      </div>
+
+      <div class="summary-grid">
+        <div class="summary-card"><div class="specimen-label">Syntaxe</div><div class="summary-count">12</div><div class="student-sub">élèves concernés</div></div>
+        <div class="summary-card"><div class="specimen-label">Compréhension</div><div class="summary-count">7</div><div class="student-sub">élèves concernés</div></div>
+        <div class="summary-card"><div class="specimen-label">Méthode</div><div class="summary-count">4</div><div class="student-sub">élèves concernés</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>

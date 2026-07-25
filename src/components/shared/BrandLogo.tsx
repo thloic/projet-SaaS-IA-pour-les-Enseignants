@@ -3,8 +3,7 @@
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
 
-const LOGO_SRC = '/images/logo-pro-cropped.jpeg'
-const LOGO_MARK_SRC = '/images/logo-mark.jpeg'
+const LOGO_SRC = '/logosansbg.png'
 
 interface BrandLogoProps {
   variant?: 'full' | 'mark'
@@ -13,31 +12,11 @@ interface BrandLogoProps {
 }
 
 export default function BrandLogo({ variant = 'full', className, priority = false }: BrandLogoProps) {
-  if (variant === 'mark') {
-    return (
-      <span
-        className={cn(
-          'relative block h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-[#080d0f]',
-          className
-        )}
-        aria-label="EducAssist"
-      >
-        <Image
-          src={LOGO_MARK_SRC}
-          alt="EducAssist"
-          fill
-          sizes="36px"
-          className="object-cover"
-          priority={priority}
-        />
-      </span>
-    )
-  }
-
   return (
     <span
       className={cn(
-        'relative block h-11 w-36 shrink-0 overflow-hidden rounded-lg bg-[#080d0f]',
+        variant === 'mark' ? 'h-9 w-9' : 'h-11 w-11',
+        'relative block shrink-0 bg-transparent',
         className
       )}
       aria-label="EducAssist"
@@ -46,8 +25,8 @@ export default function BrandLogo({ variant = 'full', className, priority = fals
         src={LOGO_SRC}
         alt="EducAssist"
         fill
-        sizes="144px"
-        className="object-contain"
+        sizes={variant === 'mark' ? '36px' : '144px'}
+        className="object-contain [filter:drop-shadow(0_0_1px_rgba(3,7,18,0.95))_drop-shadow(0_1px_1px_rgba(3,7,18,0.65))] dark:[filter:none]"
         priority={priority}
       />
     </span>

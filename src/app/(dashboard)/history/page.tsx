@@ -1,16 +1,17 @@
-import { getCurrentTeacherProfile } from '@/features/profile/server/profile'
-import QuizHistory from '@/features/quiz/components/QuizHistory'
-import { listMyQuizzes } from '@/features/quiz/server/quiz'
+import HistoryPageContent from '@/features/dashboard/history/HistoryPageContent'
+import { loadCentralDashboard } from '@/features/dashboard/server/dashboardData'
 
 export default async function HistoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ deleted?: string }>
+  searchParams: Promise<{
+    preset?: string | string[]
+    from?: string | string[]
+    to?: string | string[]
+  }>
 }) {
   const params = await searchParams
-  const [profile, quizzes] = await Promise.all([getCurrentTeacherProfile(), listMyQuizzes()])
-  const teacherName =
-    `${profile?.first_name ?? ''} ${profile?.last_name ?? ''}`.trim() || 'Enseignant'
+  const data = await loadCentralDashboard(params)
 
-  return <QuizHistory quizzes={quizzes} teacherName={teacherName} deleted={params.deleted === '1'} />
+  return <HistoryPageContent data={data} />
 }

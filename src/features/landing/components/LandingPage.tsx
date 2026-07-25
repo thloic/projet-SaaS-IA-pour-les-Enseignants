@@ -110,7 +110,7 @@ export default function LandingPage() {
       >
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center">
-            <BrandLogo className="h-10 w-32" priority />
+            <BrandLogo className="h-11 w-11" priority />
           </Link>
 
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
@@ -628,7 +628,7 @@ export default function LandingPage() {
           </div>
 
           <div className={`flex flex-col items-center justify-between gap-4 border-t px-6 py-7 text-center sm:flex-row sm:px-8 sm:text-left ${footerBorder}`}>
-            <BrandLogo className="h-10 w-32" />
+            <BrandLogo className="h-11 w-11" />
             <p className={`text-xs ${dark ? 'text-white/40' : 'text-gray-500'}`}>
               {t.footer.copyright}
             </p>

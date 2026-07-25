@@ -9,12 +9,14 @@ function getCurrentPeriod() {
 }
 
 export async function checkAndIncrementUsage(
-  userId: string
+  userId: string,
+  feature = 'general'
 ): Promise<{ allowed: boolean; used: number; limit: number }> {
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('increment_usage', {
     p_user_id: userId,
     p_limit: FREE_GENERATION_LIMIT,
+    p_feature: feature,
   })
 
   if (error) {
@@ -30,10 +32,11 @@ export async function checkAndIncrementUsage(
   return { allowed: true, used, limit: FREE_GENERATION_LIMIT }
 }
 
-export async function decrementUsage(userId: string): Promise<number> {
+export async function decrementUsage(userId: string, feature = 'general'): Promise<number> {
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('decrement_usage', {
     p_user_id: userId,
+    p_feature: feature,
   })
 
   if (error) {
@@ -45,13 +48,17 @@ export async function decrementUsage(userId: string): Promise<number> {
   return Number.isFinite(used) ? used : 0
 }
 
-export async function getUsage(userId: string): Promise<{ used: number; limit: number }> {
+export async function getUsage(
+  userId: string,
+  feature = 'general'
+): Promise<{ used: number; limit: number }> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('usage_counters')
     .select('count')
     .eq('user_id', userId)
     .eq('period', getCurrentPeriod())
+    .eq('feature', feature)
     .maybeSingle()
 
   if (error) {

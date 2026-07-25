@@ -1,6 +1,16 @@
 import 'server-only'
 
-import { Document, HeadingLevel, Packer, Paragraph, TextRun } from 'docx'
+import {
+  Document,
+  HeadingLevel,
+  Packer,
+  Paragraph,
+  Table,
+  TableCell,
+  TableRow,
+  TextRun,
+  WidthType,
+} from 'docx'
 import type { ExportBlock, ExportDocument } from '@/features/export/types/export.types'
 
 const BASE_SIZE = 22 // demi-points, ~11pt
@@ -10,12 +20,12 @@ const DYS_LINE = 480 // ~2.0
 const BASE_SPACING = 160
 const DYS_SPACING = 240
 
-function buildParagraphs(blocks: ExportBlock[], dysLayout: boolean): Paragraph[] {
+function buildContent(blocks: ExportBlock[], dysLayout: boolean): Array<Paragraph | Table> {
   const size = dysLayout ? DYS_SIZE : BASE_SIZE
   const line = dysLayout ? DYS_LINE : BASE_LINE
   const spacing = dysLayout ? DYS_SPACING : BASE_SPACING
 
-  const paragraphs: Paragraph[] = []
+  const paragraphs: Array<Paragraph | Table> = []
 
   for (const block of blocks) {
     if (block.type === 'heading1') {
@@ -50,15 +60,59 @@ function buildParagraphs(blocks: ExportBlock[], dysLayout: boolean): Paragraph[]
       continue
     }
 
-    for (const item of block.items) {
-      paragraphs.push(
-        new Paragraph({
-          bullet: { level: 0 },
-          spacing: { after: Math.round(spacing / 2), line },
-          children: [new TextRun({ text: item, size })],
-        })
-      )
+    if (block.type === 'bullets') {
+      for (const item of block.items) {
+        paragraphs.push(
+          new Paragraph({
+            bullet: { level: 0 },
+            spacing: { after: Math.round(spacing / 2), line },
+            children: [new TextRun({ text: item, size })],
+          })
+        )
+      }
+      continue
     }
+
+    paragraphs.push(
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [
+          new TableRow({
+            tableHeader: true,
+            children: block.headers.map(
+              (header) =>
+                new TableCell({
+                  children: [
+                    new Paragraph({
+                      children: [new TextRun({ text: header, bold: true, size: size - 2 })],
+                    }),
+                  ],
+                })
+            ),
+          }),
+          ...block.rows.map(
+            (row) =>
+              new TableRow({
+                children: block.headers.map(
+                  (_, index) =>
+                    new TableCell({
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: row[index] ?? '', size: size - 2 })],
+                        }),
+                      ],
+                    })
+                ),
+              })
+          ),
+        ],
+      })
+    )
+    paragraphs.push(
+      new Paragraph({
+        spacing: { after: spacing },
+      })
+    )
   }
 
   return paragraphs
@@ -87,7 +141,7 @@ export async function buildDocx(document: ExportDocument): Promise<Buffer> {
         children: [
           titleParagraph,
           ...(metaParagraph ? [metaParagraph] : []),
-          ...buildParagraphs(document.blocks, document.dysLayout),
+          ...buildContent(document.blocks, document.dysLayout),
         ],
       },
     ],

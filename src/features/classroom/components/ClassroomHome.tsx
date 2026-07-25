@@ -1,420 +1,498 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, ArrowRight, BookOpenCheck, Check, Pencil, Plus, Trash2, Users, X } from 'lucide-react'
+import {
+  AlertCircle,
+  ArrowRight,
+  BookOpenCheck,
+  Check,
+  Gauge,
+  Pencil,
+  Play,
+  Plus,
+  Search,
+  Trash2,
+  UserRoundCheck,
+  UsersRound,
+  X,
+} from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { createClient } from '@/lib/supabase/client'
-import { useToast } from '@/components/shared/ToastProvider'
 import { useConfirm } from '@/components/shared/ConfirmProvider'
-import { classSchema } from '@/features/classroom/schemas/classroomSchema'
-import type { ClassRoom } from '@/features/classroom/types/classroom.types'
+import { useToast } from '@/components/shared/ToastProvider'
+import {
+  createClassAction,
+  deleteClassAction,
+  updateClassAction,
+} from '@/features/classroom/server/classroom.actions'
+import type {
+  ClassOverviewItem,
+  ClassroomOverviewData,
+} from '@/features/classroom/types/classroomDashboard.types'
+import { GlobalAttendanceChart } from '@/features/classroom/charts/ClassroomCharts'
 
-const BRAND = '#534AB7'
+interface ClassroomHomeProps {
+  initialData?: ClassroomOverviewData
+}
 
-export default function ClassroomHome() {
+interface ClassForm {
+  name: string
+  level: string
+  subject: string
+}
+
+const EMPTY_FORM: ClassForm = { name: '', level: '', subject: '' }
+const EMPTY_OVERVIEW: ClassroomOverviewData = {
+  classes: [],
+  metrics: {
+    classCount: 0,
+    studentCount: 0,
+    attendanceRate: null,
+    attentionCount: 0,
+  },
+}
+
+function formatRate(value: number | null) {
+  return value === null ? '—' : `${value} %`
+}
+
+function rateColor(value: number | null) {
+  if (value === null) return 'bg-muted-foreground/25'
+  if (value >= 90) return 'bg-emerald-500'
+  if (value >= 80) return 'bg-amber-500'
+  return 'bg-rose-500'
+}
+
+export default function ClassroomHome({
+  initialData = EMPTY_OVERVIEW,
+}: ClassroomHomeProps) {
   const router = useRouter()
   const confirm = useConfirm()
   const { showToast } = useToast()
-  const [classes, setClasses] = useState<ClassRoom[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [classes, setClasses] = useState(initialData.classes)
+  const [query, setQuery] = useState('')
+  const [form, setForm] = useState<ClassForm>(EMPTY_FORM)
+  const [editingClass, setEditingClass] = useState<ClassOverviewItem | null>(null)
+  const [dialogMode, setDialogMode] = useState<'create' | 'edit' | null>(null)
   const [isSaving, setIsSaving] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [name, setName] = useState('')
-  const [level, setLevel] = useState('')
-  const [subject, setSubject] = useState('')
-  const [editingClass, setEditingClass] = useState<ClassRoom | null>(null)
-  const [editName, setEditName] = useState('')
-  const [editLevel, setEditLevel] = useState('')
-  const [editSubject, setEditSubject] = useState('')
 
-  const loadClasses = useCallback(async () => {
-    try {
-      setIsLoading(true)
-      setError(null)
+  const visibleClasses = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase('fr')
+    if (!normalized) return classes
+    return classes.filter((item) =>
+      `${item.name} ${item.level} ${item.subject}`.toLocaleLowerCase('fr').includes(normalized)
+    )
+  }, [classes, query])
 
-      const supabase = createClient()
-      const { data, error: queryError } = await supabase
-        .from('classes')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (queryError) throw queryError
-
-      setClasses((data ?? []) as ClassRoom[])
-    } catch (err) {
-      console.error('[classroom] échec du chargement des classes', err)
-      const message = 'Impossible de charger vos classes pour le moment.'
-      setError(message)
-      showToast(message, 'error')
-    } finally {
-      setIsLoading(false)
+  const metrics = useMemo(() => {
+    const knownRates = classes
+      .map((item) => item.attendanceRate)
+      .filter((value): value is number => value !== null)
+    return {
+      classCount: classes.length,
+      studentCount: classes.reduce((sum, item) => sum + item.studentCount, 0),
+      attendanceRate:
+        knownRates.length > 0
+          ? Math.round(knownRates.reduce((sum, value) => sum + value, 0) / knownRates.length)
+          : initialData.metrics.attendanceRate,
+      attentionCount: classes.reduce((sum, item) => sum + item.attentionCount, 0),
     }
-  }, [showToast])
+  }, [classes, initialData.metrics.attendanceRate])
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadClasses()
-  }, [loadClasses])
+  function openCreate() {
+    setForm(EMPTY_FORM)
+    setEditingClass(null)
+    setError(null)
+    setDialogMode('create')
+  }
 
-  async function handleCreateClass(event: React.FormEvent<HTMLFormElement>) {
+  function openEdit(item: ClassOverviewItem) {
+    setForm({ name: item.name, level: item.level, subject: item.subject })
+    setEditingClass(item)
+    setError(null)
+    setDialogMode('edit')
+  }
+
+  async function saveClass(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    setIsSaving(true)
     setError(null)
 
-    const parsed = classSchema.safeParse({ name, level, subject })
-    if (!parsed.success) {
-      const message = parsed.error.issues[0]?.message ?? 'Complétez les informations de la classe.'
-      setError(message)
-      showToast(message, 'error')
+    const result =
+      dialogMode === 'edit' && editingClass
+        ? await updateClassAction(editingClass.id, form)
+        : await createClassAction(form)
+
+    setIsSaving(false)
+    if (result.error || !result.data) {
+      setError(result.error ?? 'Impossible d’enregistrer cette classe.')
       return
     }
 
-    try {
-      setIsSaving(true)
-      const supabase = createClient()
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser()
-
-      if (userError || !user) {
-        throw new Error('AUTH_REQUIRED')
-      }
-
-      const { data: createdClass, error: insertError } = await supabase
-        .from('classes')
-        .insert({
-          user_id: user.id,
-          name: parsed.data.name,
-          level: parsed.data.level,
-          subject: parsed.data.subject,
-        })
-        .select('*')
-        .single()
-
-      if (insertError || !createdClass) {
-        throw insertError ?? new Error('Impossible de creer la classe.')
-      }
-
-      setName('')
-      setLevel('')
-      setSubject('')
-      setClasses((current) => [createdClass as ClassRoom, ...current])
-      showToast(`Classe "${parsed.data.name}" enregistree.`, 'success')
-    } catch (err) {
-      console.error('[classroom] échec de la création de la classe', err)
-      const message =
-        err instanceof Error && err.message === 'AUTH_REQUIRED'
-          ? 'Votre session a expiré. Reconnectez-vous pour créer une classe.'
-          : 'Impossible de créer cette classe pour le moment. Réessayez.'
-      setError(message)
-      showToast(message, 'error')
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  function openEditClass(item: ClassRoom) {
-    setEditingClass(item)
-    setEditName(item.name)
-    setEditLevel(item.level)
-    setEditSubject(item.subject)
-  }
-
-  async function handleUpdateClass(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!editingClass) return
-
-    const parsed = classSchema.safeParse({ name: editName, level: editLevel, subject: editSubject })
-    if (!parsed.success) {
-      const message = parsed.error.issues[0]?.message ?? 'Complétez les informations de la classe.'
-      setError(message)
-      showToast(message, 'error')
-      return
+    if (dialogMode === 'edit') {
+      setClasses((current) =>
+        current.map((item) =>
+          item.id === result.data!.id
+            ? {
+                ...item,
+                name: result.data!.name,
+                level: result.data!.level,
+                subject: result.data!.subject,
+              }
+            : item
+        )
+      )
+      showToast('Classe mise à jour.', 'success')
+    } else {
+      setClasses((current) => [
+        ...current,
+        {
+          id: result.data!.id,
+          name: result.data!.name,
+          level: result.data!.level,
+          subject: result.data!.subject,
+          studentCount: 0,
+          attendanceRate: null,
+          absenceCount: 0,
+          lateCount: 0,
+          attentionCount: 0,
+          activeSessionId: null,
+          lastSessionDate: null,
+        },
+      ])
+      showToast('Classe créée.', 'success')
     }
 
-    try {
-      setIsSaving(true)
-      setError(null)
-
-      const supabase = createClient()
-      const { data, error: updateError } = await supabase
-        .from('classes')
-        .update({
-          name: parsed.data.name,
-          level: parsed.data.level,
-          subject: parsed.data.subject,
-        })
-        .eq('id', editingClass.id)
-        .select('*')
-        .single()
-
-      if (updateError || !data) {
-        throw updateError ?? new Error('Impossible de modifier la classe.')
-      }
-
-      setClasses((current) => current.map((item) => (item.id === editingClass.id ? data as ClassRoom : item)))
-      setEditingClass(null)
-      showToast('Classe mise a jour.', 'success')
-    } catch (err) {
-      console.error('[classroom] échec de la modification de la classe', err)
-      const message = 'Impossible de modifier cette classe pour le moment. Réessayez.'
-      setError(message)
-      showToast(message, 'error')
-    } finally {
-      setIsSaving(false)
-    }
+    setDialogMode(null)
+    router.refresh()
   }
 
-  async function handleDeleteClass(item: ClassRoom) {
+  async function removeClass(item: ClassOverviewItem) {
     const accepted = await confirm({
       title: 'Supprimer cette classe ?',
-      message: `La classe "${item.name}" et ses donnees associees seront supprimees.`,
+      message: `« ${item.name} » et toutes ses séances seront définitivement supprimées.`,
       confirmLabel: 'Supprimer',
     })
     if (!accepted) return
 
-    try {
-      setIsDeleting(true)
-      setError(null)
-
-      const supabase = createClient()
-      const { error: deleteError } = await supabase.from('classes').delete().eq('id', item.id)
-      if (deleteError) throw deleteError
-
-      setClasses((current) => current.filter((classroom) => classroom.id !== item.id))
-      showToast('Classe supprimee.', 'success')
-    } catch (err) {
-      console.error('[classroom] échec de la suppression de la classe', err)
-      const message = 'Impossible de supprimer cette classe pour le moment. Réessayez.'
-      setError(message)
-      showToast(message, 'error')
-    } finally {
-      setIsDeleting(false)
+    setDeletingId(item.id)
+    const result = await deleteClassAction(item.id)
+    setDeletingId(null)
+    if (result.error) {
+      showToast(result.error, 'error')
+      return
     }
+    setClasses((current) => current.filter((classroom) => classroom.id !== item.id))
+    showToast('Classe supprimée.', 'success')
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 pb-24 lg:pb-8">
-      <section className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <div
-              className="flex h-11 w-11 items-center justify-center rounded-xl"
-              style={{ backgroundColor: `${BRAND}22`, color: BRAND }}
-            >
-              <BookOpenCheck size={22} />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black">Gestion de classe</h1>
-              <p className="text-sm text-muted-foreground">
-                Classes, eleves, presences, participation et observations rapides.
-              </p>
-            </div>
+    <div className="mx-auto max-w-7xl space-y-6 pb-24 lg:pb-8">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex items-center gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <BookOpenCheck size={22} />
+          </span>
+          <div>
+            <h1 className="text-2xl font-black">Mes classes</h1>
+            <p className="text-sm text-muted-foreground">
+              Présences, participation et suivi pédagogique en un coup d’œil.
+            </p>
           </div>
         </div>
+        <Button onClick={openCreate} className="min-h-10">
+          <Plus /> Nouvelle classe
+        </Button>
+      </header>
+
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Metric
+          label="Classes"
+          value={String(metrics.classCount)}
+          icon={BookOpenCheck}
+          tone="violet"
+        />
+        <Metric
+          label="Élèves"
+          value={String(metrics.studentCount)}
+          icon={UsersRound}
+          tone="blue"
+        />
+        <Metric
+          label="Présence sur 30 jours"
+          value={formatRate(metrics.attendanceRate)}
+          icon={UserRoundCheck}
+          tone="green"
+        />
+        <Metric
+          label="Suivis à vérifier"
+          value={String(metrics.attentionCount)}
+          icon={AlertCircle}
+          tone="amber"
+        />
       </section>
 
-      {error && (
-        <div className="flex gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-700 dark:text-rose-300">
-          <AlertCircle size={16} className="mt-0.5 shrink-0" />
-          <span>{error}</span>
-        </div>
+      {classes.length > 0 && (
+        <section className="rounded-lg border border-border bg-card/40 p-4 sm:p-5">
+          <div className="mb-2">
+            <h2 className="font-bold">Présence par classe</h2>
+            <p className="text-sm text-muted-foreground">
+              Comparaison des appels enregistrés sur les 30 derniers jours.
+            </p>
+          </div>
+          <GlobalAttendanceChart classes={classes} />
+        </section>
       )}
 
-      <section className="grid gap-4 lg:grid-cols-[360px_1fr]">
-        <form
-          onSubmit={handleCreateClass}
-          className="rounded-2xl border border-border bg-card/50 p-4 space-y-4"
-        >
-          <div className="flex items-center gap-2">
-            <Plus size={16} style={{ color: BRAND }} />
-            <h2 className="font-bold">Nouvelle classe</h2>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="class-name">Nom</Label>
+      <section className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full max-w-md">
+            <Search
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+            />
             <Input
-              id="class-name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="Groupe 201"
-              className="bg-muted/40"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Rechercher une classe, un niveau ou une matière..."
+              className="min-h-10 pl-9"
             />
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
-            <div className="space-y-2">
-              <Label htmlFor="class-level">Niveau</Label>
-              <Input
-                id="class-level"
-                value={level}
-                onChange={(event) => setLevel(event.target.value)}
-                placeholder="Secondaire 2"
-                className="bg-muted/40"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="class-subject">Matiere</Label>
-              <Input
-                id="class-subject"
-                value={subject}
-                onChange={(event) => setSubject(event.target.value)}
-                placeholder="Mathematiques"
-                className="bg-muted/40"
-              />
-            </div>
-          </div>
-          <Button
-            type="submit"
-            className="w-full text-white"
-            style={{ backgroundColor: BRAND }}
-            disabled={isSaving}
-          >
-            {isSaving ? 'Creation...' : 'Creer la classe'}
-          </Button>
-        </form>
+          <Badge variant="outline">
+            {visibleClasses.length} classe{visibleClasses.length > 1 ? 's' : ''}
+          </Badge>
+        </div>
 
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="font-bold">Mes classes</h2>
-            <Badge variant="outline">{classes.length} classe{classes.length > 1 ? 's' : ''}</Badge>
+        {classes.length === 0 ? (
+          <div className="flex min-h-72 flex-col items-center justify-center rounded-lg border border-dashed border-border p-6 text-center">
+            <BookOpenCheck size={30} className="mb-3 text-primary" />
+            <h2 className="font-bold">Créez votre première classe</h2>
+            <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+              Ajoutez ensuite vos élèves pour démarrer les présences et le suivi.
+            </p>
+            <Button onClick={openCreate} className="mt-5">
+              <Plus /> Nouvelle classe
+            </Button>
           </div>
+        ) : visibleClasses.length === 0 ? (
+          <div className="rounded-lg border border-border bg-muted/20 p-6 text-sm text-muted-foreground">
+            Aucune classe ne correspond à cette recherche.
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {visibleClasses.map((item) => (
+              <article
+                key={item.id}
+                className="flex min-h-64 min-w-0 flex-col rounded-lg border border-border bg-card/50 p-4 transition-colors hover:border-primary/35"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h2 className="truncate text-lg font-bold">{item.name}</h2>
+                    <p className="mt-1 truncate text-sm text-muted-foreground">
+                      {item.level} · {item.subject}
+                    </p>
+                  </div>
+                  {item.activeSessionId ? (
+                    <Badge className="bg-emerald-600 text-white">En cours</Badge>
+                  ) : (
+                    <Badge variant="outline">
+                      {item.lastSessionDate ? 'Suivie' : 'Nouvelle'}
+                    </Badge>
+                  )}
+                </div>
 
-          {isLoading ? (
-            <div className="rounded-2xl border border-border bg-muted/20 p-6 text-sm text-muted-foreground">
-              Chargement des classes...
-            </div>
-          ) : classes.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border bg-muted/20 p-6 text-sm text-muted-foreground">
-              Aucune classe pour le moment. Creez votre premiere classe pour demarrer les appels.
-            </div>
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2">
-              {classes.map((item) => (
-                <div
-                  key={item.id}
-                  className="group rounded-2xl border border-border bg-card/50 p-4 text-left transition-colors hover:bg-muted/40"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <button className="min-w-0 flex-1 text-left" onClick={() => router.push(`/classroom/${item.id}`)}>
-                      <p className="truncate font-bold">{item.name}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {item.level} · {item.subject}
-                      </p>
-                    </button>
+                <div className="mt-5 flex items-end justify-between gap-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Présence · 30 jours</p>
+                    <p className="mt-1 text-2xl font-black">{formatRate(item.attendanceRate)}</p>
+                  </div>
+                  <div className="text-right text-xs text-muted-foreground">
+                    <p>{item.studentCount} élève{item.studentCount > 1 ? 's' : ''}</p>
+                    <p>{item.lateCount} retard{item.lateCount > 1 ? 's' : ''}</p>
+                  </div>
+                </div>
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className={`h-full rounded-full ${rateColor(item.attendanceRate)}`}
+                    style={{ width: `${item.attendanceRate ?? 0}%` }}
+                  />
+                </div>
+
+                <div className="mt-4 flex min-h-7 flex-wrap gap-2 text-xs">
+                  {item.absenceCount > 0 && (
+                    <span className="rounded-md bg-rose-500/10 px-2 py-1 text-rose-700 dark:text-rose-300">
+                      {item.absenceCount} absence{item.absenceCount > 1 ? 's' : ''}
+                    </span>
+                  )}
+                  {item.attentionCount > 0 && (
+                    <span className="rounded-md bg-amber-500/10 px-2 py-1 text-amber-700 dark:text-amber-300">
+                      {item.attentionCount} suivi{item.attentionCount > 1 ? 's' : ''}
+                    </span>
+                  )}
+                  {item.absenceCount === 0 && item.attentionCount === 0 && (
+                    <span className="text-muted-foreground">Aucun signal récent</span>
+                  )}
+                </div>
+
+                <div className="mt-auto grid grid-cols-[1fr_1fr_auto] gap-2 pt-5">
+                  <Button asChild variant="outline" className="min-w-0">
+                    <Link href={`/classroom/${item.id}`}>
+                      Tableau <ArrowRight />
+                    </Link>
+                  </Button>
+                  <Button asChild className="min-w-0">
+                    <Link href={`/classroom/${item.id}/session`}>
+                      <Play /> {item.activeSessionId ? 'Reprendre' : 'Démarrer'}
+                    </Link>
+                  </Button>
+                  <div className="flex">
                     <Button
                       type="button"
-                      variant="ghost"
                       size="icon"
-                      onClick={() => router.push(`/classroom/${item.id}`)}
-                      aria-label="Ouvrir la classe"
+                      variant="ghost"
+                      title="Modifier"
+                      onClick={() => openEdit(item)}
                     >
-                      <ArrowRight size={16} />
+                      <Pencil />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="destructive"
+                      title="Supprimer"
+                      disabled={deletingId === item.id}
+                      onClick={() => void removeClass(item)}
+                    >
+                      <Trash2 />
                     </Button>
                   </div>
-                  <div className="mt-4 flex items-center justify-between gap-2">
-                    <button
-                      type="button"
-                      onClick={() => router.push(`/classroom/${item.id}`)}
-                      className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
-                    >
-                      <Users size={14} />
-                      <span>Ouvrir la classe</span>
-                    </button>
-                    <div className="flex gap-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => openEditClass(item)}
-                        aria-label="Modifier la classe"
-                      >
-                        <Pencil size={14} />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon-sm"
-                        onClick={() => void handleDeleteClass(item)}
-                        disabled={isDeleting}
-                        aria-label="Supprimer la classe"
-                      >
-                        <Trash2 size={14} />
-                      </Button>
-                    </div>
-                  </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
 
-      {editingClass && (
-        <div className="fixed inset-0 z-50 flex items-end bg-black/50 p-0 sm:items-center sm:justify-center sm:p-4">
+      {dialogMode && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/50 sm:items-center sm:justify-center sm:p-4">
           <form
-            onSubmit={handleUpdateClass}
-            className="w-full rounded-t-2xl border border-border bg-card p-4 shadow-xl sm:max-w-md sm:rounded-2xl"
+            onSubmit={saveClass}
+            className="w-full rounded-t-lg border border-border bg-card p-5 shadow-xl sm:max-w-md sm:rounded-lg"
           >
-            <div className="mb-4 flex items-start justify-between gap-3">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-lg font-black">Modifier la classe</h2>
-                <p className="text-sm text-muted-foreground">Nom, niveau et matiere.</p>
+                <h2 className="text-lg font-black">
+                  {dialogMode === 'create' ? 'Nouvelle classe' : 'Modifier la classe'}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Renseignez le groupe, son niveau et la matière principale.
+                </p>
               </div>
-              <Button type="button" variant="ghost" size="icon" onClick={() => setEditingClass(null)}>
-                <X size={16} />
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                onClick={() => setDialogMode(null)}
+                aria-label="Fermer"
+              >
+                <X />
               </Button>
             </div>
-            <div className="space-y-4">
+
+            <div className="mt-5 space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-class-name">Nom</Label>
+                <Label htmlFor="class-name">Nom de la classe</Label>
                 <Input
-                  id="edit-class-name"
-                  value={editName}
-                  onChange={(event) => setEditName(event.target.value)}
-                  className="bg-muted/40"
+                  id="class-name"
+                  value={form.name}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, name: event.target.value }))
+                  }
+                  placeholder="Ex : Groupe 201"
+                  className="min-h-10"
                 />
               </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-class-level">Niveau</Label>
+                  <Label htmlFor="class-level">Niveau</Label>
                   <Input
-                    id="edit-class-level"
-                    value={editLevel}
-                    onChange={(event) => setEditLevel(event.target.value)}
-                    className="bg-muted/40"
+                    id="class-level"
+                    value={form.level}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, level: event.target.value }))
+                    }
+                    placeholder="Secondaire 2"
+                    className="min-h-10"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-class-subject">Matiere</Label>
+                  <Label htmlFor="class-subject">Matière</Label>
                   <Input
-                    id="edit-class-subject"
-                    value={editSubject}
-                    onChange={(event) => setEditSubject(event.target.value)}
-                    className="bg-muted/40"
+                    id="class-subject"
+                    value={form.subject}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, subject: event.target.value }))
+                    }
+                    placeholder="Mathématiques"
+                    className="min-h-10"
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <Button type="button" variant="outline" onClick={() => setEditingClass(null)}>
+              {error && (
+                <div className="flex gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-700 dark:text-rose-300">
+                  <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                  {error}
+                </div>
+              )}
+              <div className="flex justify-end gap-2 pt-2">
+                <Button type="button" variant="outline" onClick={() => setDialogMode(null)}>
                   Annuler
                 </Button>
-                <Button
-                  type="submit"
-                  className="text-white"
-                  style={{ backgroundColor: BRAND }}
-                  disabled={isSaving}
-                >
-                  <Check size={15} /> {isSaving ? 'Enregistrement...' : 'Enregistrer'}
+                <Button type="submit" disabled={isSaving}>
+                  <Check /> {isSaving ? 'Enregistrement...' : 'Enregistrer'}
                 </Button>
               </div>
             </div>
           </form>
         </div>
       )}
+    </div>
+  )
+}
+
+function Metric({
+  label,
+  value,
+  icon: Icon,
+  tone,
+}: {
+  label: string
+  value: string
+  icon: typeof Gauge
+  tone: 'violet' | 'blue' | 'green' | 'amber'
+}) {
+  const tones = {
+    violet: 'bg-violet-500/10 text-violet-700 dark:text-violet-300',
+    blue: 'bg-sky-500/10 text-sky-700 dark:text-sky-300',
+    green: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+    amber: 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
+  }
+
+  return (
+    <div className="flex min-h-24 min-w-0 items-center gap-3 rounded-lg border border-border bg-card/50 p-3 sm:p-4">
+      <span className={`hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg sm:flex ${tones[tone]}`}>
+        <Icon size={18} />
+      </span>
+      <span className="min-w-0">
+        <strong className="block text-xl font-black sm:text-2xl">{value}</strong>
+        <span className="block break-words text-xs text-muted-foreground">{label}</span>
+      </span>
     </div>
   )
 }

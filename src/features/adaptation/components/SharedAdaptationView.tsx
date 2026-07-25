@@ -1,9 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { BookOpenCheck, Copy } from 'lucide-react'
+import { Copy } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import BrandLogo from '@/components/shared/BrandLogo'
 import AdaptationContent from '@/features/adaptation/components/AdaptationContent'
 import type { VariantType } from '@/features/adaptation/schemas/adaptationSchema'
 import type { SharedAdaptation } from '@/features/adaptation/types/adaptation.types'
@@ -26,9 +27,7 @@ export default function SharedAdaptationView({ adaptation }: { adaptation: Share
     <main className="min-h-screen bg-background px-4 py-8 text-foreground sm:px-6">
       <div className="mx-auto max-w-4xl space-y-6">
         <header className="space-y-4 border-b border-border pb-6">
-          <div className="flex items-center gap-2 text-sm font-bold text-primary">
-            <BookOpenCheck size={18} /> EducAssist
-          </div>
+          <BrandLogo className="h-16 w-16" priority />
           <div className="flex flex-wrap gap-2">
             <Badge variant="outline">{adaptation.subject}</Badge>
             <Badge variant="outline">{adaptation.level}</Badge>

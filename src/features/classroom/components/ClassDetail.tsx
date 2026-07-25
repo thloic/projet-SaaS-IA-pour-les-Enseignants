@@ -30,6 +30,10 @@ const BRAND = '#534AB7'
 
 interface ClassDetailProps {
   classId: string
+  backHref?: string
+  backLabel?: string
+  initialClassroom?: ClassRoom
+  initialStudents?: StudentProfile[]
 }
 
 type JoinedStudent = ClassStudent & {
@@ -101,13 +105,21 @@ function normalizeHeader(value: string) {
     .trim()
 }
 
-export default function ClassDetail({ classId }: ClassDetailProps) {
+export default function ClassDetail({
+  classId,
+  backHref = '/classroom',
+  backLabel = 'Retour aux classes',
+  initialClassroom,
+  initialStudents = [],
+}: ClassDetailProps) {
   const router = useRouter()
   const confirm = useConfirm()
   const { showToast } = useToast()
-  const [classroom, setClassroom] = useState<ClassRoom | null>(null)
-  const [students, setStudents] = useState<StudentProfile[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [classroom, setClassroom] = useState<ClassRoom | null>(initialClassroom ?? null)
+  const [students, setStudents] = useState<StudentProfile[]>(
+    initialStudents.map(normalizeStudent)
+  )
+  const [isLoading, setIsLoading] = useState(!initialClassroom)
   const [isSaving, setIsSaving] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -183,9 +195,10 @@ export default function ClassDetail({ classId }: ClassDetailProps) {
   }, [classId, showToast])
 
   useEffect(() => {
+    if (initialClassroom) return
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadClass()
-  }, [loadClass])
+  }, [initialClassroom, loadClass])
 
   function updateForm<K extends keyof StudentFormState>(key: K, value: StudentFormState[K]) {
     setForm((current) => ({ ...current, [key]: value }))
@@ -509,10 +522,10 @@ export default function ClassDetail({ classId }: ClassDetailProps) {
       <section className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <button
-            onClick={() => router.push('/classroom')}
+            onClick={() => router.push(backHref)}
             className="mb-3 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
           >
-            <ArrowLeft size={14} /> Retour aux classes
+            <ArrowLeft size={14} /> {backLabel}
           </button>
           <h1 className="text-2xl font-black">{classroom?.name ?? 'Classe'}</h1>
           <p className="text-sm text-muted-foreground">

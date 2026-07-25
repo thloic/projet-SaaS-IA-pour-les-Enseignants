@@ -1,22 +1,23 @@
-import { getCurrentTeacherProfile } from '@/features/profile/server/profile'
-import { listMyQuizzes } from '@/features/quiz/server/quiz'
-import DashboardContent from './DashboardContent'
+import CentralDashboard from '@/features/dashboard/components/CentralDashboard'
+import { loadCentralDashboard } from '@/features/dashboard/server/dashboardData'
 
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ welcome?: string; deleted?: string }>
+  searchParams: Promise<{
+    welcome?: string
+    deleted?: string
+    preset?: string | string[]
+    from?: string | string[]
+    to?: string | string[]
+  }>
 }) {
   const params = await searchParams
-  const [profile, quizzes] = await Promise.all([getCurrentTeacherProfile(), listMyQuizzes()])
-  const teacherName =
-    `${profile?.first_name ?? ''} ${profile?.last_name ?? ''}`.trim() || 'Enseignant'
+  const data = await loadCentralDashboard(params)
 
   return (
-    <DashboardContent
-      firstName={profile?.first_name ?? ''}
-      teacherName={teacherName}
-      recentQuizzes={quizzes}
+    <CentralDashboard
+      data={data}
       showWelcome={params.welcome === '1'}
       showDeletedFeedback={params.deleted === '1'}
     />

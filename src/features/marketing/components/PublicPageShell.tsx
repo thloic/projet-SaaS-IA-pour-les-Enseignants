@@ -43,7 +43,7 @@ export default function PublicPageShell({
       <header className="relative z-10 border-b border-[#534AB7]/15 bg-[#F5F3FF]/80 backdrop-blur-xl dark:border-white/10 dark:bg-[#080711]/75">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 sm:px-8">
           <Link href="/" className="flex items-center">
-            <BrandLogo className="h-10 w-32" priority />
+            <BrandLogo className="h-11 w-11" priority />
           </Link>
           <div className="flex items-center gap-3">
             <ThemeToggle />

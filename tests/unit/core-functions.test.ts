@@ -4,6 +4,11 @@ import test from 'node:test'
 import { getAuthCallbackErrorMessage, getAuthErrorMessage } from '../../src/features/auth/utils/authError.ts'
 import { magicLinkSchema } from '../../src/features/auth/schemas/authSchema.ts'
 import { classSchema, observationSchema, studentSchema } from '../../src/features/classroom/schemas/classroomSchema.ts'
+import { classroomPeriodSchema } from '../../src/features/classroom/schemas/classroomDashboardSchema.ts'
+import {
+  dashboardPeriodQuerySchema,
+  dashboardPresetSchema,
+} from '../../src/features/dashboard/schemas/dashboardPeriodSchema.ts'
 import { contactSchema } from '../../src/features/contact/schemas/contactSchema.ts'
 import { documentSchema } from '../../src/features/documents/schemas/documentSchema.ts'
 import {
@@ -14,8 +19,6 @@ import {
   resolveStudentVariant,
   summarizeAnonymousNeeds,
 } from '../../src/features/adaptation/utils/resolveStudentNeeds.ts'
-import { buildDocx } from '../../src/features/export/utils/buildDocx.ts'
-import { buildPdf } from '../../src/features/export/utils/buildPdf.ts'
 import { profileSchema } from '../../src/features/profile/schemas/profileSchema.ts'
 import {
   getProfileSaveErrorMessage,
@@ -116,6 +119,29 @@ test('classroom schemas validate classes, students, and observations', () => {
 
   assert.equal(observationSchema.safeParse({ category: 'progress', tag: 'Participation' }).success, true)
   assert.equal(observationSchema.safeParse({ category: 'invalid', tag: '' }).success, false)
+  assert.equal(classroomPeriodSchema.safeParse('30d').success, true)
+  assert.equal(classroomPeriodSchema.safeParse('365d').success, false)
+})
+
+test('dashboard period schema accepts presets and custom date ranges', () => {
+  assert.equal(dashboardPresetSchema.safeParse('30d').success, true)
+  assert.equal(dashboardPresetSchema.safeParse('365d').success, false)
+  assert.equal(
+    dashboardPeriodQuerySchema.safeParse({
+      preset: 'custom',
+      from: '2026-01-10',
+      to: '2026-02-10',
+    }).success,
+    true
+  )
+  assert.equal(
+    dashboardPeriodQuerySchema.safeParse({
+      preset: 'custom',
+      from: '10/01/2026',
+      to: '2026-02-10',
+    }).success,
+    false
+  )
 })
 
 test('documentSchema validates manual and file source documents', () => {
@@ -271,9 +297,4 @@ test('adaptation schemas and anonymous student mapping are deterministic', () =>
     }).success,
     true
   )
-})
-
-test('export builders are current placeholders', () => {
-  assert.equal(buildPdf(), null)
-  assert.equal(buildDocx(), null)
 })

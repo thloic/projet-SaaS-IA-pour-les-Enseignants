@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   AlertCircle,
@@ -16,20 +16,22 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { createClient } from '@/lib/supabase/client'
-import { observationSchema } from '@/features/classroom/schemas/classroomSchema'
 import { useToast } from '@/components/shared/ToastProvider'
+import {
+  addObservationAction,
+  addParticipationAction,
+  closeClassSessionAction,
+  markAttendanceAction,
+} from '@/features/classroom/server/classroom.actions'
 import type {
   AttendanceRecord,
   AttendanceStatus,
-  ClassRoom,
-  ClassSession,
-  ClassStudent,
   ObservationCategory,
   ParticipationEvent,
   StudentObservation,
   StudentProfile,
 } from '@/features/classroom/types/classroom.types'
+import type { ActiveClassSessionData } from '@/features/classroom/types/classroomDashboard.types'
 
 const BRAND = '#534AB7'
 
@@ -57,27 +59,26 @@ const observationTags: Array<{ category: ObservationCategory; tag: string }> = [
 
 interface ClassSessionPageProps {
   classId: string
+  initialData: ActiveClassSessionData
 }
 
-type JoinedStudent = ClassStudent & {
-  student_profiles: StudentProfile | null
-}
-
-export default function ClassSessionPage({ classId }: ClassSessionPageProps) {
+export default function ClassSessionPage({ classId, initialData }: ClassSessionPageProps) {
   const router = useRouter()
   const { showToast } = useToast()
-  const [classroom, setClassroom] = useState<ClassRoom | null>(null)
-  const [session, setSession] = useState<ClassSession | null>(null)
-  const [students, setStudents] = useState<StudentProfile[]>([])
-  const [attendance, setAttendance] = useState<AttendanceRecord[]>([])
-  const [participation, setParticipation] = useState<ParticipationEvent[]>([])
-  const [observations, setObservations] = useState<StudentObservation[]>([])
+  const classroom = initialData.classroom
+  const session = initialData.session
+  const students = initialData.students
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>(initialData.attendance)
+  const [participation, setParticipation] = useState<ParticipationEvent[]>(initialData.participation)
+  const [observations, setObservations] = useState<StudentObservation[]>(initialData.observations)
   const [selectedStudent, setSelectedStudent] = useState<StudentProfile | null>(null)
   const [selectedTag, setSelectedTag] = useState(observationTags[0])
   const [note, setNote] = useState('')
-  const [isLoading, setIsLoading] = useState(true)
   const [isSavingObservation, setIsSavingObservation] = useState(false)
+  const [savingAttendance, setSavingAttendance] = useState<string[]>([])
+  const [isClosing, setIsClosing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const optimisticEventId = useRef(0)
 
   const attendanceByStudent = useMemo(() => {
     const map = new Map<string, AttendanceRecord>()
@@ -111,257 +112,107 @@ export default function ClassSessionPage({ classId }: ClassSessionPageProps) {
     )
   }, [attendance])
 
-  async function bootstrapSession() {
-    await Promise.resolve()
-    setIsLoading(true)
-    setError(null)
-
-    try {
-
-    const supabase = createClient()
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
-
-    if (userError || !user) {
-      throw new Error('AUTH_REQUIRED')
-    }
-
-    const { data: classData, error: classError } = await supabase
-      .from('classes')
-      .select('*')
-      .eq('id', classId)
-      .maybeSingle()
-
-    if (classError || !classData) {
-      throw classError ?? new Error('CLASS_NOT_FOUND')
-    }
-
-    const today = new Date().toISOString().slice(0, 10)
-    const { data: existingSession, error: sessionError } = await supabase
-      .from('class_sessions')
-      .select('*')
-      .eq('class_id', classId)
-      .eq('session_date', today)
-      .is('ended_at', null)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    if (sessionError) {
-      throw sessionError
-    }
-
-    let activeSession = existingSession as ClassSession | null
-
-    if (!activeSession) {
-      const { data: newSession, error: createError } = await supabase
-        .from('class_sessions')
-        .insert({
-          user_id: user.id,
-          class_id: classId,
-          title: `Session du ${today}`,
-          session_date: today,
-        })
-        .select('*')
-        .single()
-
-      if (createError || !newSession) {
-        throw createError ?? new Error('SESSION_CREATE_FAILED')
-      }
-
-      activeSession = newSession as ClassSession
-    }
-
-    const { data: links, error: linkError } = await supabase
-      .from('class_students')
-      .select('id, user_id, class_id, student_id, student_profiles(*)')
-      .eq('class_id', classId)
-      .order('last_name', { foreignTable: 'student_profiles' })
-      .order('first_name', { foreignTable: 'student_profiles' })
-
-    if (linkError) {
-      throw linkError
-    }
-
-    const joined = (links ?? []) as unknown as JoinedStudent[]
-    const roster = joined.map((item) => item.student_profiles).filter(Boolean) as StudentProfile[]
-
-    setClassroom(classData as ClassRoom)
-    setSession(activeSession)
-    setStudents(roster)
-    await loadSessionData(activeSession.id)
-    } catch (error) {
-      console.error('[classroom] échec de la préparation de la séance', error)
-      const message =
-        error instanceof Error && error.message === 'AUTH_REQUIRED'
-          ? 'Votre session a expiré. Reconnectez-vous pour démarrer la séance.'
-          : error instanceof Error && error.message === 'CLASS_NOT_FOUND'
-            ? 'Cette classe est introuvable ou n’est plus disponible.'
-            : 'Impossible de préparer cette séance pour le moment. Réessayez.'
-      setError(message)
-      showToast(message, 'error')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  async function loadSessionData(sessionId: string) {
-    try {
-      const supabase = createClient()
-      const [attendanceResult, participationResult, observationResult] = await Promise.all([
-        supabase.from('attendance_records').select('*').eq('session_id', sessionId),
-        supabase.from('participation_events').select('*').eq('session_id', sessionId),
-        supabase.from('student_observations').select('*').eq('session_id', sessionId),
-      ])
-
-      const queryError = attendanceResult.error ?? participationResult.error ?? observationResult.error
-      if (queryError) throw queryError
-
-      setAttendance((attendanceResult.data ?? []) as AttendanceRecord[])
-      setParticipation((participationResult.data ?? []) as ParticipationEvent[])
-      setObservations((observationResult.data ?? []) as StudentObservation[])
-    } catch (error) {
-      console.error('[classroom] échec du chargement des données de séance', error)
-      const message = 'Impossible d’actualiser les informations de cette séance.'
-      setError(message)
-      showToast(message, 'error')
-    }
-  }
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void bootstrapSession()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [classId])
-
   async function markAttendance(studentId: string, status: AttendanceStatus) {
-    if (!session) return
-
     setError(null)
-    try {
-      const supabase = createClient()
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
-      if (userError || !user) throw new Error('AUTH_REQUIRED')
-
-      const { error: upsertError } = await supabase.from('attendance_records').upsert(
-        {
-          user_id: user.id,
+    const previous = attendance.find((record) => record.student_id === studentId) ?? null
+    const optimistic: AttendanceRecord = previous
+      ? { ...previous, status, updated_at: new Date().toISOString() }
+      : {
+          id: `pending-attendance-${studentId}`,
+          user_id: '',
           session_id: session.id,
           student_id: studentId,
           status,
-        },
-        { onConflict: 'session_id,student_id' }
-      )
+          note: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }
 
-      if (upsertError) throw upsertError
-      await loadSessionData(session.id)
-    } catch (error) {
-      console.error('[classroom] échec de l’enregistrement de la présence', error)
-      const message = 'Impossible d’enregistrer cette présence pour le moment.'
-      setError(message)
-      showToast(message, 'error')
+    setAttendance((current) => [
+      ...current.filter((record) => record.student_id !== studentId),
+      optimistic,
+    ])
+    setSavingAttendance((current) => [...current.filter((id) => id !== studentId), studentId])
+
+    const result = await markAttendanceAction(session.id, studentId, status)
+    setSavingAttendance((current) => current.filter((id) => id !== studentId))
+    if (result.error || !result.data) {
+      setAttendance((current) => [
+        ...current.filter((record) => record.student_id !== studentId),
+        ...(previous ? [previous] : []),
+      ])
+      setError(result.error ?? 'Impossible d’enregistrer cette présence.')
+      showToast(result.error ?? 'Impossible d’enregistrer cette présence.', 'error')
+      return
     }
+    setAttendance((current) => [
+      ...current.filter((record) => record.student_id !== studentId),
+      result.data!,
+    ])
   }
 
   async function addParticipation(studentId: string, value: -1 | 1 | 2, label: string) {
-    if (!session) return
-
     setError(null)
-    try {
-      const supabase = createClient()
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
-      if (userError || !user) throw new Error('AUTH_REQUIRED')
-
-      const { error: insertError } = await supabase.from('participation_events').insert({
-        user_id: user.id,
-        session_id: session.id,
-        student_id: studentId,
-        value,
-        label,
-      })
-
-      if (insertError) throw insertError
-      await loadSessionData(session.id)
-    } catch (error) {
-      console.error('[classroom] échec de l’enregistrement de la participation', error)
-      const message = 'Impossible d’enregistrer cette participation pour le moment.'
-      setError(message)
-      showToast(message, 'error')
+    optimisticEventId.current += 1
+    const temporaryId = `pending-participation-${optimisticEventId.current}`
+    const optimistic: ParticipationEvent = {
+      id: temporaryId,
+      user_id: '',
+      session_id: session.id,
+      student_id: studentId,
+      value,
+      label,
+      created_at: new Date().toISOString(),
     }
+    setParticipation((current) => [...current, optimistic])
+
+    const result = await addParticipationAction(session.id, studentId, value, label)
+    if (result.error || !result.data) {
+      setParticipation((current) => current.filter((event) => event.id !== temporaryId))
+      setError(result.error ?? 'Impossible d’enregistrer cette participation.')
+      showToast(result.error ?? 'Impossible d’enregistrer cette participation.', 'error')
+      return
+    }
+    setParticipation((current) =>
+      current.map((event) => (event.id === temporaryId ? result.data! : event))
+    )
   }
 
   async function saveObservation() {
     if (!session || !selectedStudent) return
 
     setError(null)
-    const parsed = observationSchema.safeParse({
+    setIsSavingObservation(true)
+    const result = await addObservationAction({
+      sessionId: session.id,
+      studentId: selectedStudent.id,
       category: selectedTag.category,
       tag: selectedTag.tag,
       note,
     })
-
-    if (!parsed.success) {
-      const message = parsed.error.issues[0]?.message ?? 'Complétez l’observation avant de l’enregistrer.'
-      setError(message)
-      showToast(message, 'error')
-      return
-    }
-
-    setIsSavingObservation(true)
-    try {
-      const supabase = createClient()
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
-      if (userError || !user) throw new Error('AUTH_REQUIRED')
-
-      const { error: insertError } = await supabase.from('student_observations').insert({
-        user_id: user.id,
-        session_id: session.id,
-        student_id: selectedStudent.id,
-        category: parsed.data.category,
-        tag: parsed.data.tag,
-        note: parsed.data.note || null,
-      })
-
-      if (insertError) throw insertError
+    if (!result.error && result.data) {
+      setObservations((current) => [...current, result.data!])
       setSelectedStudent(null)
       setNote('')
       showToast('Observation enregistrée.', 'success')
-      await loadSessionData(session.id)
-    } catch (error) {
-      console.error('[classroom] échec de l’enregistrement de l’observation', error)
-      const message = 'Impossible d’enregistrer cette observation pour le moment.'
-      setError(message)
-      showToast(message, 'error')
-    } finally {
       setIsSavingObservation(false)
+      return
     }
+    setError(result.error ?? 'Impossible d’enregistrer cette observation.')
+    showToast(result.error ?? 'Impossible d’enregistrer cette observation.', 'error')
+    setIsSavingObservation(false)
   }
 
   async function closeSession() {
-    if (!session) return
-
-    try {
-      const supabase = createClient()
-      const { error: updateError } = await supabase
-        .from('class_sessions')
-        .update({ ended_at: new Date().toISOString() })
-        .eq('id', session.id)
-
-      if (updateError) throw updateError
-      router.push(`/classroom/${classId}`)
-      router.refresh()
-    } catch (error) {
-      console.error('[classroom] échec de la clôture de la séance', error)
-      const message = 'Impossible de terminer cette séance pour le moment.'
-      setError(message)
-      showToast(message, 'error')
+    setIsClosing(true)
+    const result = await closeClassSessionAction(session.id, classId)
+    setIsClosing(false)
+    if (result.error) {
+      setError(result.error)
+      showToast(result.error, 'error')
+      return
     }
-  }
-
-  if (isLoading) {
-    return <div className="mx-auto max-w-6xl text-sm text-muted-foreground">Preparation de la session...</div>
+    router.push(`/classroom/${classId}`)
   }
 
   return (
@@ -460,9 +311,10 @@ export default function ClassSessionPage({ classId }: ClassSessionPageProps) {
                       <button
                         key={status}
                         onClick={() => markAttendance(student.id, status)}
+                        disabled={savingAttendance.includes(student.id)}
                         className={`flex min-h-12 items-center justify-center gap-1 rounded-xl border px-2 text-xs font-semibold transition-colors ${
                           active ? className : 'border-border bg-muted/20 text-muted-foreground hover:bg-muted/40'
-                        }`}
+                        } disabled:opacity-70`}
                       >
                         <Icon size={15} /> {label}
                       </button>
@@ -504,8 +356,8 @@ export default function ClassSessionPage({ classId }: ClassSessionPageProps) {
               {attendance.length}/{students.length} appels saisis · {participation.length} evenements de participation · {observations.length} observations
             </p>
           </div>
-          <Button variant="outline" onClick={closeSession} disabled={!session}>
-            Terminer la session
+          <Button variant="outline" onClick={closeSession} disabled={isClosing}>
+            {isClosing ? 'Clôture...' : 'Terminer la session'}
           </Button>
         </div>
       </section>

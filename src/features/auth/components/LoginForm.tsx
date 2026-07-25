@@ -126,7 +126,7 @@ export default function LoginForm() {
       >
         {/* Logo */}
         <div className="auth-animate flex items-center gap-3">
-          <BrandLogo className="h-16 w-52 rounded-xl shadow-lg" priority />
+          <BrandLogo className="h-20 w-20" priority />
         </div>
 
         {/* Bubbles */}
@@ -161,7 +161,7 @@ export default function LoginForm() {
         <div className="auth-animate w-full max-w-md space-y-6">
           {/* Mobile logo */}
           <div className="flex items-center gap-2 lg:hidden">
-            <BrandLogo className="h-12 w-40" priority />
+            <BrandLogo className="h-16 w-16" priority />
           </div>
 
           <div className="space-y-1">

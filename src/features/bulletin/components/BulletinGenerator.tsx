@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState, useTransition } from 'react'
+import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { AlertCircle, Check, Copy, MessageSquare, RefreshCw, Sparkles, Trash2 } from 'lucide-react'
@@ -13,8 +13,7 @@ import {
   generateBulletinAction,
   type BulletinCommentListItem,
 } from '@/features/bulletin/server/bulletin.actions'
-import { listClassStudents, type ClassListItem } from '@/features/classroom/server/classroom.actions'
-import type { StudentProfile } from '@/features/classroom/types/classroom.types'
+import type { ClassWithStudents } from '@/features/classroom/server/classroom.actions'
 
 const BRAND = '#534AB7'
 
@@ -31,7 +30,7 @@ const SUBJECTS = ['Mathématiques', 'Français', 'Histoire-Géo', 'SVT', 'Physiq
 interface BulletinGeneratorProps {
   initialBulletins: BulletinCommentListItem[]
   loadError: string | null
-  classes: ClassListItem[]
+  classes: ClassWithStudents[]
 }
 
 export default function BulletinGenerator({ initialBulletins, loadError, classes }: BulletinGeneratorProps) {
@@ -39,8 +38,6 @@ export default function BulletinGenerator({ initialBulletins, loadError, classes
   const { showToast } = useToast()
   const [classId, setClassId] = useState('')
   const [studentId, setStudentId] = useState('')
-  const [students, setStudents] = useState<StudentProfile[]>([])
-  const [isLoadingStudents, setIsLoadingStudents] = useState(false)
   const [subject, setSubject] = useState('Mathématiques')
   const [grade, setGrade] = useState('')
   const [observations, setObservations] = useState('')
@@ -53,31 +50,12 @@ export default function BulletinGenerator({ initialBulletins, loadError, classes
   const [isGeneratePending, startGenerateTransition] = useTransition()
   const [isDeletePending, startDeleteTransition] = useTransition()
 
-  const loadStudentsForClass = useCallback(
-    async (nextClassId: string) => {
-      if (!nextClassId) {
-        setStudents([])
-        return
-      }
-
-      setIsLoadingStudents(true)
-      try {
-        const result = await listClassStudents(nextClassId)
-        setStudents(result)
-      } catch (fetchError) {
-        console.error('[bulletin] chargement des élèves impossible', fetchError)
-        showToast('Impossible de charger les élèves de cette classe.', 'error')
-      } finally {
-        setIsLoadingStudents(false)
-      }
-    },
-    [showToast]
+  // Classes et eleves sont precharges par la page (une seule requete au
+  // chargement) : selectionner une classe est un lookup local, sans aller-retour reseau.
+  const students = useMemo(
+    () => classes.find((item) => item.id === classId)?.students ?? [],
+    [classes, classId]
   )
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadStudentsForClass(classId)
-  }, [classId, loadStudentsForClass])
 
   function handleClassChange(nextClassId: string) {
     setClassId(nextClassId)
@@ -205,16 +183,14 @@ export default function BulletinGenerator({ initialBulletins, loadError, classes
                 className="w-full rounded-xl bg-muted/40 border border-border px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-60"
                 value={studentId}
                 onChange={(e) => setStudentId(e.target.value)}
-                disabled={!classId || isLoadingStudents}
+                disabled={!classId}
               >
                 <option value="">
                   {!classId
                     ? 'Choisissez d’abord une classe'
-                    : isLoadingStudents
-                      ? 'Chargement…'
-                      : students.length === 0
-                        ? 'Aucun élève dans cette classe'
-                        : 'Sélectionnez un élève'}
+                    : students.length === 0
+                      ? 'Aucun élève dans cette classe'
+                      : 'Sélectionnez un élève'}
                 </option>
                 {students.map((s) => (
                   <option key={s.id} value={s.id}>{s.first_name} {s.last_name}</option>

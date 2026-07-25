@@ -1,5 +1,9 @@
 import { exportRequestSchema } from '@/features/export/schemas/exportSchema'
-import { loadAdaptationVariantExportDocument, loadCourseExportDocument } from '@/features/export/server/exportSource'
+import {
+  loadAdaptationVariantExportDocument,
+  loadClassroomExportDocument,
+  loadCourseExportDocument,
+} from '@/features/export/server/exportSource'
 import { buildDocx } from '@/features/export/utils/buildDocx'
 import { buildPdf } from '@/features/export/utils/buildPdf'
 import { getCurrentUser } from '@/features/profile/server/profile'
@@ -38,12 +42,26 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Vous devez être connecté.' }, { status: 401 })
   }
 
-  const { source, sourceId, variantType, format } = parsed.data
+  const {
+    source,
+    sourceId,
+    variantType,
+    format,
+    period = '30d',
+    includeNames = true,
+    includeObservations = true,
+  } = parsed.data
 
   const document =
     source === 'course'
       ? await loadCourseExportDocument(sourceId, user.id)
-      : await loadAdaptationVariantExportDocument(sourceId, variantType!, user.id)
+      : source === 'adaptation_variant'
+        ? await loadAdaptationVariantExportDocument(sourceId, variantType!, user.id)
+        : await loadClassroomExportDocument(sourceId, user.id, {
+            period,
+            includeNames,
+            includeObservations,
+          })
 
   if (!document) {
     return Response.json({ error: 'Ce contenu est introuvable ou pas encore prêt.' }, { status: 404 })

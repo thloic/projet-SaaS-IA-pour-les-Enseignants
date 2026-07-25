@@ -1,6 +1,6 @@
 import BulletinGenerator from '@/features/bulletin/components/BulletinGenerator'
 import { listMyBulletins, type BulletinCommentListItem } from '@/features/bulletin/server/bulletin.actions'
-import { listMyClasses } from '@/features/classroom/server/classroom.actions'
+import { listMyClassesWithStudents } from '@/features/classroom/server/classroom.actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,7 +15,9 @@ export default async function BulletinPage() {
     loadError = 'Impossible de charger vos commentaires pour le moment.'
   }
 
-  const classes = await listMyClasses()
+  // Precharge classes + eleves d'un coup : le select "eleve" n'a plus besoin
+  // d'un aller-retour reseau au moment ou l'enseignant choisit une classe.
+  const classes = await listMyClassesWithStudents()
 
   return <BulletinGenerator initialBulletins={bulletins} loadError={loadError} classes={classes} />
 }

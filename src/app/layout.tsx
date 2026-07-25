@@ -10,6 +10,11 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "EducAssist",
   description: "Plan lessons, create quizzes, and write report card comments with AI.",
+  icons: {
+    icon: "/logosansbg.png",
+    shortcut: "/logosansbg.png",
+    apple: "/logosansbg.png",
+  },
 };
 
 export default function RootLayout({

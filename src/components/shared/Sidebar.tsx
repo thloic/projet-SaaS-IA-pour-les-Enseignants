@@ -15,6 +15,7 @@ import {
   Settings,
   Crown,
   WandSparkles,
+  CheckCheck,
   X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -45,6 +46,7 @@ export default function Sidebar({ collapsed, mobileOpen, onMobileClose, onToggle
     { label: t.nav.adaptations, href: '/adaptations', icon: WandSparkles, isNew: true },
     { label: t.nav.generate, href: '/generate', icon: BookOpen, isNew: true },
     { label: t.nav.classroom, href: '/classroom', icon: UsersRound },
+    { label: t.nav.correction, href: '/correction', icon: CheckCheck, isNew: true },
     { label: t.nav.quiz, href: '/quiz', icon: ClipboardList },
     { label: t.nav.bulletin, href: '/bulletin', icon: MessageSquare },
     { label: t.nav.history, href: '/history', icon: History },
@@ -66,7 +68,7 @@ export default function Sidebar({ collapsed, mobileOpen, onMobileClose, onToggle
               collapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'
             }`}
           >
-            <BrandLogo className="h-10 w-32" priority />
+            <BrandLogo className="h-11 w-11" priority />
           </div>
           {collapsed && (
             <BrandLogo variant="mark" className="mx-auto h-9 w-9" priority />
@@ -170,7 +172,7 @@ export default function Sidebar({ collapsed, mobileOpen, onMobileClose, onToggle
           <aside className="relative z-10 flex h-full w-72 max-w-[min(85vw,20rem)] flex-col border-r border-border bg-card shadow-xl">
             <div className="flex h-16 items-center justify-between px-4">
               <div className="flex items-center gap-2">
-                <BrandLogo className="h-10 w-32" priority />
+                <BrandLogo className="h-11 w-11" priority />
               </div>
               <button
                 onClick={onMobileClose}
