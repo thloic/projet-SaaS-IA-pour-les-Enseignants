@@ -33,6 +33,7 @@ export const appTranslations = {
     },
     nav: {
       dashboard: 'Home',
+      agent: 'Agent',
       documents: 'Documents',
       adaptations: 'Adapt lessons',
       generate: 'New lesson',
@@ -197,6 +198,7 @@ export const appTranslations = {
     },
     nav: {
       dashboard: 'Accueil',
+      agent: 'Agent',
       documents: 'Documents',
       adaptations: 'Adapter une leçon',
       generate: 'Nouveau cours',

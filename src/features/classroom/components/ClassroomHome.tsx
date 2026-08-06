@@ -37,6 +37,7 @@ import { GlobalAttendanceChart } from '@/features/classroom/charts/ClassroomChar
 
 interface ClassroomHomeProps {
   initialData?: ClassroomOverviewData
+  subjects?: string[]
 }
 
 interface ClassForm {
@@ -69,6 +70,7 @@ function rateColor(value: number | null) {
 
 export default function ClassroomHome({
   initialData = EMPTY_OVERVIEW,
+  subjects = [],
 }: ClassroomHomeProps) {
   const router = useRouter()
   const confirm = useConfirm()
@@ -106,11 +108,17 @@ export default function ClassroomHome({
   }, [classes, initialData.metrics.attendanceRate])
 
   function openCreate() {
-    setForm(EMPTY_FORM)
+    setForm({ ...EMPTY_FORM, subject: subjects[0] ?? '' })
     setEditingClass(null)
     setError(null)
     setDialogMode('create')
   }
+
+  // Garde la matiere de la classe visible dans le select meme si elle ne
+  // figure plus (ou jamais figure) dans les matieres du profil enseignant —
+  // evite de perdre/ecraser silencieusement une valeur existante en edition.
+  const subjectOptions =
+    form.subject && !subjects.includes(form.subject) ? [form.subject, ...subjects] : subjects
 
   function openEdit(item: ClassOverviewItem) {
     setForm({ name: item.name, level: item.level, subject: item.subject })
@@ -433,15 +441,35 @@ export default function ClassroomHome({
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="class-subject">Matière</Label>
-                  <Input
-                    id="class-subject"
-                    value={form.subject}
-                    onChange={(event) =>
-                      setForm((current) => ({ ...current, subject: event.target.value }))
-                    }
-                    placeholder="Mathématiques"
-                    className="min-h-10"
-                  />
+                  {subjectOptions.length > 0 ? (
+                    <select
+                      id="class-subject"
+                      value={form.subject}
+                      onChange={(event) =>
+                        setForm((current) => ({ ...current, subject: event.target.value }))
+                      }
+                      className="min-h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                    >
+                      <option value="" disabled>
+                        Sélectionnez une matière
+                      </option>
+                      {subjectOptions.map((item) => (
+                        <option key={item} value={item}>
+                          {item}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <Input
+                      id="class-subject"
+                      value={form.subject}
+                      onChange={(event) =>
+                        setForm((current) => ({ ...current, subject: event.target.value }))
+                      }
+                      placeholder="Mathématiques"
+                      className="min-h-10"
+                    />
+                  )}
                 </div>
               </div>
               {error && (
