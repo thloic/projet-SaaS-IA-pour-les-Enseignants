@@ -9,8 +9,8 @@ import {
 
 test('normalise la saisie des adaptations institutionnelles d’un élève fictif', () => {
   const parsed = studentSchema.parse({
-    firstName: 'Nora',
-    lastName: 'Martin',
+    firstName: 'Naya',
+    lastName: 'Dorel',
     sex: 'F',
     familyLanguage: 'fr',
     institutionalAdaptations:

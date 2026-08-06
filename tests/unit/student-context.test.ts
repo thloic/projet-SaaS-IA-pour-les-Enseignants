@@ -16,9 +16,9 @@ import type {
 
 const USER_A = '11111111-1111-4111-8111-111111111111'
 const USER_B = '22222222-2222-4222-8222-222222222222'
-const JESSE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
-const JESSICA_ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
-const SOPHIE_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
+const MALO_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+const MALORIE_ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+const ELIAN_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
 
 interface FakeRepository extends StudentContextRepository {
   insertedObservations: StudentObservationContext[]
@@ -61,14 +61,14 @@ function createFakeRepository(): FakeRepository {
     [
       USER_A,
       [
-        student(JESSE_ID, 'Jesse', 'Tetsassi', 'Classe 8A'),
-        student(JESSICA_ID, 'Jessica', 'Mensah', 'Classe 8B'),
+        student(MALO_ID, 'Malo', 'Vandel', 'Classe 8A'),
+        student(MALORIE_ID, 'Malorie', 'Arquet', 'Classe 8B'),
       ],
     ],
     [
       USER_B,
       [
-        student(SOPHIE_ID, 'Sophie', 'Martin', 'Classe 7A', [
+        student(ELIAN_ID, 'Élian', 'Derval', 'Classe 7A', [
           'Accès à un référentiel',
         ]),
       ],
@@ -145,13 +145,13 @@ function createFakeRepository(): FakeRepository {
 test('getStudentContext agrège le dossier existant avec un historique borné', async () => {
   const repository = createFakeRepository()
   const result = await getStudentContextCore(
-    { studentQuery: 'Jesse Tetsassi' },
+    { studentQuery: 'Malo Vandel' },
     USER_A,
     repository
   )
 
   assert.ok(result && result.kind === 'context')
-  assert.equal(result.student.id, JESSE_ID)
+  assert.equal(result.student.id, MALO_ID)
   assert.deepEqual(result.student.needs, [
     'Développer les stratégies de planification à l’écrit.',
   ])
@@ -174,7 +174,7 @@ test('getStudentContext agrège le dossier existant avec un historique borné', 
 
 test('getStudentContext renvoie les candidats lorsqu’un nom est ambigu', async () => {
   const result = await getStudentContextCore(
-    { studentQuery: 'Jess' },
+    { studentQuery: 'Mal' },
     USER_A,
     createFakeRepository()
   )
@@ -182,7 +182,7 @@ test('getStudentContext renvoie les candidats lorsqu’un nom est ambigu', async
   assert.ok(result && result.kind === 'ambiguous')
   assert.deepEqual(
     result.candidates.map(({ fullName }) => fullName),
-    ['Jesse Tetsassi', 'Jessica Mensah']
+    ['Malo Vandel', 'Malorie Arquet']
   )
 })
 
@@ -202,16 +202,16 @@ test('getStudentContext isole strictement les élèves de chaque enseignant', as
   const repository = createFakeRepository()
 
   assert.equal(
-    await getStudentContextCore({ studentQuery: 'Sophie Martin' }, USER_A, repository),
+    await getStudentContextCore({ studentQuery: 'Élian Derval' }, USER_A, repository),
     null
   )
   assert.equal(
-    await getStudentContextCore({ studentQuery: 'Jesse Tetsassi' }, USER_B, repository),
+    await getStudentContextCore({ studentQuery: 'Malo Vandel' }, USER_B, repository),
     null
   )
 
   const ownStudent = await getStudentContextCore(
-    { studentQuery: 'Sophie Martin' },
+    { studentQuery: 'Élian Derval' },
     USER_B,
     repository
   )
@@ -225,8 +225,8 @@ test('saveStudentObservation enrichit uniquement un dossier élève existant', a
   const repository = createFakeRepository()
   const saved = await saveStudentObservationCore(
     {
-      studentId: JESSE_ID,
-      contenu: 'Jesse mobilise plus spontanément le vocabulaire travaillé à l’oral.',
+      studentId: MALO_ID,
+      contenu: 'Malo mobilise plus spontanément le vocabulaire travaillé à l’oral.',
     },
     USER_A,
     repository
@@ -239,7 +239,7 @@ test('saveStudentObservation enrichit uniquement un dossier élève existant', a
   await assert.rejects(
     () =>
       saveStudentObservationCore(
-        { studentId: SOPHIE_ID, contenu: 'Observation interdite.' },
+        { studentId: ELIAN_ID, contenu: 'Observation interdite.' },
         USER_A,
         repository
       ),
