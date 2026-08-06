@@ -12,7 +12,7 @@ export type PATGenerationMode = 'mock' | 'real'
 export type StructuredPATGenerator = (prompt: string) => Promise<unknown>
 
 export function getPATGenerationMode(): PATGenerationMode {
-  const mode = process.env.PAT_GENERATION_MODE ?? 'mock'
+  const mode = process.env.PAT_GENERATION_MODE ?? 'real'
   if (mode === 'mock' || mode === 'real') return mode
   throw new Error('INVALID_PAT_GENERATION_MODE')
 }
