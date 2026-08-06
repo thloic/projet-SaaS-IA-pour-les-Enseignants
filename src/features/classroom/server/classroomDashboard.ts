@@ -133,7 +133,7 @@ export async function listClassroomOverview(): Promise<ClassroomOverviewData> {
     const classSessionIds = new Set(classSessions.map((session) => session.id))
     const classAttendance = attendance.filter((record) => classSessionIds.has(record.session_id))
     const classObservations = observations.filter((record) =>
-      classSessionIds.has(record.session_id)
+      record.session_id !== null && classSessionIds.has(record.session_id)
     )
     const activeSession = classSessions.find((session) => !session.ended_at)
 
@@ -158,9 +158,11 @@ export async function listClassroomOverview(): Promise<ClassroomOverviewData> {
   })
 
   const allAttentionStudents = new Set(
-    observations
-      .filter(isAttentionObservation)
-      .map((observation) => `${sessionClass.get(observation.session_id)}:${observation.student_id}`)
+    observations.flatMap((observation) =>
+      observation.session_id !== null && isAttentionObservation(observation)
+        ? [`${sessionClass.get(observation.session_id)}:${observation.student_id}`]
+        : []
+    )
   )
 
   return {

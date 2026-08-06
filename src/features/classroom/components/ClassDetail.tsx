@@ -25,6 +25,10 @@ import { useToast } from '@/components/shared/ToastProvider'
 import { useConfirm } from '@/components/shared/ConfirmProvider'
 import { studentSchema } from '@/features/classroom/schemas/classroomSchema'
 import type { ClassRoom, ClassStudent, StudentProfile } from '@/features/classroom/types/classroom.types'
+import {
+  institutionalAdaptationsToText,
+  normalizeInstitutionalAdaptations,
+} from '@/features/classroom/utils/institutionalAdaptations'
 
 const BRAND = '#534AB7'
 
@@ -46,6 +50,7 @@ interface StudentFormState {
   sex: 'M' | 'F'
   familyLanguage: string
   needs: string
+  institutionalAdaptations: string
   interventionPlan: boolean
   generalNotes: string
 }
@@ -56,6 +61,7 @@ const emptyStudentForm: StudentFormState = {
   sex: 'M',
   familyLanguage: 'fr',
   needs: '',
+  institutionalAdaptations: '',
   interventionPlan: false,
   generalNotes: '',
 }
@@ -82,6 +88,9 @@ function studentToForm(student: StudentProfile): StudentFormState {
     sex: student.sex,
     familyLanguage: getFamilyLanguage(student),
     needs: needsToText(student.needs ?? []),
+    institutionalAdaptations: institutionalAdaptationsToText(
+      student.institutional_adaptations ?? []
+    ),
     interventionPlan: Boolean(student.intervention_plan),
     generalNotes: student.general_notes ?? '',
   }
@@ -94,6 +103,9 @@ function normalizeStudent(student: StudentProfile): StudentProfile {
     intervention_plan: Boolean(student.intervention_plan),
     general_notes: student.general_notes ?? '',
     needs: student.needs ?? [],
+    institutional_adaptations: normalizeInstitutionalAdaptations(
+      student.institutional_adaptations ?? []
+    ),
   }
 }
 
@@ -142,6 +154,7 @@ export default function ClassDetail({
           student.last_name,
           getFamilyLanguage(student),
           ...(student.needs ?? []),
+          ...(student.institutional_adaptations ?? []),
           student.intervention_plan ? 'pei ppi plan intervention' : '',
         ]
           .join(' ')
@@ -243,6 +256,9 @@ export default function ClassDetail({
           language: parsed.data.familyLanguage,
           family_language: parsed.data.familyLanguage,
           needs: needsList,
+          institutional_adaptations: normalizeInstitutionalAdaptations(
+            parsed.data.institutionalAdaptations ?? ''
+          ),
           intervention_plan: parsed.data.interventionPlan,
           general_notes: parsed.data.generalNotes ?? '',
         })
@@ -447,6 +463,9 @@ export default function ClassDetail({
         language: parsed.data.familyLanguage,
         family_language: parsed.data.familyLanguage,
         needs: splitNeeds(parsed.data.needs ?? ''),
+        institutional_adaptations: normalizeInstitutionalAdaptations(
+          parsed.data.institutionalAdaptations ?? ''
+        ),
         intervention_plan: parsed.data.interventionPlan,
         general_notes: parsed.data.generalNotes ?? '',
       }
@@ -739,6 +758,23 @@ export default function ClassDetail({
                   </div>
 
                   <div className="space-y-2">
+                    <p className="text-sm font-semibold">Adaptations en place</p>
+                    {selectedStudent.institutional_adaptations.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {selectedStudent.institutional_adaptations.map((adaptation) => (
+                          <Badge key={adaptation} variant="outline">
+                            {adaptation}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Aucune adaptation institutionnelle renseignee.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
                     <p className="text-sm font-semibold">Notes generales</p>
                     <p className="min-h-16 rounded-xl border border-border bg-muted/20 p-3 text-sm text-muted-foreground">
                       {selectedStudent.general_notes || 'Aucune note generale pour le moment.'}
@@ -847,6 +883,19 @@ function StudentFields({ form, onChange, prefix }: StudentFieldsProps) {
           className="bg-muted/40"
         />
         <p className="text-xs text-muted-foreground">Separez les besoins par des virgules.</p>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor={`${prefix}-institutional-adaptations`}>Adaptations en place</Label>
+        <textarea
+          id={`${prefix}-institutional-adaptations`}
+          value={form.institutionalAdaptations}
+          onChange={(event) => onChange('institutionalAdaptations', event.target.value)}
+          placeholder={'Temps supplementaire\nReformulation des consignes\nTechnologie d assistance'}
+          className="min-h-24 w-full rounded-lg border border-input bg-muted/40 px-2.5 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+        />
+        <p className="text-xs text-muted-foreground">
+          Inscrivez une adaptation institutionnelle par ligne.
+        </p>
       </div>
       <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-muted/20 p-3 text-sm">
         <input

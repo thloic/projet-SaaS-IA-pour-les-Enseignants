@@ -12,6 +12,11 @@ export const studentSchema = z.object({
   sex: z.enum(['M', 'F']),
   familyLanguage: z.string().trim().min(1, 'La langue familiale est requise'),
   needs: z.string().trim().optional(),
+  institutionalAdaptations: z
+    .string()
+    .trim()
+    .max(2000, 'La liste des adaptations est trop longue')
+    .optional(),
   interventionPlan: z.boolean().default(false),
   generalNotes: z.string().trim().max(1000, 'La note est trop longue').optional(),
 })

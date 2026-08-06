@@ -25,6 +25,7 @@ export interface StudentProfile {
   last_name: string
   sex: StudentSex
   needs: string[]
+  institutional_adaptations: string[]
   language: string
   family_language: string
   intervention_plan: boolean
@@ -76,7 +77,7 @@ export interface ParticipationEvent {
 export interface StudentObservation {
   id: string
   user_id: string
-  session_id: string
+  session_id: string | null
   student_id: string
   category: ObservationCategory
   tag: string
