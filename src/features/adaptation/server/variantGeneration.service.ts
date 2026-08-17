@@ -14,7 +14,7 @@ interface GenerateVariantInput {
   sourceTitle: string
   subject: string
   level: string
-  language: 'fr' | 'en'
+  language: 'fr' | 'en' | 'es'
   variantType: VariantType
   anonymousNeeds: string[]
   signal?: AbortSignal

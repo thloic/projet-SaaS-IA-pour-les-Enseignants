@@ -16,8 +16,25 @@ import { detectPATIntent } from '@/features/agent/server/patIntent'
 import { buildAgentSystemPrompt } from '@/lib/prompts/agent'
 import { getCurrentTeacherProfile, getCurrentUser } from '@/features/profile/server/profile'
 
-const LIMIT_ERROR = 'Vous avez atteint votre limite de générations gratuites pour l’agent ce mois-ci.'
 const USAGE_FEATURE = 'agent'
+
+const ROUTE_COPY = {
+  fr: {
+    limit: 'Vous avez atteint votre limite de générations gratuites pour l’agent ce mois-ci.',
+    patFailed: 'Le PAT n’a pas pu être généré. Votre quota n’a pas été débité.',
+    quotaFailed: 'Impossible de vérifier votre quota pour le moment.',
+  },
+  en: {
+    limit: 'You have reached your free agent generation limit for this month.',
+    patFailed: 'The support plan could not be generated. Your quota was not charged.',
+    quotaFailed: 'Your quota could not be checked right now.',
+  },
+  es: {
+    limit: 'Has alcanzado el límite de generaciones gratuitas del agente para este mes.',
+    patFailed: 'No se ha podido generar el PAT. No se ha descontado de tu cuota.',
+    quotaFailed: 'No se puede comprobar tu cuota en este momento.',
+  },
+} as const
 
 function jsonError(message: string, status: number) {
   return NextResponse.json({ error: message }, { status })
@@ -45,6 +62,7 @@ export async function POST(request: Request) {
   if (!profile) {
     return jsonError('Terminez votre profil enseignant avant d’utiliser l’agent.', 400)
   }
+  const copy = ROUTE_COPY[profile.interface_language]
 
   const latestUserMessage = [...parsed.data.messages]
     .reverse()
@@ -54,7 +72,12 @@ export async function POST(request: Request) {
   if (patIntent) {
     try {
       const result = await orchestratePATRequest(
-        { studentQuery: patIntent.studentQuery, trustedUserId: user.id },
+        {
+          studentQuery: patIntent.studentQuery,
+          trustedUserId: user.id,
+          contentLanguage: profile.language,
+          interfaceLanguage: profile.interface_language,
+        },
         {
           getStudentContext,
           generatePAT,
@@ -65,10 +88,10 @@ export async function POST(request: Request) {
       return NextResponse.json(agentStructuredResponseSchema.parse(result))
     } catch (error) {
       if (error instanceof PATOrchestrationError && error.code === 'PAT_QUOTA_EXCEEDED') {
-        return jsonError(LIMIT_ERROR, 403)
+        return jsonError(copy.limit, 403)
       }
       console.error('[agent:pat] echec de la demande structuree')
-      return jsonError('Le PAT n’a pas pu être généré. Votre quota n’a pas été débité.', 500)
+      return jsonError(copy.patFailed, 500)
     }
   }
 
@@ -77,11 +100,11 @@ export async function POST(request: Request) {
     usage = await checkAndIncrementUsage(user.id, USAGE_FEATURE)
   } catch (error) {
     console.error('[agent] verification du quota impossible', error)
-    return jsonError('Impossible de vérifier votre quota pour le moment.', 500)
+    return jsonError(copy.quotaFailed, 500)
   }
 
   if (!usage.allowed) {
-    return jsonError(LIMIT_ERROR, 403)
+    return jsonError(copy.limit, 403)
   }
 
   const systemPrompt = buildAgentSystemPrompt({

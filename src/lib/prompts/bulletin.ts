@@ -1,5 +1,6 @@
 import type { BulletinGenerationInput } from '@/features/bulletin/schemas/bulletinSchema'
 import type { GradingSystem, ContentLanguage } from '@/features/profile/types/profile.types'
+import { languageLabel } from '../../features/i18n/locale.ts'
 
 interface BuildBulletinPromptInput {
   input: BulletinGenerationInput
@@ -19,10 +20,6 @@ const toneInstructions: Record<BulletinGenerationInput['tone'], string> = {
     'Ton encourageant : dynamique, motivant, orienté vers les progrès à venir et les prochaines réussites possibles.',
   factuel:
     'Ton factuel : sobre, précis, centré sur les résultats observables, sans lyrisme ni formulation émotionnelle excessive.',
-}
-
-function languageLabel(language: ContentLanguage) {
-  return language === 'en' ? 'anglais' : 'français'
 }
 
 export function buildBulletinPrompt({

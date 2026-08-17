@@ -41,6 +41,24 @@ const copy = {
     journeyTitle: 'Une plateforme construite progressivement',
     journeyText: 'La feuille de route relie cinq grands espaces : correction, adaptation des leçons, communication avec les parents, planification des programmes et outils de classe en temps réel. Ils sont livrés progressivement pour garantir des fonctionnalités fiables et réellement utiles.',
   },
+  es: {
+    eyebrow: 'SOBRE EDUCASSIST',
+    title: 'Tecnología que devuelve tiempo a los docentes.',
+    description: 'EducAssist parte de una convicción sencilla: la IA debe reducir el trabajo repetitivo sin quitar al profesorado su criterio profesional.',
+    missionTitle: 'Nuestra misión',
+    missionText: 'Reunir la preparación de clases, la diferenciación, el seguimiento del aula, la ayuda con la corrección y la comunicación con las familias en un espacio coherente y basado en el contexto real del docente.',
+    promiseTitle: 'El docente mantiene el control',
+    promiseText: 'EducAssist prepara, estructura y propone. El docente revisa, adapta y decide. Cada función respeta esta distribución de responsabilidades.',
+    principlesTitle: 'Lo que guía el producto',
+    principles: [
+      ['Útil antes que espectacular', 'Priorizamos herramientas que pueden utilizarse de inmediato en un aula real.'],
+      ['El contexto importa', 'El país, el nivel, la materia, el alumnado y las preferencias pedagógicas permiten obtener resultados pertinentes.'],
+      ['Privacidad desde el diseño', 'Los datos del alumnado deben permanecer aislados, ser mínimos y estar protegidos durante todo el proceso.'],
+      ['Un espacio realmente conectado', 'Cada módulo contribuye a una visión más clara y duradera del alumno y de la clase.'],
+    ],
+    journeyTitle: 'Una plataforma construida progresivamente',
+    journeyText: 'La hoja de ruta conecta cinco grandes áreas: corrección, adaptación de lecciones, comunicación con las familias, planificación curricular y herramientas de aula en tiempo real. Se entregan de forma progresiva para mantener cada versión fiable y realmente útil.',
+  },
 } as const
 
 const principleIcons = [Sparkles, BookOpenCheck, ShieldCheck, Users]

@@ -7,7 +7,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const teacher = profile ? await profileToTeacherIdentity(profile) : null
 
   return (
-    <AppLocaleProvider initialLocale={teacher?.language ?? 'en'}>
+    <AppLocaleProvider initialLocale={teacher?.interfaceLanguage ?? 'en'} restoreStoredLocale={false}>
       <DashboardShell teacher={teacher}>{children}</DashboardShell>
     </AppLocaleProvider>
   )

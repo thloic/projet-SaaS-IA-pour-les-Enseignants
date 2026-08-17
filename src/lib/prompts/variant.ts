@@ -2,13 +2,15 @@ import type {
   GeneratedVariant,
   VariantType,
 } from '@/features/adaptation/schemas/adaptationSchema'
+import type { ContentLanguage } from '@/features/i18n/locale'
+import { languageLabel } from '../../features/i18n/locale.ts'
 
 interface BuildVariantPromptInput {
   sourceContent: string
   sourceTitle: string
   subject: string
   level: string
-  language: 'fr' | 'en'
+  language: ContentLanguage
   variantType: VariantType
   anonymousNeeds: string[]
   validationError?: string
@@ -45,7 +47,7 @@ export function buildVariantPrompt(input: BuildVariantPromptInput): {
   systemPrompt: string
   userPrompt: string
 } {
-  const outputLanguage = input.language === 'en' ? 'anglais' : 'français'
+  const outputLanguage = languageLabel(input.language)
   const needs =
     input.anonymousNeeds.length > 0
       ? input.anonymousNeeds.join(', ')

@@ -36,6 +36,7 @@ import type {
   DashboardAlert,
   DashboardMetric,
 } from '@/features/dashboard/types/dashboard.types'
+import { intlLocale, type AppLocale } from '@/features/i18n/locale'
 
 interface CentralDashboardProps {
   data: CentralDashboardData
@@ -149,6 +150,46 @@ const COPY = {
     noAttendance: 'No attendance recorded during this period.',
     noCorrection: 'No grading activity during this period.',
   },
+  es: {
+    hello: 'Hola',
+    subtitle: 'Estas son las señales útiles para organizar tu jornada.',
+    metrics: {
+      attendance: 'Asistencia',
+      students: 'Alumnos',
+      attention: 'Seguimientos pendientes',
+      corrections: 'Trabajos por corregir',
+      usage: 'Cuota IA',
+    },
+    quick: {
+      course: 'Crear una lección',
+      adaptation: 'Adaptar una lección',
+      quiz: 'Crear un quiz',
+      correction: 'Corregir trabajos',
+      bulletin: 'Redactar un informe',
+      classroom: 'Abrir mis clases',
+    },
+    compared: 'comparado con el período anterior',
+    classes: 'clases',
+    sessions: 'sesiones',
+    priority: 'Revisar ahora',
+    attendanceTrend: 'Evolución de la asistencia',
+    attendanceTrendHint: 'Tasa real calculada a partir de la asistencia registrada.',
+    attendanceSplit: 'Distribución de la asistencia',
+    attendanceSplitHint: 'Presentes, ausentes, retrasos y ausencias justificadas.',
+    activity: 'Actividad pedagógica',
+    activityHint: 'Contenidos y procesos creados durante el período.',
+    engagement: 'Participación por clase',
+    engagementHint: 'Participaciones y observaciones registradas en las sesiones.',
+    observations: 'Observaciones',
+    observationsHint: 'Distribución de los hechos registrados por categoría.',
+    workload: 'Estado de las correcciones',
+    workloadHint: 'Trabajos pendientes, en curso, terminados o fallidos.',
+    history: 'Actividad reciente',
+    allHistory: 'Ver todo el historial',
+    noObservation: 'No hay observaciones durante este período.',
+    noAttendance: 'No hay asistencia registrada durante este período.',
+    noCorrection: 'No hay correcciones durante este período.',
+  },
 }
 
 export default function CentralDashboard({
@@ -167,7 +208,7 @@ export default function CentralDashboard({
   const priorityAlert = visibleAlerts[0] ?? null
 
   const formattedRange = useMemo(() => {
-    const formatter = new Intl.DateTimeFormat(locale === 'fr' ? 'fr-FR' : 'en-US', {
+    const formatter = new Intl.DateTimeFormat(intlLocale(locale), {
       day: 'numeric',
       month: 'short',
       year: data.period.from.slice(0, 4) !== data.period.to.slice(0, 4) ? 'numeric' : undefined,
@@ -352,6 +393,8 @@ export default function CentralDashboard({
             <p className="text-sm text-muted-foreground">
               {locale === 'fr'
                 ? `${data.history.length} élément${data.history.length > 1 ? 's' : ''} sur la période`
+                : locale === 'es'
+                  ? `${data.history.length} elemento${data.history.length === 1 ? '' : 's'} en este período`
                 : `${data.history.length} item${data.history.length === 1 ? '' : 's'} in this period`}
             </p>
           </div>
@@ -382,7 +425,7 @@ function MetricCard({
   label: string
   comparedLabel: string
   alert: DashboardAlert | null
-  locale: 'en' | 'fr'
+  locale: AppLocale
   open: boolean
   onToggle: () => void
 }) {
@@ -456,7 +499,7 @@ function PriorityAlert({
 }: {
   alert: DashboardAlert
   label: string
-  locale: 'en' | 'fr'
+  locale: AppLocale
   onDismiss: () => void
 }) {
   return (

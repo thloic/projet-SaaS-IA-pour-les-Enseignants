@@ -48,7 +48,7 @@ export default function PublicPageShell({
           <div className="flex items-center gap-3">
             <ThemeToggle />
             <div className="flex rounded-lg border border-[#534AB7]/20 p-0.5 text-xs font-bold dark:border-white/15">
-              {(['en', 'fr'] as const).map((option) => (
+              {(['en', 'fr', 'es'] as const).map((option) => (
                 <button
                   key={option}
                   type="button"
@@ -68,7 +68,7 @@ export default function PublicPageShell({
               href="/"
               className="hidden items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-gray-950 dark:text-white/55 dark:hover:text-white sm:flex"
             >
-              <ArrowLeft size={15} /> {locale === 'en' ? 'Home' : 'Accueil'}
+              <ArrowLeft size={15} /> {locale === 'en' ? 'Home' : locale === 'es' ? 'Inicio' : 'Accueil'}
             </Link>
           </div>
         </div>
@@ -84,7 +84,7 @@ export default function PublicPageShell({
       </main>
 
       <footer className="relative z-10 border-t border-[#534AB7]/15 px-5 py-7 text-center text-xs text-gray-500 dark:border-white/10 dark:text-white/35">
-        © 2026 EducAssist. {locale === 'en' ? 'All rights reserved.' : 'Tous droits réservés.'}
+        © 2026 EducAssist. {locale === 'en' ? 'All rights reserved.' : locale === 'es' ? 'Todos los derechos reservados.' : 'Tous droits réservés.'}
       </footer>
     </div>
   )

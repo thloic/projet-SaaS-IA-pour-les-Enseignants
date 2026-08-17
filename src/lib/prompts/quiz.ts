@@ -1,4 +1,5 @@
-import type { GradingSystem } from '@/features/profile/types/profile.types'
+import type { ContentLanguage, GradingSystem } from '@/features/profile/types/profile.types'
+import { languageLabel } from '../../features/i18n/locale.ts'
 
 interface BuildQuizPromptInput {
   content: string
@@ -6,6 +7,7 @@ interface BuildQuizPromptInput {
   questionCount: number
   subject?: string | null
   level?: string | null
+  language?: ContentLanguage
 }
 
 export function buildQuizPrompt({
@@ -14,9 +16,12 @@ export function buildQuizPrompt({
   questionCount,
   subject,
   level,
+  language = 'fr',
 }: BuildQuizPromptInput): string {
+  const booleanOptions = language === 'es' ? '["Verdadero", "Falso"]' : language === 'en' ? '["True", "False"]' : '["Vrai", "Faux"]'
   return [
     'Tu es un assistant pedagogique expert. Genere un quiz strictement base sur le contenu fourni.',
+    `Redige le titre, les questions, les choix et les guides en ${languageLabel(language)}.`,
     '',
     'Contraintes de sortie:',
     '- Reponds uniquement avec un objet JSON valide.',
@@ -47,7 +52,7 @@ export function buildQuizPrompt({
     'Regles:',
     '- Melange QCM, vrai/faux et questions ouvertes.',
     '- Pour un QCM, options contient 2 a 6 choix et correctAnswer doit etre une option exacte.',
-    '- Pour vrai/faux, options vaut exactement ["Vrai", "Faux"] et correctAnswer vaut "Vrai" ou "Faux".',
+    `- Pour vrai/faux, options vaut exactement ${booleanOptions} et correctAnswer reprend exactement l'une de ces deux valeurs.`,
     '- Pour une question ouverte, options vaut [], correctAnswer contient une reponse attendue concise, et correctionGuide contient un guide de correction clair.',
     '- Le champ correctAnswer est obligatoire pour toutes les questions, y compris les questions ouvertes.',
     '- Ne note pas automatiquement les questions ouvertes; fournis seulement le guide.',

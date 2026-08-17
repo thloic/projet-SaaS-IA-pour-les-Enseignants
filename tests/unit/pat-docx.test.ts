@@ -4,6 +4,7 @@ import test from 'node:test'
 import { patMock } from '../../src/features/agent/mocks/patMock.ts'
 import type { PAT } from '../../src/features/agent/schemas/patSchema.ts'
 import { exportPATToDocx } from '../../src/features/agent/utils/exportPATDocx.ts'
+import JSZip from 'jszip'
 
 function assertDocx(buffer: Buffer): void {
   assert.ok(buffer.length > 0)
@@ -45,4 +46,17 @@ test('exportPATToDocx accepte des listes et un tableau de comportements longs', 
   }
 
   assertDocx(await exportPATToDocx(longPAT))
+})
+
+test('exportPATToDocx traduit réellement la structure du document en espagnol', async () => {
+  const docx = await exportPATToDocx(patMock, { language: 'es' })
+  const archive = await JSZip.loadAsync(docx)
+  const documentXml = await archive.file('word/document.xml')?.async('string')
+
+  assert.ok(documentXml)
+  assert.match(documentXml, /Plan temporal de apoyo/)
+  assert.match(documentXml, /Fortalezas y necesidades/)
+  assert.match(documentXml, /Conductas y habilidades objetivo/)
+  assert.match(documentXml, /Adaptaciones ofrecidas/)
+  assert.doesNotMatch(documentXml, /Forces et besoins/)
 })

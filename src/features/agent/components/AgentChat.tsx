@@ -10,7 +10,10 @@ import {
   type AgentStructuredResponse,
 } from '@/features/agent/schemas/agentSchema'
 import type { PAT } from '@/features/agent/schemas/patSchema'
+import type { ContentLanguage } from '@/features/i18n/locale'
 import PATReviewCard from '@/features/agent/components/PATReviewCard'
+import { useAppLocale } from '@/features/i18n/AppLocaleProvider'
+import { agentTranslations } from '@/features/agent/i18n/agentTranslations'
 
 const BRAND = '#534AB7'
 
@@ -25,32 +28,16 @@ interface PATChatMessage {
   kind: 'pat'
   role: 'assistant'
   studentId: string
+  language: ContentLanguage
   pat: PAT
 }
 
 type ChatMessage = TextChatMessage | PATChatMessage
 
-// Cadrage statique uniquement (aucune logique metier declenchee) : ces textes
-// pre-remplissent le champ de saisie, l'enseignant garde la main pour completer.
-const QUICK_ACTIONS = [
-  {
-    label: 'Générer un plan d’appui',
-    prompt: 'Génère le PAT de [prénom ou nom de l’élève]',
-  },
-  {
-    label: 'Rédiger un commentaire de bulletin',
-    prompt:
-      'Je veux rédiger un commentaire de bulletin. Élève : [prénom], matière : [matière], note ou appréciation : [note], observations : [observations]',
-  },
-  {
-    label: 'Préparer un suivi d’élève',
-    prompt:
-      'Je veux préparer un suivi d’élève. Adaptations en place : [adaptations], observations récentes : [observations], prochaines étapes envisagées : [étapes]',
-  },
-]
-
 export default function AgentChat() {
   const { showToast } = useToast()
+  const { locale } = useAppLocale()
+  const copy = agentTranslations[locale]
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
@@ -94,12 +81,12 @@ export default function AgentChat() {
 
       if (!response.ok) {
         const body = await response.json().catch(() => null)
-        throw new Error(body?.error ?? 'La réponse de l’agent a échoué.')
+        throw new Error(body?.error ?? copy.responseFailed)
       }
 
       if (response.headers.get('content-type')?.includes('application/json')) {
         const structured = agentStructuredResponseSchema.safeParse(await response.json())
-        if (!structured.success) throw new Error('La réponse structurée de l’agent est invalide.')
+        if (!structured.success) throw new Error(copy.invalidStructured)
 
         setMessages((current) => {
           const withoutPending = current.slice(0, -1)
@@ -110,6 +97,7 @@ export default function AgentChat() {
                 kind: 'pat',
                 role: 'assistant',
                 studentId: structured.data.studentId,
+                language: structured.data.language,
                 pat: structured.data.pat,
               },
             ]
@@ -130,7 +118,7 @@ export default function AgentChat() {
         return
       }
 
-      if (!response.body) throw new Error('La réponse de l’agent est vide.')
+      if (!response.body) throw new Error(copy.emptyResponse)
 
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
@@ -150,7 +138,7 @@ export default function AgentChat() {
       }
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return
-      const message = err instanceof Error ? err.message : 'La réponse de l’agent a échoué.'
+      const message = err instanceof Error ? err.message : copy.responseFailed
       console.error('[agent] échec du chat', err)
       setError(message)
       showToast(message, 'error')
@@ -175,20 +163,20 @@ export default function AgentChat() {
           <Bot size={22} style={{ color: BRAND }} />
         </div>
         <div>
-          <h1 className="text-2xl font-black">Agent EducAssist</h1>
-          <p className="text-sm text-muted-foreground">Votre assistant pédagogique conversationnel</p>
+          <h1 className="text-2xl font-black">{copy.title}</h1>
+          <p className="text-sm text-muted-foreground">{copy.subtitle}</p>
         </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {QUICK_ACTIONS.map((action) => (
+        {copy.quick.map(([label, prompt]) => (
           <button
-            key={action.label}
+            key={label}
             type="button"
-            onClick={() => handleQuickAction(action.prompt)}
+            onClick={() => handleQuickAction(prompt)}
             className="rounded-full border border-border bg-muted/30 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/60"
           >
-            {action.label}
+            {label}
           </button>
         ))}
       </div>
@@ -197,12 +185,12 @@ export default function AgentChat() {
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-sm text-muted-foreground">
             <Sparkles size={20} style={{ color: BRAND }} />
-            <p>Décrivez ce dont vous avez besoin, ou utilisez une action rapide ci-dessus.</p>
+            <p>{copy.empty}</p>
           </div>
         ) : (
           messages.map((message, index) =>
             message.kind === 'pat' ? (
-              <PATReviewCard key={index} initialPAT={message.pat} />
+              <PATReviewCard key={index} initialPAT={message.pat} documentLanguage={message.language} />
             ) : (
               <div
                 key={index}
@@ -220,7 +208,7 @@ export default function AgentChat() {
                       <button
                         key={candidate.id}
                         type="button"
-                        onClick={() => setInput(`Génère le PAT de ${candidate.fullName}`)}
+                        onClick={() => setInput(copy.patPrompt(candidate.fullName))}
                         className="rounded-full border border-border bg-background px-3 py-1 text-xs hover:bg-muted"
                       >
                         {candidate.fullName}
@@ -242,7 +230,7 @@ export default function AgentChat() {
           value={input}
           onChange={(event) => setInput(event.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Écrivez votre message…"
+          placeholder={copy.placeholder}
           rows={2}
           className="flex-1 resize-none rounded-xl bg-muted/40 border border-border px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20"
         />

@@ -154,7 +154,7 @@ export async function createAdaptationGeneration(
   const userId = user.id
   const generationSubject = parsed.data.subject
   const generationLevel = parsed.data.level
-  const generationLanguage = profile.language === 'en' ? 'en' : 'fr'
+  const generationLanguage = profile.language
 
   const source = await resolveSource(userId, parsed.data)
   const students = await loadOwnedStudents(userId, parsed.data.studentIds)
@@ -206,7 +206,7 @@ export async function createAdaptationGeneration(
         source_hash: sourceHash,
         subject: parsed.data.subject,
         level: parsed.data.level,
-        language: profile.language === 'en' ? 'en' : 'fr',
+        language: profile.language,
         status: 'generating',
       })
       .select('id')

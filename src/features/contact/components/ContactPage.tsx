@@ -44,6 +44,22 @@ const copy = {
     asideTitle: 'Une vraie conversation, pas un numéro de ticket.',
     asideText: 'Produit, déploiement dans un établissement, tarifs ou prise en main : toutes vos questions sont les bienvenues.',
   },
+  es: {
+    eyebrow: 'CONTACTO',
+    title: 'Hablemos de tus necesidades educativas.',
+    description: 'Indícanos cómo contactar contigo y qué tema quieres tratar. Nuestro equipo te responderá lo antes posible.',
+    name: 'Nombre',
+    email: 'Correo electrónico',
+    subject: 'Asunto',
+    phone: 'Número de teléfono',
+    submit: 'Enviar mi solicitud',
+    sending: 'Enviando…',
+    success: 'Tu solicitud se ha enviado correctamente. Te responderemos pronto.',
+    error: 'Revisa la información introducida antes de continuar.',
+    placeholders: ['María García', 'maria@centro.es', 'Plan para centros, demostración, ayuda…', '+34 600 000 000'],
+    asideTitle: 'Una conversación real, no un número de incidencia.',
+    asideText: 'Producto, implantación en un centro, precios o primeros pasos: todas tus preguntas son bienvenidas.',
+  },
 } as const
 
 export default function ContactPage() {
@@ -67,7 +83,7 @@ export default function ContactPage() {
     try {
       const result = await submitContactAction(formData)
       if (!result.success) {
-        showToast(locale === 'en' ? 'We could not send your request right now. Please try again.' : result.error ?? 'Impossible d’envoyer votre demande.', 'error')
+        showToast(locale === 'en' ? 'We could not send your request right now. Please try again.' : locale === 'es' ? 'No se ha podido enviar tu solicitud. Inténtalo de nuevo.' : result.error ?? 'Impossible d’envoyer votre demande.', 'error')
         return
       }
 
@@ -75,7 +91,7 @@ export default function ContactPage() {
       showToast(t.success, 'success')
     } catch (error) {
       console.error('[contact] action indisponible', error)
-      showToast(locale === 'en' ? 'We could not send your request right now. Please try again.' : 'Impossible d’envoyer votre demande pour le moment.', 'error')
+      showToast(locale === 'en' ? 'We could not send your request right now. Please try again.' : locale === 'es' ? 'No se ha podido enviar tu solicitud en este momento.' : 'Impossible d’envoyer votre demande pour le moment.', 'error')
     } finally {
       setIsSubmitting(false)
     }

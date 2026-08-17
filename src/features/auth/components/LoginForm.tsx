@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
 import { FileText, Sparkles, Target, BarChart2, CheckCircle2 } from 'lucide-react'
@@ -14,29 +14,96 @@ import { magicLinkSchema } from '@/features/auth/schemas/authSchema'
 import { getAuthCallbackErrorMessage, getAuthErrorMessage } from '@/features/auth/utils/authError'
 import { useToast } from '@/components/shared/ToastProvider'
 import ThemeToggle from '@/components/shared/ThemeToggle'
+import { usePublicLocale } from '@/features/marketing/hooks/usePublicLocale'
 
 const BRAND = '#534AB7'
 
-const bubbles = [
-  { Icon: FileText, label: 'Cours complets', top: '18%', left: '6%' },
-  { Icon: Sparkles, label: 'Quiz IA', top: '38%', left: '52%' },
-  { Icon: Target, label: 'Objectifs ciblés', top: '58%', left: '8%' },
-  { Icon: BarChart2, label: 'Bulletins', top: '74%', left: '48%' },
+const AUTH_COPY = {
+  fr: {
+    bubbles: ['Cours complets', 'Quiz IA', 'Objectifs ciblés', 'Bulletins'],
+    tagline: 'Créez des cours d’exception',
+    taglineSub: 'Zéro prompt. 100 % pédagogique.',
+    title: 'Connexion',
+    welcome: 'Bon retour parmi nous 👋',
+    google: 'Continuer avec Google',
+    redirecting: 'Redirection…',
+    or: 'ou',
+    sentToast: 'Le lien de connexion vient de vous être envoyé.',
+    sent: 'Lien envoyé à',
+    sentHint: 'Vérifiez votre boîte mail pour vous connecter.',
+    email: 'Email',
+    emailPlaceholder: 'vous@exemple.fr',
+    send: 'Recevoir le lien de connexion',
+    sending: 'Envoi…',
+    invalidEmail: 'Saisissez une adresse email valide.',
+    authError: 'La connexion a échoué. Réessayez dans un instant.',
+  },
+  en: {
+    bubbles: ['Complete lessons', 'AI quizzes', 'Focused objectives', 'Reports'],
+    tagline: 'Create exceptional lessons',
+    taglineSub: 'Zero prompts. 100% teaching.',
+    title: 'Log in',
+    welcome: 'Welcome back 👋',
+    google: 'Continue with Google',
+    redirecting: 'Redirecting…',
+    or: 'or',
+    sentToast: 'Your login link has just been sent.',
+    sent: 'Link sent to',
+    sentHint: 'Check your inbox to log in.',
+    email: 'Email',
+    emailPlaceholder: 'you@example.com',
+    send: 'Send me a login link',
+    sending: 'Sending…',
+    invalidEmail: 'Enter a valid email address.',
+    authError: 'Login failed. Please try again shortly.',
+  },
+  es: {
+    bubbles: ['Lecciones completas', 'Quizzes con IA', 'Objetivos concretos', 'Informes'],
+    tagline: 'Crea lecciones excepcionales',
+    taglineSub: 'Sin prompts. 100 % educación.',
+    title: 'Iniciar sesión',
+    welcome: 'Nos alegra verte de nuevo 👋',
+    google: 'Continuar con Google',
+    redirecting: 'Redirigiendo…',
+    or: 'o',
+    sentToast: 'Te hemos enviado el enlace de acceso.',
+    sent: 'Enlace enviado a',
+    sentHint: 'Revisa tu correo para iniciar sesión.',
+    email: 'Correo electrónico',
+    emailPlaceholder: 'tu@ejemplo.es',
+    send: 'Recibir el enlace de acceso',
+    sending: 'Enviando…',
+    invalidEmail: 'Introduce un correo electrónico válido.',
+    authError: 'No se ha podido iniciar sesión. Inténtalo de nuevo en unos instantes.',
+  },
+} as const
+
+const bubblePositions = [
+  { Icon: FileText, top: '18%', left: '6%' },
+  { Icon: Sparkles, top: '38%', left: '52%' },
+  { Icon: Target, top: '58%', left: '8%' },
+  { Icon: BarChart2, top: '74%', left: '48%' },
 ]
 
 export default function LoginForm() {
   const containerRef = useRef<HTMLDivElement>(null)
   const { showToast } = useToast()
+  const { locale, setLocale } = usePublicLocale()
+  const copy = AUTH_COPY[locale]
 
   const [email, setEmail] = useState('')
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [isMagicLinkLoading, setIsMagicLinkLoading] = useState(false)
   const [magicLinkSent, setMagicLinkSent] = useState(false)
-  const [error, setError] = useState<string | null>(() =>
-    typeof window !== 'undefined'
-      ? getAuthCallbackErrorMessage(window.location.search, window.location.hash)
-      : null
-  )
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const callbackError = getAuthCallbackErrorMessage(window.location.search, window.location.hash)
+    if (callbackError) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setError(locale === 'fr' ? callbackError : copy.authError)
+    }
+  }, [copy.authError, locale])
 
   useGSAP(
     () => {
@@ -73,7 +140,7 @@ export default function LoginForm() {
       if (oauthError) throw oauthError
     } catch (error) {
       console.error('[auth] échec de la connexion Google', error)
-      const message = getAuthErrorMessage(error instanceof Error ? error : null)
+      const message = locale === 'fr' ? getAuthErrorMessage(error instanceof Error ? error : null) : copy.authError
       setIsGoogleLoading(false)
       setError(message)
       showToast(message, 'error')
@@ -87,7 +154,7 @@ export default function LoginForm() {
 
     const parsed = magicLinkSchema.safeParse({ email: email.trim() })
     if (!parsed.success) {
-      const message = parsed.error.issues[0].message
+      const message = locale === 'fr' ? parsed.error.issues[0].message : copy.invalidEmail
       setError(message)
       showToast(message, 'error')
       return
@@ -106,10 +173,10 @@ export default function LoginForm() {
 
       if (otpError) throw otpError
       setMagicLinkSent(true)
-      showToast('Le lien de connexion vient de vous être envoyé.', 'success')
+      showToast(copy.sentToast, 'success')
     } catch (error) {
       console.error('[auth] échec de l’envoi du lien magique', error)
-      const message = getAuthErrorMessage(error instanceof Error ? error : null)
+      const message = locale === 'fr' ? getAuthErrorMessage(error instanceof Error ? error : null) : copy.authError
       setError(message)
       showToast(message, 'error')
     } finally {
@@ -131,14 +198,14 @@ export default function LoginForm() {
 
         {/* Bubbles */}
         <div className="auth-animate flex-1 relative">
-          {bubbles.map(({ Icon, label, top, left }) => (
+          {bubblePositions.map(({ Icon, top, left }, index) => (
             <div
-              key={label}
+              key={copy.bubbles[index]}
               className="bubble absolute flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2.5 text-white text-sm font-medium shadow-lg"
               style={{ top, left }}
             >
               <Icon size={15} />
-              {label}
+              {copy.bubbles[index]}
             </div>
           ))}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-56 h-56 rounded-full bg-white/10 blur-3xl pointer-events-none" />
@@ -147,17 +214,32 @@ export default function LoginForm() {
         {/* Tagline */}
         <div className="auth-animate text-center pb-4">
           <p className="text-white font-semibold text-lg">
-            Créez des cours d&apos;exception
+            {copy.tagline}
           </p>
           <p className="text-white/60 text-sm mt-1">
-            Zéro prompt. 100 % pédagogique.
+            {copy.taglineSub}
           </p>
         </div>
       </div>
 
       {/* ── Right panel ── */}
       <div className="relative flex w-full items-center justify-center bg-[#F5F3FF] p-8 transition-colors dark:bg-[#080711] lg:w-1/2">
-        <ThemeToggle className="absolute right-5 top-5" />
+        <div className="absolute right-5 top-5 flex items-center gap-2">
+          <div className="flex rounded-lg border border-[#534AB7]/20 p-0.5 text-xs font-bold dark:border-white/15">
+            {(['en', 'fr', 'es'] as const).map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => setLocale(option)}
+                className={`rounded-md px-2 py-1.5 uppercase ${locale === option ? 'bg-[#534AB7] text-white' : 'text-muted-foreground'}`}
+                aria-pressed={locale === option}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+          <ThemeToggle />
+        </div>
         <div className="auth-animate w-full max-w-md space-y-6">
           {/* Mobile logo */}
           <div className="flex items-center gap-2 lg:hidden">
@@ -165,8 +247,8 @@ export default function LoginForm() {
           </div>
 
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold text-foreground">Connexion</h1>
-            <p className="text-sm text-muted-foreground">Bon retour parmi nous 👋</p>
+            <h1 className="text-2xl font-bold text-foreground">{copy.title}</h1>
+            <p className="text-sm text-muted-foreground">{copy.welcome}</p>
           </div>
 
           {/* Google */}
@@ -201,12 +283,12 @@ export default function LoginForm() {
                 fill="#EA4335"
               />
             </svg>
-            {isGoogleLoading ? 'Redirection…' : 'Continuer avec Google'}
+            {isGoogleLoading ? copy.redirecting : copy.google}
           </Button>
 
           <div className="flex items-center gap-3">
             <Separator className="flex-1" />
-            <span className="text-xs text-muted-foreground shrink-0">ou</span>
+            <span className="text-xs text-muted-foreground shrink-0">{copy.or}</span>
             <Separator className="flex-1" />
           </div>
 
@@ -220,17 +302,17 @@ export default function LoginForm() {
             <div className="flex items-start gap-3 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">
               <CheckCircle2 size={18} className="mt-0.5 shrink-0" />
               <span>
-                Lien envoyé à <strong>{email}</strong>. Vérifiez votre boîte mail pour vous connecter.
+                {copy.sent} <strong>{email}</strong>. {copy.sentHint}
               </span>
             </div>
           ) : (
             <form onSubmit={handleMagicLink} className="space-y-4" noValidate>
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{copy.email}</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="vous@exemple.fr"
+                  placeholder={copy.emailPlaceholder}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -244,7 +326,7 @@ export default function LoginForm() {
                 style={{ backgroundColor: BRAND }}
                 disabled={isMagicLinkLoading}
               >
-                {isMagicLinkLoading ? 'Envoi…' : 'Recevoir le lien de connexion'}
+                {isMagicLinkLoading ? copy.sending : copy.send}
               </Button>
             </form>
           )}

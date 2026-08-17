@@ -3,9 +3,11 @@ import type { PAT } from '../schemas/patSchema.ts'
 import type { StudentContext } from '../types/memory.types.ts'
 import { buildPATPrompt } from './patPrompt.ts'
 import { parseAndValidatePAT } from './patValidation.ts'
+import type { ContentLanguage } from '@/features/i18n/locale'
 
 export interface GeneratePATInput {
   studentContext: StudentContext
+  language?: ContentLanguage
 }
 
 export type PATGenerationMode = 'mock' | 'real'
@@ -78,16 +80,16 @@ export async function generateRealPAT(
   input: GeneratePATInput,
   generator: StructuredPATGenerator
 ): Promise<PAT> {
-  const output = await generator(buildPATPrompt(input.studentContext))
+  const output = await generator(buildPATPrompt(input.studentContext, input.language ?? 'fr'))
   return groundGeneratedPAT(output, input.studentContext)
 }
 
-export async function generatePAT({ studentContext }: GeneratePATInput): Promise<PAT> {
+export async function generatePAT({ studentContext, language = 'fr' }: GeneratePATInput): Promise<PAT> {
   const mode = getPATGenerationMode()
   if (mode === 'mock') {
     return parseAndValidatePAT(structuredClone(patMock))
   }
 
   const { generateStructuredPATWithAnthropic } = await import('./patModel.ts')
-  return generateRealPAT({ studentContext }, generateStructuredPATWithAnthropic)
+  return generateRealPAT({ studentContext, language }, generateStructuredPATWithAnthropic)
 }

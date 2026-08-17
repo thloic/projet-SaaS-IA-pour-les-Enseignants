@@ -1,6 +1,11 @@
 import type { StudentContext } from '../types/memory.types.ts'
+import type { ContentLanguage } from '@/features/i18n/locale'
+import { languageLabel } from '../../i18n/locale.ts'
 
-export function buildPATPrompt(studentContext: StudentContext): string {
+export function buildPATPrompt(
+  studentContext: StudentContext,
+  language: ContentLanguage = 'fr'
+): string {
   const source = {
     eleve: {
       nom: studentContext.student.fullName,
@@ -28,6 +33,7 @@ export function buildPATPrompt(studentContext: StudentContext): string {
 
   return [
     'Génère un plan d’appui temporaire conforme au schéma JSON demandé.',
+    `Rédige tous les contenus textuels du PAT en ${languageLabel(language)}. Les noms de clés JSON restent strictement ceux du schéma.`,
     'Utilise uniquement les faits fournis ci-dessous. N’invente aucune date, preuve, recommandation factuelle ou information sur l’élève.',
     'Omet les champs facultatifs lorsqu’aucune donnée ne permet de les documenter.',
     'Formule chaque besoin comme un axe de progrès bienveillant, par exemple « Développer… », « Consolider… » ou « Renforcer… ».',

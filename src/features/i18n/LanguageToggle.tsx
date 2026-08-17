@@ -1,6 +1,9 @@
 'use client'
 
+import { useTransition } from 'react'
 import { useAppLocale } from '@/features/i18n/AppLocaleProvider'
+import { APP_LOCALES } from '@/features/i18n/locale'
+import { updateInterfaceLanguageAction } from '@/features/profile/server/profile.actions'
 
 interface LanguageToggleProps {
   compact?: boolean
@@ -9,6 +12,16 @@ interface LanguageToggleProps {
 
 export default function LanguageToggle({ compact = false, className = '' }: LanguageToggleProps) {
   const { locale, setLocale, t } = useAppLocale()
+  const [isPending, startTransition] = useTransition()
+
+  function changeLocale(nextLocale: typeof locale) {
+    const previousLocale = locale
+    setLocale(nextLocale)
+    startTransition(async () => {
+      const result = await updateInterfaceLanguageAction(nextLocale)
+      if (result.error) setLocale(previousLocale)
+    })
+  }
 
   return (
     <div
@@ -17,11 +30,12 @@ export default function LanguageToggle({ compact = false, className = '' }: Lang
       aria-label={t.common.language}
       title={t.common.language}
     >
-      {(['en', 'fr'] as const).map((option) => (
+      {APP_LOCALES.map((option) => (
         <button
           key={option}
           type="button"
-          onClick={() => setLocale(option)}
+          onClick={() => changeLocale(option)}
+          disabled={isPending}
           className={`rounded-md px-2 py-1.5 uppercase transition-colors ${
             locale === option ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
           }`}

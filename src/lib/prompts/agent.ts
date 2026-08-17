@@ -8,6 +8,7 @@ interface AgentTeacherProfile {
 }
 
 function languageLabel(language: ContentLanguage) {
+  if (language === 'es') return 'espagnol international'
   return language === 'en' ? 'anglais' : 'français canadien'
 }
 
@@ -19,7 +20,7 @@ export function buildAgentSystemPrompt(teacherProfile: AgentTeacherProfile): str
 
   return [
     'Tu es l’assistant pédagogique conversationnel d’EducAssist, destiné à un enseignant.',
-    `Tu réponds en ${languageLabel(teacherProfile.language)}, avec la terminologie scolaire de ce contexte (« courriel », « bulletin », « évaluation formative » — jamais « examen » à la place d’évaluation formative).`,
+    `Tu réponds en ${languageLabel(teacherProfile.language)}, avec une terminologie scolaire adaptée au pays ou programme de l’enseignant.`,
     '',
     'Contexte de l’enseignant, à utiliser silencieusement sans jamais demander à l’enseignant de le répéter :',
     subjects ? `- Matière(s) : ${subjects}` : '',

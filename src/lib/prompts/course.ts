@@ -1,14 +1,11 @@
 import type { CourseInput } from '@/features/generation/schemas/generationSchema'
 import type { ContentLanguage, GradingSystem } from '@/features/profile/types/profile.types'
+import { languageLabel } from '../../features/i18n/locale.ts'
 
 interface BuildCoursePromptTeacherProfile {
   country?: string | null
   gradingSystem: GradingSystem
   language: ContentLanguage
-}
-
-function languageLabel(language: ContentLanguage) {
-  return language === 'en' ? 'anglais' : 'français'
 }
 
 export function buildCoursePrompt(

@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { useFormatter } from 'next-intl'
 import Link from 'next/link'
 import {
   BookOpen,
@@ -22,6 +23,7 @@ import type {
   DashboardHistoryItem,
   DashboardHistoryType,
 } from '@/features/dashboard/types/dashboard.types'
+import { intlLocale, type AppLocale } from '@/features/i18n/locale'
 
 const TYPE_ICONS = {
   course: BookOpen,
@@ -33,14 +35,14 @@ const TYPE_ICONS = {
   session: UsersRound,
 } satisfies Record<DashboardHistoryType, typeof History>
 
-const TYPE_LABELS: Record<DashboardHistoryType, { fr: string; en: string }> = {
-  course: { fr: 'Cours', en: 'Lesson' },
-  quiz: { fr: 'Quiz', en: 'Quiz' },
-  adaptation: { fr: 'Adaptation', en: 'Adaptation' },
-  bulletin: { fr: 'Bulletin', en: 'Report' },
-  correction: { fr: 'Correction', en: 'Grading' },
-  document: { fr: 'Document', en: 'Document' },
-  session: { fr: 'Séance', en: 'Session' },
+const TYPE_LABELS: Record<DashboardHistoryType, Record<AppLocale, string>> = {
+  course: { fr: 'Cours', en: 'Lesson', es: 'Lección' },
+  quiz: { fr: 'Quiz', en: 'Quiz', es: 'Quiz' },
+  adaptation: { fr: 'Adaptation', en: 'Adaptation', es: 'Adaptación' },
+  bulletin: { fr: 'Bulletin', en: 'Report', es: 'Informe' },
+  correction: { fr: 'Correction', en: 'Grading', es: 'Corrección' },
+  document: { fr: 'Document', en: 'Document', es: 'Documento' },
+  session: { fr: 'Séance', en: 'Session', es: 'Sesión' },
 }
 
 interface UnifiedHistoryProps {
@@ -48,15 +50,15 @@ interface UnifiedHistoryProps {
   compact?: boolean
 }
 
-function dayGroup(value: string, locale: 'en' | 'fr') {
+function dayGroup(value: string, locale: AppLocale) {
   const date = new Date(value)
   const today = new Date()
   const yesterday = new Date()
   yesterday.setDate(today.getDate() - 1)
   const key = date.toISOString().slice(0, 10)
-  if (key === today.toISOString().slice(0, 10)) return locale === 'fr' ? 'Aujourd’hui' : 'Today'
-  if (key === yesterday.toISOString().slice(0, 10)) return locale === 'fr' ? 'Hier' : 'Yesterday'
-  return date.toLocaleDateString(locale === 'fr' ? 'fr-FR' : 'en-US', {
+  if (key === today.toISOString().slice(0, 10)) return locale === 'fr' ? 'Aujourd’hui' : locale === 'es' ? 'Hoy' : 'Today'
+  if (key === yesterday.toISOString().slice(0, 10)) return locale === 'fr' ? 'Hier' : locale === 'es' ? 'Ayer' : 'Yesterday'
+  return date.toLocaleDateString(intlLocale(locale), {
     month: 'long',
     year: 'numeric',
   })
@@ -75,6 +77,7 @@ function statusClass(status: DashboardHistoryItem['status']) {
 
 export default function UnifiedHistory({ items, compact = false }: UnifiedHistoryProps) {
   const { locale } = useAppLocale()
+  const format = useFormatter()
   const [query, setQuery] = useState('')
   const [type, setType] = useState<'all' | DashboardHistoryType>('all')
   const filtered = useMemo(() => {
@@ -113,7 +116,7 @@ export default function UnifiedHistory({ items, compact = false }: UnifiedHistor
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder={locale === 'fr' ? 'Rechercher dans l’historique...' : 'Search history...'}
+              placeholder={locale === 'fr' ? 'Rechercher dans l’historique...' : locale === 'es' ? 'Buscar en el historial...' : 'Search history...'}
               className="min-h-10 pl-9"
             />
           </div>
@@ -125,7 +128,7 @@ export default function UnifiedHistory({ items, compact = false }: UnifiedHistor
                 type === 'all' ? 'border-primary bg-primary/10 text-primary' : 'border-border'
               }`}
             >
-              {locale === 'fr' ? 'Tout' : 'All'}
+              {locale === 'fr' ? 'Tout' : locale === 'es' ? 'Todo' : 'All'}
             </button>
             {(Object.keys(TYPE_LABELS) as DashboardHistoryType[]).map((itemType) => (
               <button
@@ -149,6 +152,8 @@ export default function UnifiedHistory({ items, compact = false }: UnifiedHistor
         <div className="flex min-h-40 items-center justify-center rounded-lg border border-dashed border-border p-5 text-center text-sm text-muted-foreground">
           {locale === 'fr'
             ? 'Aucune activité ne correspond à cette période.'
+            : locale === 'es'
+              ? 'Ninguna actividad corresponde a este período.'
             : 'No activity matches this period.'}
         </div>
       ) : (
@@ -171,33 +176,33 @@ export default function UnifiedHistory({ items, compact = false }: UnifiedHistor
                         <p className="truncate text-sm font-semibold">{item.title}</p>
                         <p className="truncate text-xs text-muted-foreground">
                           {TYPE_LABELS[item.type][locale]} · {item.subtitle} ·{' '}
-                          {new Date(item.createdAt).toLocaleTimeString(
-                            locale === 'fr' ? 'fr-FR' : 'en-US',
-                            { hour: '2-digit', minute: '2-digit' }
-                          )}
+                          {format.dateTime(new Date(item.createdAt), {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
                         </p>
                       </div>
                       <Badge variant="outline" className={`hidden text-[10px] sm:flex ${statusClass(item.status)}`}>
                         {item.status === 'failed'
                           ? locale === 'fr'
                             ? 'À vérifier'
-                            : 'Check'
+                            : locale === 'es' ? 'Revisar' : 'Check'
                           : item.status === 'generating'
                             ? locale === 'fr'
                               ? 'En cours'
-                              : 'In progress'
+                              : locale === 'es' ? 'En curso' : 'In progress'
                             : item.status === 'complete'
                               ? locale === 'fr'
                                 ? 'Terminé'
-                                : 'Complete'
+                                : locale === 'es' ? 'Terminado' : 'Complete'
                               : locale === 'fr'
                                 ? 'Ajouté'
-                                : 'Added'}
+                                : locale === 'es' ? 'Añadido' : 'Added'}
                       </Badge>
                       <Button asChild size="icon" variant="ghost">
                         <Link
                           href={item.href}
-                          aria-label={`${locale === 'fr' ? 'Ouvrir' : 'Open'} ${item.title}`}
+                          aria-label={`${locale === 'fr' ? 'Ouvrir' : locale === 'es' ? 'Abrir' : 'Open'} ${item.title}`}
                         >
                           <ChevronRight />
                         </Link>

@@ -41,7 +41,7 @@ export default function LandingPage() {
     if (!localeReadyRef.current) {
       localeReadyRef.current = true
       const savedLocale = window.localStorage.getItem('educassist-locale')
-      if (savedLocale === 'en' || savedLocale === 'fr') {
+      if (savedLocale === 'en' || savedLocale === 'fr' || savedLocale === 'es') {
         // Restores the visitor's explicit choice after the hydration-safe EN default.
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setLocale(savedLocale)
@@ -142,7 +142,7 @@ export default function LandingPage() {
               role="group"
               aria-label={t.language}
             >
-              {(['en', 'fr'] as const).map((option) => (
+              {(['en', 'fr', 'es'] as const).map((option) => (
                 <button
                   key={option}
                   type="button"

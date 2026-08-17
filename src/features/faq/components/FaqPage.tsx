@@ -38,6 +38,22 @@ const copy = {
       ['Puis-je utiliser EducAssist sur téléphone ?', 'Oui. L’expérience web est pensée mobile-first pour une utilisation en classe. Une application mobile native pourra arriver plus tard, mais la priorité actuelle est une plateforme web responsive et fiable.'],
     ],
   },
+  es: {
+    eyebrow: 'PREGUNTAS FRECUENTES',
+    title: 'Respuestas claras antes de empezar.',
+    description: 'Todo lo que necesitas saber sobre cómo EducAssist facilita la preparación, el trabajo en el aula y el seguimiento del alumnado.',
+    questions: [
+      ['¿Qué puedo hacer con EducAssist?', 'EducAssist se desarrolla en torno a cinco áreas conectadas: corrección asistida por IA, adaptación de lecciones, comunicación con las familias, planificación curricular y seguimiento del aula en tiempo real. Las herramientas disponibles aparecen directamente en tu panel.'],
+      ['¿Necesito saber escribir prompts para la IA?', 'No. La plataforma utiliza formularios guiados. Tú proporcionas el contexto educativo, el nivel, los objetivos y las restricciones útiles; EducAssist prepara las instrucciones para la IA.'],
+      ['¿EducAssist sustituye el criterio del docente?', 'No. El contenido generado es un borrador de trabajo. El docente revisa, ajusta y aprueba cada lección, comentario, adaptación o comunicación antes de utilizarla.'],
+      ['¿Qué documentos puedo importar?', 'Actualmente puedes escribir texto o importar archivos digitales TXT, PDF y DOCX. El contenido extraído se puede editar y revisar. Los documentos escaneados o manuscritos todavía no son compatibles.'],
+      ['¿Puedo exportar el contenido generado?', 'La hoja de ruta incluye exportaciones PDF y Word para lecciones, adaptaciones, comentarios y mensajes. La disponibilidad aparece dentro de cada herramienta compatible.'],
+      ['¿Cómo se protegen los datos del alumnado?', 'La información del alumnado se aísla por cuenta docente mediante Row Level Security de Supabase. Los datos sensibles deben limitarse a lo estrictamente necesario, también al utilizar herramientas de IA.'],
+      ['¿Para qué sirve el perfil docente?', 'Tu materia, niveles, país, sistema de calificación, idiomas y preferencias pedagógicas se registran una vez y se reutilizan para personalizar las generaciones futuras.'],
+      ['¿Existe un plan gratuito?', 'El acceso freemium previsto incluye un número limitado de generaciones. El panel muestra el consumo y avisa antes de alcanzar el límite.'],
+      ['¿Puedo utilizar EducAssist en el móvil?', 'Sí. La experiencia web está diseñada con prioridad móvil para su uso en el aula. La prioridad actual es una plataforma web adaptable y fiable.'],
+    ],
+  },
 } as const
 
 export default function FaqPage() {
@@ -59,6 +75,8 @@ export default function FaqPage() {
           <p className="mt-6 text-sm leading-7 text-gray-600 dark:text-white/55">
             {locale === 'en'
               ? 'Click a question to reveal its answer. Still unsure? Our contact page is here for you.'
+              : locale === 'es'
+                ? 'Pulsa una pregunta para ver su respuesta. ¿Aún tienes dudas? Nuestra página de contacto está a tu disposición.'
               : 'Cliquez sur une question pour dérouler sa réponse. Un doute persiste ? Notre page contact est là pour vous.'}
           </p>
         </aside>

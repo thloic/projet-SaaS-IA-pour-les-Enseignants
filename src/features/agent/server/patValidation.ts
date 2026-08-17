@@ -6,6 +6,8 @@ const NEGATIVE_DIRECT_PATTERNS = [
   /faible/iu,
   /[eé]choue/iu,
   /ne\s+[^.!?]{0,60}\s+pas/iu,
+  /\b(?:unable|incapable|weak|fails?|cannot|can['’]?t|struggles?\s+with)\b/iu,
+  /\b(?:incapaz|d[eé]bil|fracasa|no\s+puede|tiene\s+dificultades)\b/iu,
 ]
 
 export class PATValidationError extends Error {

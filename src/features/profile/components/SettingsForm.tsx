@@ -14,6 +14,8 @@ import {
   type UpdateProfileState,
 } from '@/features/profile/server/profile.actions'
 import { defaultGrading, type GradingSystem, type ContentLanguage } from '@/features/profile/types/profile.types'
+import type { AppLocale } from '@/features/i18n/locale'
+import { APP_LOCALES } from '@/features/i18n/locale'
 
 const BRAND = '#534AB7'
 
@@ -36,6 +38,7 @@ interface SettingsFormProps {
   initialSubjects: string[]
   initialGradingSystem: GradingSystem
   initialLanguage: ContentLanguage
+  initialInterfaceLanguage: AppLocale
   generationsUsed: number
   generationsLimit: number
 }
@@ -56,6 +59,7 @@ export default function SettingsForm({
   initialSubjects,
   initialGradingSystem,
   initialLanguage,
+  initialInterfaceLanguage,
   generationsUsed,
   generationsLimit,
 }: SettingsFormProps) {
@@ -75,6 +79,7 @@ export default function SettingsForm({
   const [customSubject, setCustomSubject] = useState(initialCustomSubject)
   const [gradingSystem, setGradingSystem] = useState<GradingSystem>(initialGradingSystem)
   const [language, setLanguage] = useState<ContentLanguage>(initialLanguage)
+  const [interfaceLanguage, setInterfaceLanguage] = useState<AppLocale>(initialInterfaceLanguage)
 
   function toggleSubject(subject: string) {
     if (subject === 'Autre') {
@@ -147,6 +152,7 @@ export default function SettingsForm({
         <input type="hidden" name="country" value={getCountryValue()} />
         <input type="hidden" name="gradingSystem" value={gradingSystem} />
         <input type="hidden" name="language" value={language} />
+        <input type="hidden" name="interfaceLanguage" value={interfaceLanguage} />
         {normalizedSubjects.map((subject) => (
           <input key={subject} type="hidden" name="subjects" value={subject} />
         ))}
@@ -300,16 +306,34 @@ export default function SettingsForm({
               </div>
             </div>
             <div className="space-y-2">
+              <Label>{t.settings.interfaceLanguage}</Label>
+              <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-3">
+                {APP_LOCALES.map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => {
+                      setInterfaceLanguage(value)
+                      setLocale(value)
+                    }}
+                    className={`min-h-10 rounded-xl border px-3 py-2.5 text-xs font-medium transition-colors ${
+                      interfaceLanguage === value ? 'text-white border-transparent' : 'border-border text-muted-foreground hover:bg-muted/40'
+                    }`}
+                    style={interfaceLanguage === value ? { backgroundColor: BRAND } : {}}
+                  >
+                    {value === 'fr' ? '🇫🇷 Français' : value === 'es' ? '🇪🇸 Español' : '🇬🇧 English'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
               <Label>{t.settings.contentLanguage}</Label>
-              <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
-                {([['fr', '🇫🇷 Français'], ['en', '🇬🇧 English']] as const).map(([v, l]) => (
+              <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-3">
+                {([['fr', '🇫🇷 Français'], ['en', '🇬🇧 English'], ['es', '🇪🇸 Español']] as const).map(([v, l]) => (
                   <button
                     key={v}
                     type="button"
-                    onClick={() => {
-                      setLanguage(v)
-                      setLocale(v)
-                    }}
+                    onClick={() => setLanguage(v)}
                     className={`min-h-10 rounded-xl border px-3 py-2.5 text-xs font-medium transition-colors ${
                       language === v ? 'text-white border-transparent' : 'border-border text-muted-foreground hover:bg-muted/40'
                     }`}
@@ -344,17 +368,17 @@ export default function SettingsForm({
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <CreditCard size={16} style={{ color: BRAND }} />
-          <h2 className="font-bold text-sm uppercase tracking-wider" style={{ color: BRAND }}>Plan & Facturation</h2>
+          <h2 className="font-bold text-sm uppercase tracking-wider" style={{ color: BRAND }}>{t.settings.planBilling}</h2>
         </div>
         <div className="rounded-2xl border border-border bg-muted/20 p-5 space-y-4">
           <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="font-semibold flex items-center gap-2">
-                Plan Free
-                <Badge className="bg-muted text-muted-foreground border-border text-[10px]">Actuel</Badge>
+                {t.common.freePlan}
+                <Badge className="bg-muted text-muted-foreground border-border text-[10px]">{t.settings.current}</Badge>
               </p>
               <p className="text-sm text-muted-foreground mt-0.5">
-                {generationsUsed} / {generationsLimit} générations utilisées ce mois
+                {generationsUsed} / {generationsLimit} {t.settings.usedThisMonth}
               </p>
             </div>
           </div>
@@ -371,17 +395,17 @@ export default function SettingsForm({
           <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 space-y-3">
             <div className="flex items-center gap-2">
               <Crown size={16} className="text-amber-400" />
-              <p className="font-bold">Passer au plan Pro</p>
+              <p className="font-bold">{t.settings.upgradeTitle}</p>
             </div>
             <ul className="space-y-1.5 text-sm text-muted-foreground">
-              {['Générations illimitées', 'Export PDF & DOCX', 'Quiz & bulletins sans limite', 'Support prioritaire'].map((f) => (
+              {t.settings.planFeatures.map((f) => (
                 <li key={f} className="flex items-center gap-2">
                   <Check size={12} className="text-emerald-400 shrink-0" /> {f}
                 </li>
               ))}
             </ul>
             <Button className="w-full text-white font-bold h-10" style={{ backgroundColor: BRAND }}>
-              <Crown size={15} className="mr-2" /> Passer au Pro — 9€/mois
+              <Crown size={15} className="mr-2" /> {t.settings.upgradeCta}
             </Button>
           </div>
         </div>

@@ -16,6 +16,14 @@ test('détecte quelques demandes PAT explicites de la V1', () => {
     kind: 'generate_pat',
     studentQuery: 'Maélis',
   })
+  assert.deepEqual(detectPATIntent('Generate the support plan for Alex Rivera'), {
+    kind: 'generate_pat',
+    studentQuery: 'Alex Rivera',
+  })
+  assert.deepEqual(detectPATIntent('Genera el PAT de Lucía Torres'), {
+    kind: 'generate_pat',
+    studentQuery: 'Lucía Torres',
+  })
 })
 
 test('retombe sur le chat normal dès que la formulation ne correspond pas clairement', () => {

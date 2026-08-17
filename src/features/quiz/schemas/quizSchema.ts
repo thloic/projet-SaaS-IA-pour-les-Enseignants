@@ -2,6 +2,12 @@ import { z } from 'zod'
 
 export const quizQuestionTypeSchema = z.enum(['multiple_choice', 'true_false', 'open'])
 
+const TRUE_FALSE_OPTIONS = [
+  ['Vrai', 'Faux'],
+  ['True', 'False'],
+  ['Verdadero', 'Falso'],
+] as const
+
 export const quizQuestionSchema = z
   .object({
     id: z.string().trim().min(1, 'Identifiant de question requis'),
@@ -31,10 +37,10 @@ export const quizQuestionSchema = z
     }
 
     if (question.type === 'true_false') {
-      const validOptions =
-        question.options.length === 2 &&
-        question.options.includes('Vrai') &&
-        question.options.includes('Faux')
+      const validPair = TRUE_FALSE_OPTIONS.find(
+        ([truthy, falsy]) => question.options.length === 2 && question.options.includes(truthy) && question.options.includes(falsy)
+      )
+      const validOptions = Boolean(validPair)
       if (!validOptions) {
         ctx.addIssue({
           code: 'custom',
@@ -42,10 +48,13 @@ export const quizQuestionSchema = z
           path: ['options'],
         })
       }
-      if (question.correctAnswer !== 'Vrai' && question.correctAnswer !== 'Faux') {
+      if (
+        !validPair ||
+        (question.correctAnswer !== validPair[0] && question.correctAnswer !== validPair[1])
+      ) {
         ctx.addIssue({
           code: 'custom',
-          message: 'La bonne reponse doit etre Vrai ou Faux',
+          message: 'La bonne reponse doit correspondre à une option vrai/faux',
           path: ['correctAnswer'],
         })
       }

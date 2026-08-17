@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import type { User } from '@supabase/supabase-js'
 import { getUsage } from '@/features/billing/server/usage'
 import type { TeacherIdentity, TeacherProfile } from '@/features/profile/types/profile.types'
+import { normalizeAppLocale } from '@/features/i18n/locale'
 
 // cache() mémorise le résultat pour la durée d'une seule requête : si layout
 // et page appellent toutes les deux getCurrentUser() pendant le même rendu,
@@ -64,7 +65,14 @@ export const getCurrentTeacherProfile = cache(async (): Promise<TeacherProfile |
       .maybeSingle()
 
     if (error) throw error
-    return data
+    if (!data) return null
+
+    const language = normalizeAppLocale(data.language)
+    return {
+      ...data,
+      language,
+      interface_language: normalizeAppLocale(data.interface_language, language),
+    } as TeacherProfile
   } catch (error) {
     console.error('[profile] impossible de charger le profil enseignant', error)
     return null
@@ -92,7 +100,8 @@ export async function profileToTeacherIdentity(
     subject: subjects.join(', ') || 'Matiere non precisee',
     level: profile.levels?.[0] ?? 'Niveau non precise',
     country: profile.country ?? 'Pays non precise',
-    language: profile.language === 'fr' || profile.language === 'en' ? profile.language : 'en',
+    language: normalizeAppLocale(profile.language),
+    interfaceLanguage: normalizeAppLocale(profile.interface_language, normalizeAppLocale(profile.language)),
     plan: options?.plan ?? 'free',
     generationsUsed: usage.used,
     generationsLimit: usage.limit,

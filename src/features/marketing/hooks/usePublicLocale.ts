@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-export type PublicLocale = 'en' | 'fr'
+export type PublicLocale = 'en' | 'fr' | 'es'
 
 export function usePublicLocale() {
   const [locale, setLocale] = useState<PublicLocale>('en')
@@ -12,7 +12,7 @@ export function usePublicLocale() {
     if (!localeReadyRef.current) {
       localeReadyRef.current = true
       const savedLocale = window.localStorage.getItem('educassist-locale')
-      if (savedLocale === 'en' || savedLocale === 'fr') {
+      if (savedLocale === 'en' || savedLocale === 'fr' || savedLocale === 'es') {
         // Hydration stays stable in English, then restores the visitor's choice.
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setLocale(savedLocale)

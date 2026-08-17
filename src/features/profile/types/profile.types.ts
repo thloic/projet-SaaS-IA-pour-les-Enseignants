@@ -1,5 +1,6 @@
 export type GradingSystem = '20' | '10' | 'letter' | 'percentage' | 'letter_ca' | 'levels'
-export type ContentLanguage = 'fr' | 'en'
+export type { ContentLanguage } from '@/features/i18n/locale'
+import type { AppLocale, ContentLanguage } from '@/features/i18n/locale'
 
 export interface TeacherProfile {
   id: string
@@ -12,6 +13,7 @@ export interface TeacherProfile {
   levels: string[]
   grading_system: GradingSystem
   language: ContentLanguage
+  interface_language: AppLocale
   style_notes: string | null
   created_at: string
   updated_at: string
@@ -24,6 +26,7 @@ export interface TeacherIdentity {
   level: string
   country: string
   language: ContentLanguage
+  interfaceLanguage: AppLocale
   plan: 'free' | 'pro'
   generationsUsed: number
   generationsLimit: number

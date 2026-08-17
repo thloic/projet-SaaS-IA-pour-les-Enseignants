@@ -52,7 +52,7 @@ export interface AdaptationSetRecord {
   source_hash: string
   subject: string
   level: string
-  language: 'fr' | 'en'
+  language: 'fr' | 'en' | 'es'
   status: AdaptationStatus
   created_at: string
   updated_at: string
@@ -86,7 +86,7 @@ export interface SharedAdaptation {
   title: string
   subject: string
   level: string
-  language: 'fr' | 'en'
+  language: 'fr' | 'en' | 'es'
   created_at: string
   variants: Array<{
     variant_type: VariantType

@@ -4,7 +4,7 @@ import { anthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import { buildQuizPrompt } from '@/lib/prompts/quiz'
 import { generatedQuizSchema } from '@/features/quiz/schemas/quizSchema'
-import type { GradingSystem } from '@/features/profile/types/profile.types'
+import type { ContentLanguage, GradingSystem } from '@/features/profile/types/profile.types'
 import type { GeneratedQuiz } from '@/features/quiz/types/quiz.types'
 
 interface GenerateQuizFromContentInput {
@@ -13,6 +13,7 @@ interface GenerateQuizFromContentInput {
   questionCount: number
   subject?: string | null
   level?: string | null
+  language?: ContentLanguage
 }
 
 export function stripJsonCodeFence(value: string) {

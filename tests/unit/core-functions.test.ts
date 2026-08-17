@@ -23,6 +23,7 @@ import { profileSchema } from '../../src/features/profile/schemas/profileSchema.
 import {
   getProfileSaveErrorMessage,
   isMissingSubjectsColumnError,
+  isMissingInterfaceLanguageColumnError,
   normalizeProfileSaveError,
   withoutSubjectsColumn,
 } from '../../src/features/profile/utils/profileSaveError.ts'
@@ -71,6 +72,7 @@ test('profileSchema validates the complete onboarding payload', () => {
     levels: ['Secondaire 1er cycle'],
     gradingSystem: '20',
     language: 'fr',
+    interfaceLanguage: 'fr',
     styleNotes: 'Ton bienveillant',
   })
 
@@ -99,6 +101,13 @@ test('profile save error utilities expose Supabase schema drift clearly', () => 
     details: undefined,
   })
   assert.deepEqual(withoutSubjectsColumn({ subject: 'Maths', subjects: ['Maths'] }), { subject: 'Maths' })
+
+  const missingLanguageColumn = {
+    code: 'PGRST204',
+    message: "Could not find the 'interface_language' column of 'teacher_profiles'",
+  }
+  assert.equal(isMissingInterfaceLanguageColumnError(missingLanguageColumn), true)
+  assert.match(getProfileSaveErrorMessage(missingLanguageColumn), /migration 022/i)
 })
 
 test('classroom schemas validate classes, students, and observations', () => {

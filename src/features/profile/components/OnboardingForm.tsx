@@ -12,6 +12,8 @@ import { saveOnboardingProfileAction } from '@/features/profile/server/profile.a
 import { createClient } from '@/lib/supabase/client'
 import { defaultGrading, type ContentLanguage, type GradingSystem } from '@/features/profile/types/profile.types'
 import { appTranslations } from '@/features/i18n/appTranslations'
+import type { AppLocale } from '@/features/i18n/locale'
+import { useAppLocale } from '@/features/i18n/AppLocaleProvider'
 import { QUEBEC_LEVELS, ONTARIO_LEVELS } from '@/lib/constants/gradeLevels'
 
 const BRAND = '#534AB7'
@@ -76,6 +78,7 @@ export default function OnboardingForm({
 }: OnboardingFormProps) {
   const router = useRouter()
   const { showToast } = useToast()
+  const { setLocale } = useAppLocale()
   const [step, setStep] = useState(0)
   const [firstName, setFirstName] = useState(initialFirstName)
   const [lastName, setLastName] = useState(initialLastName)
@@ -87,10 +90,11 @@ export default function OnboardingForm({
   const [levels, setLevels] = useState<string[]>([])
   const [gradingSystem, setGradingSystem] = useState<GradingSystem>('percentage')
   const [language, setLanguage] = useState<ContentLanguage>('en')
+  const [interfaceLanguage, setInterfaceLanguage] = useState<AppLocale>('en')
   const [styleNotes, setStyleNotes] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const t = appTranslations[language]
+  const t = appTranslations[interfaceLanguage]
   // Ref synchrone pour bloquer les doubles appels avant que React re-render le bouton disabled
   const isSavingRef = useRef(false)
 
@@ -182,6 +186,7 @@ export default function OnboardingForm({
         levels,
         gradingSystem,
         language,
+        interfaceLanguage,
         styleNotes,
       })
 
@@ -429,11 +434,35 @@ export default function OnboardingForm({
                 </div>
               </div>
               <div className="space-y-2">
+                <Label>{t.onboarding.interfaceLanguage}</Label>
+                <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-3">
+                  {([['fr', 'Français'], ['en', 'English'], ['es', 'Español']] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => {
+                        setInterfaceLanguage(value)
+                        setLocale(value)
+                      }}
+                      className={`min-h-10 rounded-xl border px-3 py-2.5 text-xs font-medium transition-colors ${
+                        interfaceLanguage === value
+                          ? 'text-white border-transparent'
+                          : 'border-border text-muted-foreground hover:bg-muted/40'
+                      }`}
+                      style={interfaceLanguage === value ? { backgroundColor: BRAND } : {}}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
                 <Label>{t.onboarding.contentLanguage}</Label>
-                <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
+                <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-3">
                   {([
-                    ['fr', 'Francais'],
+                    ['fr', 'Français'],
                     ['en', 'English'],
+                    ['es', 'Español'],
                   ] as const).map(([value, label]) => (
                     <button
                       key={value}

@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/features/profile/server/profile'
 import { profileSchema } from '@/features/profile/schemas/profileSchema'
@@ -8,11 +9,13 @@ import { settingsProfileSchema, settingsEmailSchema } from '@/features/profile/s
 import {
   getProfileSaveErrorMessage,
   isInvalidAuthUserReferenceError,
+  isMissingInterfaceLanguageColumnError,
   isMissingSubjectsColumnError,
   isUnsupportedGradingSystemError,
   normalizeProfileSaveError,
   withLegacyGradingSystem,
   withLegacyProfileCompatibility,
+  withoutInterfaceLanguageColumn,
   withoutSubjectsColumn,
 } from '@/features/profile/utils/profileSaveError'
 
@@ -27,6 +30,32 @@ export interface OnboardingProfileState {
   redirectTo?: string
 }
 
+const interfaceLanguageSchema = z.enum(['fr', 'en', 'es'])
+
+export async function updateInterfaceLanguageAction(
+  value: unknown
+): Promise<{ error: string | null }> {
+  const parsed = interfaceLanguageSchema.safeParse(value)
+  if (!parsed.success) return { error: 'INVALID_INTERFACE_LANGUAGE' }
+
+  const user = await getCurrentUser()
+  if (!user) return { error: 'AUTH_REQUIRED' }
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('teacher_profiles')
+    .update({ interface_language: parsed.data })
+    .eq('user_id', user.id)
+
+  if (error) {
+    console.error('[profile] impossible d’enregistrer la langue de l’interface', normalizeProfileSaveError(error))
+    return { error: 'INTERFACE_LANGUAGE_SAVE_FAILED' }
+  }
+
+  revalidatePath('/dashboard', 'layout')
+  return { error: null }
+}
+
 export async function saveOnboardingProfileAction(data: {
   firstName: string
   lastName: string
@@ -35,6 +64,7 @@ export async function saveOnboardingProfileAction(data: {
   levels: string[]
   gradingSystem: string
   language: string
+  interfaceLanguage: string
   styleNotes: string
 }): Promise<OnboardingProfileState> {
   try {
@@ -69,6 +99,7 @@ export async function saveOnboardingProfileAction(data: {
       levels: parsed.data.levels,
       grading_system: parsed.data.gradingSystem,
       language: parsed.data.language,
+      interface_language: parsed.data.interfaceLanguage,
       style_notes: parsed.data.styleNotes || null,
     }
     console.log('[onboarding:server] upsert teacher profile attempt', {
@@ -79,6 +110,7 @@ export async function saveOnboardingProfileAction(data: {
       levels: profilePayload.levels,
       gradingSystem: profilePayload.grading_system,
       language: profilePayload.language,
+      interfaceLanguage: profilePayload.interface_language,
     })
 
     const { error: profileError } = await supabase
@@ -108,18 +140,22 @@ export async function saveOnboardingProfileAction(data: {
       }
 
       const missingSubjectsColumn = isMissingSubjectsColumnError(profileError)
+      const missingInterfaceLanguageColumn = isMissingInterfaceLanguageColumnError(profileError)
       const unsupportedGradingSystem = isUnsupportedGradingSystemError(profileError)
 
-      if (!missingSubjectsColumn && !unsupportedGradingSystem) {
+      if (!missingSubjectsColumn && !missingInterfaceLanguageColumn && !unsupportedGradingSystem) {
         throw profileError
       }
 
       const compatiblePayload = unsupportedGradingSystem
         ? withLegacyGradingSystem(profilePayload)
         : profilePayload
-      const retryPayload = missingSubjectsColumn
+      const withoutSubjects = missingSubjectsColumn
         ? withoutSubjectsColumn(compatiblePayload)
         : compatiblePayload
+      const retryPayload = missingInterfaceLanguageColumn
+        ? withoutInterfaceLanguageColumn(withoutSubjects)
+        : withoutSubjects
 
       const { error: legacyError } = await supabase
         .from('teacher_profiles')
@@ -129,6 +165,7 @@ export async function saveOnboardingProfileAction(data: {
         console.error('[onboarding:server] compatibility retry failed', normalizeProfileSaveError(legacyError))
         const canUseFullCompatibility =
           isMissingSubjectsColumnError(legacyError) ||
+          isMissingInterfaceLanguageColumnError(legacyError) ||
           isUnsupportedGradingSystemError(legacyError)
 
         if (!canUseFullCompatibility) {
@@ -173,6 +210,7 @@ export async function updateProfileAction(
       subjects: formData.getAll('subjects'),
       gradingSystem: formData.get('gradingSystem'),
       language: formData.get('language'),
+      interfaceLanguage: formData.get('interfaceLanguage'),
     })
 
     if (!parsedProfile.success) {
@@ -188,6 +226,7 @@ export async function updateProfileAction(
       subjects: parsedProfile.data.subjects,
       grading_system: parsedProfile.data.gradingSystem,
       language: parsedProfile.data.language,
+      interface_language: parsedProfile.data.interfaceLanguage,
     }
 
     const { error: profileError } = await supabase
@@ -197,18 +236,22 @@ export async function updateProfileAction(
 
     if (profileError) {
       const missingSubjectsColumn = isMissingSubjectsColumnError(profileError)
+      const missingInterfaceLanguageColumn = isMissingInterfaceLanguageColumnError(profileError)
       const unsupportedGradingSystem = isUnsupportedGradingSystemError(profileError)
 
-      if (!missingSubjectsColumn && !unsupportedGradingSystem) {
+      if (!missingSubjectsColumn && !missingInterfaceLanguageColumn && !unsupportedGradingSystem) {
         throw profileError
       }
 
       const compatiblePayload = unsupportedGradingSystem
         ? withLegacyGradingSystem(profilePayload)
         : profilePayload
-      const retryPayload = missingSubjectsColumn
+      const withoutSubjects = missingSubjectsColumn
         ? withoutSubjectsColumn(compatiblePayload)
         : compatiblePayload
+      const retryPayload = missingInterfaceLanguageColumn
+        ? withoutInterfaceLanguageColumn(withoutSubjects)
+        : withoutSubjects
 
       const { error: legacyProfileError } = await supabase
         .from('teacher_profiles')
@@ -218,6 +261,7 @@ export async function updateProfileAction(
       if (legacyProfileError) {
         const canUseFullCompatibility =
           isMissingSubjectsColumnError(legacyProfileError) ||
+          isMissingInterfaceLanguageColumnError(legacyProfileError) ||
           isUnsupportedGradingSystemError(legacyProfileError)
 
         if (!canUseFullCompatibility) {

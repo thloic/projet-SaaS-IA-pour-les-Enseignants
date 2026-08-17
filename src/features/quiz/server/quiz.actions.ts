@@ -112,6 +112,7 @@ export async function generateQuizAction(
       questionCount: parsedInput.data.questionCount,
       subject: parsedInput.data.subject,
       level: profile.levels?.[0],
+      language: profile.language,
     })
 
     const validatedQuiz = generatedQuizSchema.safeParse(generatedQuiz)

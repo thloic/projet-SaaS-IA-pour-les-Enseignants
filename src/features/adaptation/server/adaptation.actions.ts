@@ -134,7 +134,7 @@ export async function regenerateVariantAction(
       sourceTitle: adaptation.title,
       subject: adaptation.subject,
       level: adaptation.level,
-      language: profile.language === 'en' ? 'en' : 'fr',
+      language: profile.language,
       variantType: parsedType.data,
       anonymousNeeds: summarizeAnonymousNeeds(linkedStudents),
     })

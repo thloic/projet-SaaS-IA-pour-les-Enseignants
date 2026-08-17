@@ -36,6 +36,7 @@ export const agentStructuredResponseSchema = z.discriminatedUnion('kind', [
     .object({
       kind: z.literal('pat'),
       studentId: z.string().uuid(),
+      language: z.enum(['fr', 'en', 'es']),
       pat: PATSchema,
     })
     .strict(),

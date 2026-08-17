@@ -1,5 +1,6 @@
 import type { CorrectionTone } from '@/features/correction/schemas/correctionSchema'
 import type { ContentLanguage } from '@/features/profile/types/profile.types'
+import { languageLabel } from '../../features/i18n/locale.ts'
 
 interface BuildCorrectionPromptInput {
   contentText: string
@@ -18,10 +19,6 @@ const toneInstructions: Record<CorrectionTone, string> = {
     'Ton factuel : sobre, précis, centré sur les observations concrètes de la copie, sans jugement de valeur.',
   direct:
     'Ton direct : clair et concis, va droit au but sur ce qui doit être amélioré, tout en restant respectueux.',
-}
-
-function languageLabel(language: ContentLanguage) {
-  return language === 'en' ? 'anglais' : 'français'
 }
 
 export function buildCorrectionPrompt({

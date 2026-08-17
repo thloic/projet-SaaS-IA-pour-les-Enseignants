@@ -43,6 +43,16 @@ export function isMissingSubjectsColumnError(error: unknown) {
   )
 }
 
+export function isMissingInterfaceLanguageColumnError(error: unknown) {
+  const normalized = normalizeProfileSaveError(error)
+  const text = [normalized.message, normalized.details, normalized.hint].filter(Boolean).join(' ')
+
+  return (
+    (normalized.code === '42703' || normalized.code === 'PGRST204') &&
+    text.includes('interface_language')
+  )
+}
+
 export function isUnsupportedGradingSystemError(error: unknown) {
   const normalized = normalizeProfileSaveError(error)
   const text = [normalized.message, normalized.details, normalized.hint].filter(Boolean).join(' ')
@@ -76,12 +86,22 @@ export function getProfileSaveErrorMessage(error: unknown) {
     return "Le profil a été enregistré en mode compatible, mais la base doit appliquer la migration des matières multiples."
   }
 
+  if (isMissingInterfaceLanguageColumnError(error)) {
+    return "La préférence de langue n’a pas été enregistrée : appliquez la migration 022 de Supabase."
+  }
+
   return "Nous n’avons pas pu enregistrer votre profil pour le moment. Réessayez dans quelques instants."
 }
 
 export function withoutSubjectsColumn<T extends { subjects?: unknown }>(payload: T) {
   const legacyPayload = { ...payload }
   delete legacyPayload.subjects
+  return legacyPayload
+}
+
+export function withoutInterfaceLanguageColumn<T extends { interface_language?: unknown }>(payload: T) {
+  const legacyPayload = { ...payload }
+  delete legacyPayload.interface_language
   return legacyPayload
 }
 
@@ -101,7 +121,7 @@ export function withLegacyGradingSystem<T extends { grading_system?: unknown }>(
 }
 
 export function withLegacyProfileCompatibility<
-  T extends { subjects?: unknown; grading_system?: unknown },
+  T extends { subjects?: unknown; grading_system?: unknown; interface_language?: unknown },
 >(payload: T) {
-  return withoutSubjectsColumn(withLegacyGradingSystem(payload))
+  return withoutInterfaceLanguageColumn(withoutSubjectsColumn(withLegacyGradingSystem(payload)))
 }

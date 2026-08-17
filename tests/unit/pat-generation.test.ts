@@ -211,6 +211,16 @@ test('rejette une sortie invalide et les besoins formulés négativement', () =>
     (error: unknown) =>
       error instanceof PATValidationError && error.code === 'NEGATIVE_NEED'
   )
+
+  assert.throws(
+    () =>
+      parseAndValidatePAT({
+        ...patMock,
+        habiletes: { ...patMock.habiletes, besoins: ['La alumna no puede escribir un texto.'] },
+      }),
+    (error: unknown) =>
+      error instanceof PATValidationError && error.code === 'NEGATIVE_NEED'
+  )
 })
 
 test('conserve l’omission réelle des champs facultatifs non documentés', () => {
@@ -251,6 +261,42 @@ test('le prompt réel exclut les variantes de contenu pédagogique', () => {
   assert.match(prompt, /adaptationsInstitutionnelles/)
   assert.doesNotMatch(prompt, /Support de cours différencié fictif/)
   assert.doesNotMatch(prompt, /contentVariants/)
+})
+
+test('le parcours PAT transmet la langue espagnole jusqu’au prompt structuré', async () => {
+  let capturedPrompt = ''
+  await generateRealPAT(
+    { studentContext: fictitiousContext(), language: 'es' },
+    async (prompt) => {
+      capturedPrompt = prompt
+      return patMock
+    }
+  )
+
+  assert.match(capturedPrompt, /espagnol international/i)
+
+  let capturedLanguage: string | undefined
+  const response = await orchestratePATRequest(
+    {
+      studentQuery: 'Maélis Roy',
+      trustedUserId: USER_ID,
+      contentLanguage: 'es',
+      interfaceLanguage: 'es',
+    },
+    {
+      getStudentContext: async () => fictitiousContext(),
+      generatePAT: async ({ language }) => {
+        capturedLanguage = language
+        return patMock
+      },
+      checkUsage: async () => ({ allowed: true }),
+      refundUsage: async () => 0,
+    }
+  )
+
+  assert.equal(capturedLanguage, 'es')
+  assert.equal(response.kind, 'pat')
+  if (response.kind === 'pat') assert.equal(response.language, 'es')
 })
 
 test('la branche réelle rejette une sortie structurée invalide', async () => {

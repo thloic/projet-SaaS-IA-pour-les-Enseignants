@@ -1,11 +1,16 @@
 'use client'
 
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { NextIntlClientProvider } from 'next-intl'
 import {
   appTranslations,
-  DEFAULT_APP_LOCALE,
-  type AppLocale,
 } from '@/features/i18n/appTranslations'
+import {
+  DEFAULT_APP_LOCALE,
+  isAppLocale,
+  normalizeAppLocale,
+  type AppLocale,
+} from '@/features/i18n/locale'
 
 interface AppLocaleContextValue {
   locale: AppLocale
@@ -15,27 +20,27 @@ interface AppLocaleContextValue {
 
 const AppLocaleContext = createContext<AppLocaleContextValue | null>(null)
 
-function normalizeLocale(value: unknown): AppLocale {
-  return value === 'fr' || value === 'en' ? value : DEFAULT_APP_LOCALE
-}
-
-function readInitialLocale(initialLocale: AppLocale | null | undefined): AppLocale {
-  if (typeof window === 'undefined') return normalizeLocale(initialLocale)
-
-  const savedLocale = window.localStorage.getItem('educassist-locale')
-  return savedLocale === 'fr' || savedLocale === 'en'
-    ? savedLocale
-    : normalizeLocale(initialLocale)
-}
-
 export function AppLocaleProvider({
   initialLocale = DEFAULT_APP_LOCALE,
+  restoreStoredLocale = true,
   children,
 }: {
   initialLocale?: AppLocale | null
+  restoreStoredLocale?: boolean
   children: React.ReactNode
 }) {
-  const [locale, setLocaleState] = useState<AppLocale>(() => readInitialLocale(initialLocale))
+  // Le premier rendu est toujours identique sur le serveur et dans le navigateur.
+  // La préférence locale publique n'est restaurée qu'après l'hydratation.
+  const [locale, setLocaleState] = useState<AppLocale>(() => normalizeAppLocale(initialLocale))
+
+  useEffect(() => {
+    if (!restoreStoredLocale) return
+    const savedLocale = window.localStorage.getItem('educassist-locale')
+    if (isAppLocale(savedLocale) && savedLocale !== locale) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLocaleState(savedLocale)
+    }
+  }, [locale, restoreStoredLocale])
 
   useEffect(() => {
     window.localStorage.setItem('educassist-locale', locale)
@@ -57,7 +62,11 @@ export function AppLocaleProvider({
     [locale]
   )
 
-  return <AppLocaleContext.Provider value={value}>{children}</AppLocaleContext.Provider>
+  return (
+    <NextIntlClientProvider locale={locale} messages={{}}>
+      <AppLocaleContext.Provider value={value}>{children}</AppLocaleContext.Provider>
+    </NextIntlClientProvider>
+  )
 }
 
 export function useAppLocale() {

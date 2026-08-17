@@ -1,4 +1,4 @@
-export type LandingLocale = 'en' | 'fr'
+export type LandingLocale = 'en' | 'fr' | 'es'
 
 export const landingTranslations = {
   en: {
@@ -281,6 +281,131 @@ export const landingTranslations = {
         { title: 'Légal', links: ['Mentions légales', 'Confidentialité', 'Conditions d’utilisation'] },
       ],
       copyright: '© 2026 EducAssist. Tous droits réservés.',
+    },
+  },
+  es: {
+    language: 'Idioma',
+    nav: {
+      features: 'Funciones',
+      howItWorks: 'Cómo funciona',
+      pricing: 'Precios',
+      login: 'Iniciar sesión',
+      register: 'Empezar gratis',
+      registerMobile: 'Empezar',
+    },
+    theme: {
+      light: 'Cambiar al modo claro',
+      dark: 'Cambiar al modo oscuro',
+    },
+    hero: {
+      eyebrow: 'IA · EDUCACIÓN · DOCENTES',
+      title: 'Prepara tus clases',
+      titleAccent: 'en unos pocos clics.',
+      description:
+        'Describe tu clase y la IA crea una lección completa, un quiz y comentarios de evaluación en menos de 60 segundos.',
+      primaryCta: 'Crear mi cuenta gratis →',
+      demoCta: 'Ver la demostración',
+      generated: 'Lección creada',
+      generatedSubject: 'Historia · Bachillerato',
+      generatedTopic: 'La Primera Guerra Mundial',
+      freeGenerations: 'generaciones gratuitas',
+      noCard: 'Sin tarjeta bancaria',
+      quizGenerated: 'Quiz generado automáticamente',
+      questions: '8 preguntas',
+      questionTypes: 'Opción múltiple · Verdadero/Falso · Abiertas',
+      reportComment: 'Comentario de evaluación',
+      writtenIn: 'Redactado en 5 s',
+      reportQualities: 'Personalizado · Cercano',
+    },
+    features: {
+      title: 'Todo lo que necesitas',
+      subtitle: 'Tres herramientas docentes impulsadas por IA',
+      included: 'Incluido',
+      items: [
+        {
+          title: 'Generación de lecciones',
+          description:
+            'Un formulario guiado, sin escribir prompts. La IA estructura y redacta tu lección completa, lista para exportar en PDF o Word.',
+        },
+        {
+          title: 'Quizzes automáticos',
+          description:
+            'De 5 a 10 preguntas generadas después de cada lección: opción múltiple, verdadero/falso y preguntas abiertas con guía de evaluación.',
+        },
+        {
+          title: 'Comentarios de evaluación',
+          description:
+            'Nombre, materia, nota y observaciones: la IA crea un comentario cercano, personalizado y pertinente.',
+        },
+      ],
+    },
+    how: {
+      title: 'Cómo funciona',
+      subtitle: 'Listo para usar en menos de 2 minutos',
+      steps: [
+        { n: '01', title: 'Crea tu perfil', detail: '90 s. Añade tu nombre, materia y nivel educativo.' },
+        { n: '02', title: 'Elige el tema', detail: 'Indica título, objetivos, duración y nivel del alumnado.' },
+        { n: '03', title: 'La IA genera en tiempo real', detail: 'Observa cómo aparece la lección completa mientras se crea.' },
+        { n: '04', title: 'Exporta', detail: 'Descarga en PDF o Word, listo para imprimir o compartir.' },
+      ],
+    },
+    pricing: {
+      title: 'Precios sencillos',
+      subtitle: 'Elige el plan que mejor se adapte a tu entorno educativo',
+      popular: 'Popular',
+      tiers: [
+        {
+          name: 'Starter',
+          audience: 'Docente independiente',
+          price: '20 $',
+          period: '/mes',
+          features: ['Módulos 1 a 4', 'Corrección y planificación'],
+          cta: 'Unirme a la lista de espera',
+          highlight: false,
+        },
+        {
+          name: 'Pro',
+          audience: 'Docente de un centro',
+          price: '39 $',
+          period: '/mes',
+          features: ['Los 5 módulos', 'Panel integrado'],
+          cta: 'Unirme a la lista de espera',
+          highlight: true,
+        },
+        {
+          name: 'Centro',
+          audience: 'Dirección / Coordinación pedagógica',
+          price: '299 $',
+          period: '/mes',
+          features: ['Todo el profesorado del centro', 'Análisis para dirección', 'Integraciones'],
+          cta: 'Unirme a la lista de espera',
+          highlight: false,
+        },
+        {
+          name: 'Distrito',
+          audience: 'Distrito escolar / Administración educativa',
+          price: 'A medida',
+          period: '',
+          features: ['Despliegue en varios centros', 'Cumplimiento institucional'],
+          cta: 'Contactar',
+          highlight: false,
+        },
+      ],
+    },
+    footer: {
+      eyebrow: 'CREADO PARA DOCENTES',
+      title: 'Menos administración. Más enseñanza.',
+      description:
+        'EducAssist reúne la planificación, las herramientas de aula y el seguimiento del alumnado en un espacio sencillo y coherente.',
+      socials: ['Facebook', 'LinkedIn', 'YouTube', 'Instagram'],
+      comingSoon: 'Próximamente',
+      groups: [
+        { title: 'Producto', links: ['Funciones', 'Cómo funciona', 'Precios'] },
+        { title: 'Recursos', links: ['FAQ'] },
+        { title: 'Empresa', links: ['Quiénes somos', 'Contacto'] },
+        { title: 'Legal', links: ['Aviso legal', 'Privacidad', 'Condiciones de uso'] },
+      ],
+      copyright: '© 2026 EducAssist. Todos los derechos reservados.',
     },
   },
 } as const

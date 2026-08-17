@@ -11,11 +11,13 @@ export default function PublicSharePage() {
     <PublicPageShell
       locale={locale}
       onLocaleChange={setLocale}
-      eyebrow={locale === 'en' ? 'SHARED DOCUMENT' : 'DOCUMENT PARTAGÉ'}
-      title={locale === 'en' ? 'Shared content will appear here.' : 'Le contenu partagé apparaîtra ici.'}
+      eyebrow={locale === 'en' ? 'SHARED DOCUMENT' : locale === 'es' ? 'DOCUMENTO COMPARTIDO' : 'DOCUMENT PARTAGÉ'}
+      title={locale === 'en' ? 'Shared content will appear here.' : locale === 'es' ? 'El contenido compartido aparecerá aquí.' : 'Le contenu partagé apparaîtra ici.'}
       description={
         locale === 'en'
           ? 'This public sharing page is ready for the upcoming document-sharing workflow.'
+          : locale === 'es'
+            ? 'Esta página pública está preparada para el futuro proceso de compartir documentos.'
           : 'Cette page publique est prête pour le futur parcours de partage de documents.'
       }
     >

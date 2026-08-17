@@ -7,7 +7,8 @@ export const profileSchema = z.object({
   subjects: z.array(z.string().trim().min(1)).min(1, 'Selectionnez au moins une matiere'),
   levels: z.array(z.string().trim().min(1)).min(1, 'Selectionnez au moins un niveau'),
   gradingSystem: z.enum(['20', '10', 'letter', 'percentage', 'letter_ca', 'levels']),
-  language: z.enum(['fr', 'en']),
+  language: z.enum(['fr', 'en', 'es']),
+  interfaceLanguage: z.enum(['fr', 'en', 'es']),
   styleNotes: z.string().trim().max(1000, 'Les notes de style sont trop longues').optional(),
 })
 

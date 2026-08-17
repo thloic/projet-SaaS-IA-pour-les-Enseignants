@@ -8,9 +8,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/shared/ToastProvider'
 import { PATSchema, type PAT } from '@/features/agent/schemas/patSchema'
+import type { ContentLanguage } from '@/features/i18n/locale'
+import { useAppLocale } from '@/features/i18n/AppLocaleProvider'
+import { patTranslations } from '@/features/agent/i18n/patTranslations'
 
 interface PATReviewCardProps {
   initialPAT: PAT
+  documentLanguage: ContentLanguage
 }
 
 function textList(value: string): string[] {
@@ -25,11 +29,13 @@ function ListEditor({
   label,
   value,
   onChange,
+  hint,
 }: {
   id: string
   label: string
   value: string[]
   onChange: (value: string[]) => void
+  hint: string
 }) {
   const [text, setText] = useState(() => value.join('\n'))
 
@@ -43,20 +49,22 @@ function ListEditor({
         onBlur={() => onChange(textList(text))}
         className="min-h-24 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
       />
-      <p className="text-[11px] text-muted-foreground">Une entrée par ligne.</p>
+      <p className="text-[11px] text-muted-foreground">{hint}</p>
     </div>
   )
 }
 
-export default function PATReviewCard({ initialPAT }: PATReviewCardProps) {
+export default function PATReviewCard({ initialPAT, documentLanguage }: PATReviewCardProps) {
   const { showToast } = useToast()
+  const { locale } = useAppLocale()
+  const labels = patTranslations[locale]
   const [pat, setPAT] = useState<PAT>(() => structuredClone(initialPAT))
   const [isExporting, setIsExporting] = useState(false)
 
   async function handleExport() {
     const parsed = PATSchema.safeParse(pat)
     if (!parsed.success) {
-      showToast('Vérifiez les champs du PAT avant de l’exporter.', 'error')
+      showToast(labels.invalid, 'error')
       return
     }
 
@@ -65,12 +73,12 @@ export default function PATReviewCard({ initialPAT }: PATReviewCardProps) {
       const response = await fetch('/api/agent/pat/export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(parsed.data),
+        body: JSON.stringify({ pat: parsed.data, language: documentLanguage }),
       })
 
       if (!response.ok) {
         const body = await response.json().catch(() => null)
-        throw new Error(body?.error ?? 'L’export DOCX a échoué.')
+        throw new Error(body?.error ?? labels.exportFailed)
       }
 
       const url = URL.createObjectURL(await response.blob())
@@ -79,9 +87,9 @@ export default function PATReviewCard({ initialPAT }: PATReviewCardProps) {
       link.download = 'plan-appui-temporaire.docx'
       link.click()
       URL.revokeObjectURL(url)
-      showToast('Le PAT a été exporté en DOCX.', 'success')
+      showToast(labels.exported, 'success')
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'L’export DOCX a échoué.'
+      const message = error instanceof Error ? error.message : labels.exportFailed
       showToast(message, 'error')
     } finally {
       setIsExporting(false)
@@ -93,21 +101,21 @@ export default function PATReviewCard({ initialPAT }: PATReviewCardProps) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-            Plan d’appui temporaire
+            {labels.shortTitle}
           </p>
           <p className="text-xs text-muted-foreground">
-            Relisez et ajustez le document avant l’export.
+            {labels.reviewHint}
           </p>
         </div>
         <Button type="button" size="sm" onClick={handleExport} disabled={isExporting}>
           {isExporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
-          Exporter DOCX
+          {labels.export}
         </Button>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="pat-student-name">Élève</Label>
+          <Label htmlFor="pat-student-name">{labels.student}</Label>
           <Input
             id="pat-student-name"
             value={pat.eleve.nom}
@@ -120,7 +128,7 @@ export default function PATReviewCard({ initialPAT }: PATReviewCardProps) {
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="pat-student-level">Niveau</Label>
+          <Label htmlFor="pat-student-level">{labels.level}</Label>
           <Input
             id="pat-student-level"
             value={pat.eleve.niveau ?? ''}
@@ -135,7 +143,7 @@ export default function PATReviewCard({ initialPAT }: PATReviewCardProps) {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="pat-student-profile">Profil</Label>
+        <Label htmlFor="pat-student-profile">{labels.profile}</Label>
         <textarea
           id="pat-student-profile"
           value={pat.eleve.profil ?? ''}
@@ -152,7 +160,8 @@ export default function PATReviewCard({ initialPAT }: PATReviewCardProps) {
       <div className="grid gap-4 sm:grid-cols-2">
         <ListEditor
           id="pat-strengths"
-          label="Forces"
+          label={labels.strengths}
+          hint={labels.onePerLine}
           value={pat.habiletes.forces}
           onChange={(forces) =>
             setPAT((current) => ({
@@ -163,7 +172,8 @@ export default function PATReviewCard({ initialPAT }: PATReviewCardProps) {
         />
         <ListEditor
           id="pat-needs"
-          label="Besoins / axes de progrès"
+          label={labels.needs}
+          hint={labels.onePerLine}
           value={pat.habiletes.besoins}
           onChange={(besoins) =>
             setPAT((current) => ({
@@ -175,12 +185,12 @@ export default function PATReviewCard({ initialPAT }: PATReviewCardProps) {
       </div>
 
       <div className="space-y-3">
-        <p className="text-sm font-semibold">Comportements et habiletés ciblés</p>
+        <p className="text-sm font-semibold">{labels.targets}</p>
         {pat.comportementsCibles.map((target, index) => (
           <div key={index} className="grid gap-2 rounded-xl border border-border p-3 sm:grid-cols-2">
             <Input
               aria-label={`Date ${index + 1}`}
-              placeholder="Date (facultative)"
+              placeholder={labels.dateOptional}
               value={target.date ?? ''}
               onChange={(event) =>
                 setPAT((current) => ({
@@ -195,7 +205,7 @@ export default function PATReviewCard({ initialPAT }: PATReviewCardProps) {
             />
             <Input
               aria-label={`Habileté ${index + 1}`}
-              placeholder="Habileté ciblée"
+              placeholder={labels.skill}
               value={target.habilete}
               onChange={(event) =>
                 setPAT((current) => ({
@@ -208,7 +218,7 @@ export default function PATReviewCard({ initialPAT }: PATReviewCardProps) {
             />
             <textarea
               aria-label={`Interventions ${index + 1}`}
-              placeholder="Interventions prévues"
+              placeholder={labels.interventions}
               value={target.interventionsPrevues}
               onChange={(event) =>
                 setPAT((current) => ({
@@ -224,7 +234,7 @@ export default function PATReviewCard({ initialPAT }: PATReviewCardProps) {
             />
             <textarea
               aria-label={`Preuves ${index + 1}`}
-              placeholder="Preuves de progression (facultatives)"
+              placeholder={labels.evidenceOptional}
               value={target.preuvesProgression ?? ''}
               onChange={(event) =>
                 setPAT((current) => ({
@@ -245,13 +255,15 @@ export default function PATReviewCard({ initialPAT }: PATReviewCardProps) {
       <div className="grid gap-4 sm:grid-cols-2">
         <ListEditor
           id="pat-support"
-          label="Modalités d’appui"
+          label={labels.support}
+          hint={labels.onePerLine}
           value={pat.modalitesAppui}
           onChange={(modalitesAppui) => setPAT((current) => ({ ...current, modalitesAppui }))}
         />
         <ListEditor
           id="pat-adaptations"
-          label="Adaptations offertes"
+          label={labels.adaptations}
+          hint={labels.onePerLine}
           value={pat.adaptationsOffertes}
           onChange={(adaptationsOffertes) =>
             setPAT((current) => ({ ...current, adaptationsOffertes }))
@@ -260,7 +272,7 @@ export default function PATReviewCard({ initialPAT }: PATReviewCardProps) {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="pat-recommendations">Recommandations PSAC</Label>
+        <Label htmlFor="pat-recommendations">{labels.recommendations}</Label>
         <textarea
           id="pat-recommendations"
           value={pat.recommandationsPSAC ?? ''}
@@ -276,15 +288,15 @@ export default function PATReviewCard({ initialPAT }: PATReviewCardProps) {
 
       {pat.francisation && (
         <div className="space-y-3 rounded-xl border border-border p-3">
-          <p className="text-sm font-semibold">Francisation</p>
+          <p className="text-sm font-semibold">{labels.francisation}</p>
           {(['communicationOrale', 'lecture', 'ecriture'] as const).map((field) => (
             <div key={field} className="space-y-1.5">
               <Label htmlFor={`pat-${field}`}>
                 {field === 'communicationOrale'
-                  ? 'Communication orale'
+                  ? labels.oral
                   : field === 'lecture'
-                    ? 'Lecture'
-                    : 'Écriture'}
+                    ? labels.reading
+                    : labels.writing}
               </Label>
               <textarea
                 id={`pat-${field}`}
@@ -306,7 +318,8 @@ export default function PATReviewCard({ initialPAT }: PATReviewCardProps) {
           ))}
           <ListEditor
             id="pat-francisation-needs"
-            label="Axes de progrès en francisation"
+            label={labels.francisationNeeds}
+            hint={labels.onePerLine}
             value={pat.francisation.besoins ?? []}
             onChange={(besoins) =>
               setPAT((current) => ({
