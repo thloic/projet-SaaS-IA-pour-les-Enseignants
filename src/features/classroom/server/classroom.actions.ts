@@ -4,6 +4,11 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/features/profile/server/profile'
 import { classSchema, observationSchema } from '@/features/classroom/schemas/classroomSchema'
+import {
+  deleteClassTemplatePdf,
+  MAX_TEMPLATE_PDF_BYTES,
+  uploadClassTemplatePdf,
+} from '@/features/classroom/server/documentTemplateStorage'
 import type {
   AttendanceRecord,
   AttendanceStatus,
@@ -128,6 +133,7 @@ export async function createClassAction(input: {
   name: string
   level: string
   subject: string
+  documentTemplate?: string
 }): Promise<ClassroomMutationResult<ClassRoom>> {
   const parsed = classSchema.safeParse(input)
   if (!parsed.success) {
@@ -137,10 +143,15 @@ export async function createClassAction(input: {
   const user = await getCurrentUser()
   if (!user) return { data: null, error: 'Vous devez être connecté pour créer une classe.' }
 
+  const { documentTemplate, ...classFields } = parsed.data
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('classes')
-    .insert({ user_id: user.id, ...parsed.data })
+    .insert({
+      user_id: user.id,
+      ...classFields,
+      document_template: documentTemplate || null,
+    })
     .select('*')
     .single()
 
@@ -155,7 +166,7 @@ export async function createClassAction(input: {
 
 export async function updateClassAction(
   classId: string,
-  input: { name: string; level: string; subject: string }
+  input: { name: string; level: string; subject: string; documentTemplate?: string }
 ): Promise<ClassroomMutationResult<ClassRoom>> {
   const parsed = classSchema.safeParse(input)
   if (!parsed.success) {
@@ -165,10 +176,11 @@ export async function updateClassAction(
   const user = await getCurrentUser()
   if (!user) return { data: null, error: 'Vous devez être connecté.' }
 
+  const { documentTemplate, ...classFields } = parsed.data
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('classes')
-    .update(parsed.data)
+    .update({ ...classFields, document_template: documentTemplate || null })
     .eq('id', classId)
     .eq('user_id', user.id)
     .select('*')
@@ -380,4 +392,85 @@ export async function closeClassSessionAction(
   revalidatePath('/classroom')
   revalidatePath(`/classroom/${classId}`)
   return { data: null, error: null }
+}
+
+export async function uploadClassDocumentTemplatePdfAction(
+  classId: string,
+  formData: FormData
+): Promise<ClassroomMutationResult<ClassRoom>> {
+  const user = await getCurrentUser()
+  if (!user) return { data: null, error: 'Vous devez être connecté.' }
+
+  const file = formData.get('file')
+  if (!(file instanceof File) || file.type !== 'application/pdf') {
+    return { data: null, error: 'Le fichier doit être un PDF.' }
+  }
+  if (file.size > MAX_TEMPLATE_PDF_BYTES) {
+    return { data: null, error: 'Le PDF dépasse la taille maximale de 10 Mo.' }
+  }
+
+  const supabase = await createClient()
+  const { data: owned } = await supabase
+    .from('classes')
+    .select('id')
+    .eq('id', classId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+  if (!owned) return { data: null, error: 'Classe introuvable.' }
+
+  let path: string
+  try {
+    path = await uploadClassTemplatePdf(user.id, classId, file)
+  } catch {
+    return { data: null, error: 'Impossible de téléverser ce PDF pour le moment.' }
+  }
+
+  const { data, error } = await supabase
+    .from('classes')
+    .update({ document_template_path: path })
+    .eq('id', classId)
+    .eq('user_id', user.id)
+    .select('*')
+    .maybeSingle()
+
+  if (error || !data) {
+    console.error('[classroom] enregistrement du chemin du modele refuse', error)
+    return { data: null, error: 'Impossible d’enregistrer ce PDF pour le moment.' }
+  }
+
+  revalidatePath('/classroom')
+  revalidatePath(`/classroom/${classId}`)
+  return { data: data as ClassRoom, error: null }
+}
+
+export async function removeClassDocumentTemplatePdfAction(
+  classId: string
+): Promise<ClassroomMutationResult<ClassRoom>> {
+  const user = await getCurrentUser()
+  if (!user) return { data: null, error: 'Vous devez être connecté.' }
+
+  try {
+    await deleteClassTemplatePdf(user.id, classId)
+  } catch {
+    // Le fichier peut déjà être absent du stockage : on continue quand même
+    // à nettoyer la référence en base plutôt que de bloquer l'enseignant.
+  }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('classes')
+    .update({ document_template_path: null })
+    .eq('id', classId)
+    .eq('user_id', user.id)
+    .select('*')
+    .maybeSingle()
+
+  if (error || !data) {
+    console.error('[classroom] retrait du modele PDF refuse', error)
+    return { data: null, error: 'Impossible de retirer ce PDF pour le moment.' }
+  }
+
+  revalidatePath('/classroom')
+  revalidatePath(`/classroom/${classId}`)
+  return { data: data as ClassRoom, error: null }
 }

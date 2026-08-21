@@ -1,5 +1,6 @@
 import type { BulletinGenerationInput } from '@/features/bulletin/schemas/bulletinSchema'
 import type { GradingSystem, ContentLanguage } from '@/features/profile/types/profile.types'
+import type { ResolvedDocumentTemplate } from '@/features/agent/types/documentTemplate.types'
 import { languageLabel } from '../../features/i18n/locale.ts'
 
 interface BuildBulletinPromptInput {
@@ -11,6 +12,7 @@ interface BuildBulletinPromptInput {
     language: ContentLanguage
   }
   validationError?: string
+  documentTemplate?: ResolvedDocumentTemplate
 }
 
 const toneInstructions: Record<BulletinGenerationInput['tone'], string> = {
@@ -26,6 +28,7 @@ export function buildBulletinPrompt({
   input,
   teacherProfile,
   validationError,
+  documentTemplate,
 }: BuildBulletinPromptInput): { systemPrompt: string; userPrompt: string } {
   const teacherSubjects = teacherProfile.subjects?.length
     ? teacherProfile.subjects.join(', ')
@@ -58,6 +61,18 @@ export function buildBulletinPrompt({
     '- Mentionner les éléments observables fournis sans inventer de faits précis.',
     '- Formuler les axes d’amélioration de manière constructive.',
     `- ${toneInstructions[input.tone]}`,
+    '',
+    documentTemplate?.kind === 'text'
+      ? [
+          '',
+          'L’enseignant a fourni un modèle de document ci-dessous, propre à son établissement : inspire-toi de son style et de son vocabulaire pour rédiger le commentaire, sans t’écarter du format JSON demandé.',
+          '',
+          'MODÈLE DE DOCUMENT FOURNI PAR L’ENSEIGNANT :',
+          documentTemplate.content,
+        ].join('\n')
+      : documentTemplate?.kind === 'pdf'
+        ? 'L’enseignant a fourni un modèle de document en pièce jointe (PDF), propre à son établissement : inspire-toi de son style et de son vocabulaire pour rédiger le commentaire, sans t’écarter du format JSON demandé.'
+        : '',
     '',
     'Sortie attendue :',
     '{ "comment": "..." }',

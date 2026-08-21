@@ -4,6 +4,11 @@ export const classSchema = z.object({
   name: z.string().trim().min(2, 'Le nom de la classe est requis'),
   level: z.string().trim().min(1, 'Le niveau est requis'),
   subject: z.string().trim().min(1, 'La matiere est requise'),
+  documentTemplate: z
+    .string()
+    .trim()
+    .max(5000, 'Le modele de document est trop long')
+    .optional(),
 })
 
 export const studentSchema = z.object({

@@ -14,6 +14,8 @@ export interface ClassRoom {
   name: string
   level: string
   subject: string
+  document_template: string | null
+  document_template_path: string | null
   created_at: string
   updated_at: string
 }

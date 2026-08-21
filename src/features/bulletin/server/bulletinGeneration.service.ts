@@ -5,6 +5,7 @@ import { generateText } from 'ai'
 import { buildBulletinPrompt } from '@/lib/prompts/bulletin'
 import { generatedBulletinSchema, type BulletinGenerationInput, type GeneratedBulletin } from '@/features/bulletin/schemas/bulletinSchema'
 import type { ContentLanguage, GradingSystem } from '@/features/profile/types/profile.types'
+import type { ResolvedDocumentTemplate } from '@/features/agent/types/documentTemplate.types'
 
 interface GenerateBulletinCommentInput {
   input: BulletinGenerationInput
@@ -14,6 +15,7 @@ interface GenerateBulletinCommentInput {
     gradingSystem: GradingSystem
     language: ContentLanguage
   }
+  documentTemplate?: ResolvedDocumentTemplate
 }
 
 class BulletinValidationError extends Error {
@@ -67,18 +69,31 @@ function buildMockBulletin(input: GenerateBulletinCommentInput) {
 async function callAnthropic({
   input,
   teacherProfile,
+  documentTemplate,
   validationError,
 }: GenerateBulletinCommentInput & { validationError?: string }) {
   const { systemPrompt, userPrompt } = buildBulletinPrompt({
     input,
     teacherProfile,
     validationError,
+    documentTemplate,
   })
 
   const result = await generateText({
     model: anthropic(process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-5'),
     system: systemPrompt,
-    prompt: userPrompt,
+    prompt:
+      documentTemplate?.kind === 'pdf'
+        ? [
+            {
+              role: 'user' as const,
+              content: [
+                { type: 'text' as const, text: userPrompt },
+                { type: 'file' as const, data: documentTemplate.base64, mediaType: 'application/pdf' },
+              ],
+            },
+          ]
+        : userPrompt,
     temperature: 0.25,
     maxOutputTokens: 900,
     maxRetries: 1,

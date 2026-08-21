@@ -9,6 +9,8 @@ export interface StudentClassContext {
   name: string
   level: string
   subject: string
+  documentTemplate: string | null
+  documentTemplatePath: string | null
 }
 
 export interface StudentCandidate {

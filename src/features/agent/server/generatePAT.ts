@@ -1,6 +1,7 @@
 import { patMock } from '../mocks/patMock.ts'
 import type { PAT } from '../schemas/patSchema.ts'
 import type { StudentContext } from '../types/memory.types.ts'
+import type { ResolvedDocumentTemplate } from '../types/documentTemplate.types.ts'
 import { buildPATPrompt } from './patPrompt.ts'
 import { parseAndValidatePAT } from './patValidation.ts'
 import type { ContentLanguage } from '@/features/i18n/locale'
@@ -8,10 +9,14 @@ import type { ContentLanguage } from '@/features/i18n/locale'
 export interface GeneratePATInput {
   studentContext: StudentContext
   language?: ContentLanguage
+  documentTemplate: ResolvedDocumentTemplate
 }
 
 export type PATGenerationMode = 'mock' | 'real'
-export type StructuredPATGenerator = (prompt: string) => Promise<unknown>
+export type StructuredPATGenerator = (
+  prompt: string,
+  attachment?: { base64: string; mediaType: string }
+) => Promise<unknown>
 
 export function getPATGenerationMode(): PATGenerationMode {
   const mode = process.env.PAT_GENERATION_MODE ?? 'real'
@@ -80,16 +85,25 @@ export async function generateRealPAT(
   input: GeneratePATInput,
   generator: StructuredPATGenerator
 ): Promise<PAT> {
-  const output = await generator(buildPATPrompt(input.studentContext, input.language ?? 'fr'))
+  const prompt = buildPATPrompt(input.studentContext, input.documentTemplate, input.language ?? 'fr')
+  const attachment =
+    input.documentTemplate.kind === 'pdf'
+      ? { base64: input.documentTemplate.base64, mediaType: 'application/pdf' }
+      : undefined
+  const output = await generator(prompt, attachment)
   return groundGeneratedPAT(output, input.studentContext)
 }
 
-export async function generatePAT({ studentContext, language = 'fr' }: GeneratePATInput): Promise<PAT> {
+export async function generatePAT({
+  studentContext,
+  language = 'fr',
+  documentTemplate,
+}: GeneratePATInput): Promise<PAT> {
   const mode = getPATGenerationMode()
   if (mode === 'mock') {
     return parseAndValidatePAT(structuredClone(patMock))
   }
 
   const { generateStructuredPATWithAnthropic } = await import('./patModel.ts')
-  return generateRealPAT({ studentContext, language }, generateStructuredPATWithAnthropic)
+  return generateRealPAT({ studentContext, language, documentTemplate }, generateStructuredPATWithAnthropic)
 }

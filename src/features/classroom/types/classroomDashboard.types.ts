@@ -14,6 +14,8 @@ export interface ClassOverviewItem {
   name: string
   level: string
   subject: string
+  documentTemplate: string | null
+  documentTemplatePath: string | null
   studentCount: number
   attendanceRate: number | null
   absenceCount: number

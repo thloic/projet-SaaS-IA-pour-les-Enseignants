@@ -10,17 +10,25 @@ import {
 import {
   orchestratePATRequest,
   PATOrchestrationError,
+  selectDocumentTemplate,
 } from '../../src/features/agent/server/patOrchestration.ts'
 import {
   parseAndValidatePAT,
   PATValidationError,
 } from '../../src/features/agent/server/patValidation.ts'
 import type { StudentContext } from '../../src/features/agent/types/memory.types.ts'
+import type { ResolvedDocumentTemplate } from '../../src/features/agent/types/documentTemplate.types.ts'
 import { exportPATToDocx } from '../../src/features/agent/utils/exportPATDocx.ts'
 import { buildPATPrompt } from '../../src/features/agent/server/patPrompt.ts'
 
 const USER_ID = '11111111-1111-4111-8111-111111111111'
 const STUDENT_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+const SAMPLE_TEMPLATE =
+  'Modèle utilisé par l’enseignant : forces observées, besoins prioritaires, interventions prévues, adaptations en place.'
+const TEXT_TEMPLATE: ResolvedDocumentTemplate = { kind: 'text', content: SAMPLE_TEMPLATE }
+const failPdfFetch = async () => {
+  throw new Error('Aucune lecture de PDF attendue pour un modèle texte')
+}
 
 function fictitiousContext(): StudentContext {
   return {
@@ -43,6 +51,8 @@ function fictitiousContext(): StudentContext {
         name: 'Classe fictive 8A',
         level: '8e année',
         subject: 'Français',
+        documentTemplate: SAMPLE_TEMPLATE,
+        documentTemplatePath: null,
       },
     ],
     observations: [],
@@ -75,6 +85,7 @@ test('la chaîne mock traverse génération, réponse structurée et export DOCX
       { studentQuery: 'Maélis Roy', trustedUserId: USER_ID },
       {
         getStudentContext: async () => fictitiousContext(),
+        fetchTemplatePdfBase64: failPdfFetch,
         generatePAT,
         checkUsage: async () => ({ allowed: true }),
         refundUsage: async () => 0,
@@ -97,6 +108,7 @@ test('ambiguïté et élève inconnu ne déclenchent ni génération ni quota', 
   let generationCalls = 0
   let usageCalls = 0
   const baseDependencies = {
+    fetchTemplatePdfBase64: failPdfFetch,
     generatePAT: async () => {
       generationCalls += 1
       return patMock
@@ -152,6 +164,7 @@ test('un échec de génération rembourse exactement une fois', async () => {
         { studentQuery: 'Maélis Roy', trustedUserId: USER_ID },
         {
           getStudentContext: async () => fictitiousContext(),
+          fetchTemplatePdfBase64: failPdfFetch,
           generatePAT: async () => {
             throw new Error('Sortie invalide')
           },
@@ -176,6 +189,7 @@ test('une génération réussie débite le quota une seule fois sans rembourseme
     { studentQuery: 'Maélis Roy', trustedUserId: USER_ID },
     {
       getStudentContext: async () => fictitiousContext(),
+      fetchTemplatePdfBase64: failPdfFetch,
       generatePAT: async () => {
         generationCalls += 1
         return patMock
@@ -243,11 +257,14 @@ test('conserve l’omission réelle des champs facultatifs non documentés', () 
 
 test('la branche réelle ancre l’identité et les adaptations dans le dossier élève', async () => {
   const context = fictitiousContext()
-  const generated = await generateRealPAT({ studentContext: context }, async () => ({
-    ...patMock,
-    eleve: { ...patMock.eleve, nom: 'Autre élève' },
-    adaptationsOffertes: ['Support de cours différencié fictif'],
-  }))
+  const generated = await generateRealPAT(
+    { studentContext: context, documentTemplate: TEXT_TEMPLATE },
+    async () => ({
+      ...patMock,
+      eleve: { ...patMock.eleve, nom: 'Autre élève' },
+      adaptationsOffertes: ['Support de cours différencié fictif'],
+    })
+  )
 
   assert.equal(generated.eleve.nom, 'Maélis Roy')
   assert.equal(generated.eleve.niveau, '8e année')
@@ -256,17 +273,24 @@ test('la branche réelle ancre l’identité et les adaptations dans le dossier 
 })
 
 test('le prompt réel exclut les variantes de contenu pédagogique', () => {
-  const prompt = buildPATPrompt(fictitiousContext())
+  const prompt = buildPATPrompt(fictitiousContext(), TEXT_TEMPLATE)
 
   assert.match(prompt, /adaptationsInstitutionnelles/)
   assert.doesNotMatch(prompt, /Support de cours différencié fictif/)
   assert.doesNotMatch(prompt, /contentVariants/)
 })
 
+test('le prompt réel intègre le modèle de document fourni par l’enseignant', () => {
+  const prompt = buildPATPrompt(fictitiousContext(), TEXT_TEMPLATE)
+
+  assert.match(prompt, /MODÈLE DE DOCUMENT FOURNI PAR L’ENSEIGNANT/)
+  assert.ok(prompt.includes(SAMPLE_TEMPLATE))
+})
+
 test('le parcours PAT transmet la langue espagnole jusqu’au prompt structuré', async () => {
   let capturedPrompt = ''
   await generateRealPAT(
-    { studentContext: fictitiousContext(), language: 'es' },
+    { studentContext: fictitiousContext(), language: 'es', documentTemplate: TEXT_TEMPLATE },
     async (prompt) => {
       capturedPrompt = prompt
       return patMock
@@ -285,6 +309,7 @@ test('le parcours PAT transmet la langue espagnole jusqu’au prompt structuré'
     },
     {
       getStudentContext: async () => fictitiousContext(),
+      fetchTemplatePdfBase64: failPdfFetch,
       generatePAT: async ({ language }) => {
         capturedLanguage = language
         return patMock
@@ -301,7 +326,11 @@ test('le parcours PAT transmet la langue espagnole jusqu’au prompt structuré'
 
 test('la branche réelle rejette une sortie structurée invalide', async () => {
   await assert.rejects(
-    () => generateRealPAT({ studentContext: fictitiousContext() }, async () => ({ eleve: {} })),
+    () =>
+      generateRealPAT(
+        { studentContext: fictitiousContext(), documentTemplate: TEXT_TEMPLATE },
+        async () => ({ eleve: {} })
+      ),
     (error: unknown) => error instanceof PATValidationError && error.code === 'INVALID_PAT'
   )
 })
@@ -319,7 +348,10 @@ test('la branche réelle retire les champs optionnels sans preuve source', async
     participations: [],
     attendance: [],
   }
-  const generated = await generateRealPAT({ studentContext: context }, async () => patMock)
+  const generated = await generateRealPAT(
+    { studentContext: context, documentTemplate: TEXT_TEMPLATE },
+    async () => patMock
+  )
 
   assert.equal('francisation' in generated, false)
   assert.ok(
@@ -350,8 +382,154 @@ test('la branche réelle ne conserve que les dates présentes dans l’historiqu
       { ...patMock.comportementsCibles[1], date: '2026-12-31' },
     ],
   }
-  const generated = await generateRealPAT({ studentContext: context }, async () => output)
+  const generated = await generateRealPAT(
+    { studentContext: context, documentTemplate: TEXT_TEMPLATE },
+    async () => output
+  )
 
   assert.equal(generated.comportementsCibles[0]?.date, '2026-09-15')
   assert.equal('date' in (generated.comportementsCibles[1] ?? {}), false)
+})
+
+test('selectDocumentTemplate retient déterministement la première classe (ordre alphabétique) avec un modèle', () => {
+  assert.equal(selectDocumentTemplate([]), null)
+
+  assert.equal(
+    selectDocumentTemplate([
+      { id: '1', name: 'Classe A', level: '1', subject: 'Français', documentTemplate: null, documentTemplatePath: null },
+      { id: '2', name: 'Classe B', level: '1', subject: 'Français', documentTemplate: '  ', documentTemplatePath: null },
+    ]),
+    null
+  )
+
+  const result = selectDocumentTemplate([
+    { id: '1', name: 'Classe Zoulou', level: '1', subject: 'Français', documentTemplate: 'Modèle Z', documentTemplatePath: null },
+    { id: '2', name: 'Classe Alpha', level: '1', subject: 'Français', documentTemplate: 'Modèle A', documentTemplatePath: null },
+    { id: '3', name: 'Classe Bravo', level: '1', subject: 'Français', documentTemplate: null, documentTemplatePath: null },
+  ])
+  assert.deepEqual(result, { source: 'text', content: 'Modèle A', className: 'Classe Alpha', classId: '2' })
+})
+
+test('selectDocumentTemplate priorise le PDF sur le texte pour la même classe', () => {
+  const result = selectDocumentTemplate([
+    {
+      id: '1',
+      name: 'Classe Zoulou',
+      level: '1',
+      subject: 'Français',
+      documentTemplate: 'Modèle Z',
+      documentTemplatePath: null,
+    },
+    {
+      id: '2',
+      name: 'Classe Alpha',
+      level: '1',
+      subject: 'Français',
+      documentTemplate: 'Texte legacy conservé',
+      documentTemplatePath: 'user-1/2.pdf',
+    },
+  ])
+  assert.deepEqual(result, {
+    source: 'pdf',
+    path: 'user-1/2.pdf',
+    className: 'Classe Alpha',
+    classId: '2',
+  })
+})
+
+test('sans modèle configuré sur aucune classe de l’élève, l’agent bloque sans générer ni débiter le quota', async () => {
+  let usageCalls = 0
+  let generationCalls = 0
+
+  const contextWithoutTemplate: StudentContext = {
+    ...fictitiousContext(),
+    classes: [{ ...fictitiousContext().classes[0], documentTemplate: null, documentTemplatePath: null }],
+  }
+
+  const response = await orchestratePATRequest(
+    { studentQuery: 'Maélis Roy', trustedUserId: USER_ID },
+    {
+      getStudentContext: async () => contextWithoutTemplate,
+      fetchTemplatePdfBase64: failPdfFetch,
+      generatePAT: async () => {
+        generationCalls += 1
+        return patMock
+      },
+      checkUsage: async () => {
+        usageCalls += 1
+        return { allowed: true }
+      },
+      refundUsage: async () => 0,
+    }
+  )
+
+  const structured = agentStructuredResponseSchema.parse(response)
+  assert.equal(structured.kind, 'template_missing')
+  assert.equal(usageCalls, 0)
+  assert.equal(generationCalls, 0)
+})
+
+test('avec un modèle texte configuré, l’agent transmet ce modèle exact à la génération', async () => {
+  let receivedTemplate: ResolvedDocumentTemplate | null = null
+
+  const response = await orchestratePATRequest(
+    { studentQuery: 'Maélis Roy', trustedUserId: USER_ID },
+    {
+      getStudentContext: async () => fictitiousContext(),
+      fetchTemplatePdfBase64: failPdfFetch,
+      generatePAT: async ({ documentTemplate }) => {
+        receivedTemplate = documentTemplate
+        return patMock
+      },
+      checkUsage: async () => ({ allowed: true }),
+      refundUsage: async () => 0,
+    }
+  )
+
+  assert.equal(response.kind, 'pat')
+  assert.deepEqual(receivedTemplate, TEXT_TEMPLATE)
+})
+
+test('avec un modèle PDF configuré, l’agent lit le PDF et le transmet en pièce jointe à la génération', async () => {
+  let receivedTemplate: ResolvedDocumentTemplate | null = null
+  let fetchedPath = ''
+
+  const contextWithPdf: StudentContext = {
+    ...fictitiousContext(),
+    classes: [
+      {
+        ...fictitiousContext().classes[0],
+        documentTemplate: null,
+        documentTemplatePath: 'user-1/bbbbbbbb.pdf',
+      },
+    ],
+  }
+
+  const response = await orchestratePATRequest(
+    { studentQuery: 'Maélis Roy', trustedUserId: USER_ID },
+    {
+      getStudentContext: async () => contextWithPdf,
+      fetchTemplatePdfBase64: async (path) => {
+        fetchedPath = path
+        return 'ZmFrZS1wZGYtY29udGVudA=='
+      },
+      generatePAT: async ({ documentTemplate }) => {
+        receivedTemplate = documentTemplate
+        return patMock
+      },
+      checkUsage: async () => ({ allowed: true }),
+      refundUsage: async () => 0,
+    }
+  )
+
+  assert.equal(response.kind, 'pat')
+  assert.equal(fetchedPath, 'user-1/bbbbbbbb.pdf')
+  assert.deepEqual(receivedTemplate, { kind: 'pdf', base64: 'ZmFrZS1wZGYtY29udGVudA==' })
+})
+
+test('le prompt réel mentionne la pièce jointe PDF sans texte de modèle en clair', () => {
+  const prompt = buildPATPrompt(fictitiousContext(), { kind: 'pdf', base64: 'xxx' })
+
+  assert.match(prompt, /pièce jointe/i)
+  assert.doesNotMatch(prompt, /MODÈLE DE DOCUMENT FOURNI PAR L’ENSEIGNANT/)
 })

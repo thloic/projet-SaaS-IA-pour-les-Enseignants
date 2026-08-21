@@ -13,6 +13,15 @@ import {
   PATOrchestrationError,
 } from '@/features/agent/server/patOrchestration'
 import { detectPATIntent } from '@/features/agent/server/patIntent'
+import { looksLikeBulletinRequest } from '@/features/agent/server/bulletinIntent'
+import { extractBulletinFieldsWithAnthropic } from '@/features/agent/server/bulletinExtractionModel'
+import {
+  orchestrateBulletinRequest,
+  BulletinOrchestrationError,
+} from '@/features/agent/server/bulletinOrchestration'
+import { generateBulletinComment as generateBulletinCommentService } from '@/features/bulletin/server/bulletinGeneration.service'
+import { saveAgentBulletinComment } from '@/features/bulletin/server/bulletin.actions'
+import { downloadClassTemplatePdfBase64 } from '@/features/classroom/server/documentTemplateStorage'
 import { buildAgentSystemPrompt } from '@/lib/prompts/agent'
 import { getCurrentTeacherProfile, getCurrentUser } from '@/features/profile/server/profile'
 
@@ -22,16 +31,19 @@ const ROUTE_COPY = {
   fr: {
     limit: 'Vous avez atteint votre limite de générations gratuites pour l’agent ce mois-ci.',
     patFailed: 'Le PAT n’a pas pu être généré. Votre quota n’a pas été débité.',
+    bulletinFailed: 'Le commentaire de bulletin n’a pas pu être généré. Votre quota n’a pas été débité.',
     quotaFailed: 'Impossible de vérifier votre quota pour le moment.',
   },
   en: {
     limit: 'You have reached your free agent generation limit for this month.',
     patFailed: 'The support plan could not be generated. Your quota was not charged.',
+    bulletinFailed: 'The report card comment could not be generated. Your quota was not charged.',
     quotaFailed: 'Your quota could not be checked right now.',
   },
   es: {
     limit: 'Has alcanzado el límite de generaciones gratuitas del agente para este mes.',
     patFailed: 'No se ha podido generar el PAT. No se ha descontado de tu cuota.',
+    bulletinFailed: 'No se ha podido generar el comentario de boletín. No se ha descontado de tu cuota.',
     quotaFailed: 'No se puede comprobar tu cuota en este momento.',
   },
 } as const
@@ -80,6 +92,7 @@ export async function POST(request: Request) {
         },
         {
           getStudentContext,
+          fetchTemplatePdfBase64: downloadClassTemplatePdfBase64,
           generatePAT,
           checkUsage: async (userId) => checkAndIncrementUsage(userId, USAGE_FEATURE),
           refundUsage: async (userId) => decrementUsage(userId, USAGE_FEATURE),
@@ -92,6 +105,49 @@ export async function POST(request: Request) {
       }
       console.error('[agent:pat] echec de la demande structuree')
       return jsonError(copy.patFailed, 500)
+    }
+  }
+
+  if (!patIntent && latestUserMessage && looksLikeBulletinRequest(latestUserMessage.content)) {
+    try {
+      const result = await orchestrateBulletinRequest(
+        {
+          message: latestUserMessage.content,
+          trustedUserId: user.id,
+          interfaceLanguage: profile.interface_language,
+        },
+        {
+          extractBulletinFields: extractBulletinFieldsWithAnthropic,
+          getStudentContext,
+          fetchTemplatePdfBase64: downloadClassTemplatePdfBase64,
+          generateBulletinComment: ({ studentName, subject, grade, observations, tone, documentTemplate }) =>
+            generateBulletinCommentService({
+              input: { student_name: studentName, subject, grade, observations, tone },
+              teacherProfile: {
+                subject: profile.subject,
+                subjects: profile.subjects,
+                gradingSystem: profile.grading_system,
+                language: profile.language,
+              },
+              documentTemplate,
+            }),
+          saveBulletinComment: saveAgentBulletinComment,
+          checkUsage: async (userId) => checkAndIncrementUsage(userId, USAGE_FEATURE),
+          refundUsage: async (userId) => decrementUsage(userId, USAGE_FEATURE),
+        }
+      )
+      // result === null : le message ressemblait a une demande de bulletin
+      // mais il manquait un champ indispensable (matiere/note) — on laisse la
+      // conversation normale continuer pour que l'agent redemande l'info.
+      if (result) {
+        return NextResponse.json(agentStructuredResponseSchema.parse(result))
+      }
+    } catch (error) {
+      if (error instanceof BulletinOrchestrationError && error.code === 'BULLETIN_QUOTA_EXCEEDED') {
+        return jsonError(copy.limit, 403)
+      }
+      console.error('[agent:bulletin] echec de la demande structuree')
+      return jsonError(copy.bulletinFailed, 500)
     }
   }
 

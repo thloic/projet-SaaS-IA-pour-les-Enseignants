@@ -51,6 +51,8 @@ function student(
         name: className,
         level: '8e année',
         subject: 'Français',
+        documentTemplate: null,
+        documentTemplatePath: null,
       },
     ],
   }

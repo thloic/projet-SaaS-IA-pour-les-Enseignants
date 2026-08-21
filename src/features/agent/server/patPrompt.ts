@@ -1,9 +1,11 @@
 import type { StudentContext } from '../types/memory.types.ts'
+import type { ResolvedDocumentTemplate } from '../types/documentTemplate.types.ts'
 import type { ContentLanguage } from '@/features/i18n/locale'
 import { languageLabel } from '../../i18n/locale.ts'
 
 export function buildPATPrompt(
   studentContext: StudentContext,
+  documentTemplate: ResolvedDocumentTemplate,
   language: ContentLanguage = 'fr'
 ): string {
   const source = {
@@ -39,6 +41,14 @@ export function buildPATPrompt(
     'Formule chaque besoin comme un axe de progrès bienveillant, par exemple « Développer… », « Consolider… » ou « Renforcer… ».',
     'Les adaptations offertes doivent reprendre uniquement adaptationsInstitutionnelles, sans ajout ni substitution.',
     'Ne mentionne aucune variante de contenu pédagogique.',
+    documentTemplate.kind === 'text'
+      ? [
+          'L’enseignant a fourni un modèle de document ci-dessous, propre à son établissement : inspire-toi de son style, de son vocabulaire et de sa structure pour rédiger le document, sans pour autant t’écarter du schéma JSON demandé ni y intégrer du texte du modèle qui ne concerne pas cet élève.',
+          '',
+          'MODÈLE DE DOCUMENT FOURNI PAR L’ENSEIGNANT :',
+          documentTemplate.content,
+        ].join('\n')
+      : 'L’enseignant a fourni un modèle de document en pièce jointe (PDF), propre à son établissement : inspire-toi de son style, de son vocabulaire et de sa structure pour rédiger le document, sans pour autant t’écarter du schéma JSON demandé ni y intégrer du texte du modèle qui ne concerne pas cet élève.',
     '',
     'CONTEXTE ÉLÈVE :',
     JSON.stringify(source),

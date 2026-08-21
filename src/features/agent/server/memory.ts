@@ -91,6 +91,8 @@ async function createRepository(): Promise<StudentContextRepository> {
           name: classroom.name,
           level: classroom.level,
           subject: classroom.subject,
+          documentTemplate: classroom.document_template ?? null,
+          documentTemplatePath: classroom.document_template_path ?? null,
         }
 
         if (existing) {

@@ -12,6 +12,7 @@ import {
 import type { PAT } from '@/features/agent/schemas/patSchema'
 import type { ContentLanguage } from '@/features/i18n/locale'
 import PATReviewCard from '@/features/agent/components/PATReviewCard'
+import BulletinReviewCard from '@/features/agent/components/BulletinReviewCard'
 import { useAppLocale } from '@/features/i18n/AppLocaleProvider'
 import { agentTranslations } from '@/features/agent/i18n/agentTranslations'
 
@@ -32,7 +33,15 @@ interface PATChatMessage {
   pat: PAT
 }
 
-type ChatMessage = TextChatMessage | PATChatMessage
+interface BulletinChatMessage {
+  kind: 'bulletin'
+  role: 'assistant'
+  subject: string
+  grade: string
+  comment: string
+}
+
+type ChatMessage = TextChatMessage | PATChatMessage | BulletinChatMessage
 
 export default function AgentChat() {
   const { showToast } = useToast()
@@ -99,6 +108,18 @@ export default function AgentChat() {
                 studentId: structured.data.studentId,
                 language: structured.data.language,
                 pat: structured.data.pat,
+              },
+            ]
+          }
+          if (structured.data.kind === 'bulletin') {
+            return [
+              ...withoutPending,
+              {
+                kind: 'bulletin',
+                role: 'assistant',
+                subject: structured.data.subject,
+                grade: structured.data.grade,
+                comment: structured.data.comment,
               },
             ]
           }
@@ -191,6 +212,13 @@ export default function AgentChat() {
           messages.map((message, index) =>
             message.kind === 'pat' ? (
               <PATReviewCard key={index} initialPAT={message.pat} documentLanguage={message.language} />
+            ) : message.kind === 'bulletin' ? (
+              <BulletinReviewCard
+                key={index}
+                subject={message.subject}
+                grade={message.grade}
+                initialComment={message.comment}
+              />
             ) : (
               <div
                 key={index}

@@ -34,10 +34,25 @@ export const agentStructuredResponseSchema = z.discriminatedUnion('kind', [
     .strict(),
   z
     .object({
+      kind: z.literal('template_missing'),
+      message: z.string().min(1),
+    })
+    .strict(),
+  z
+    .object({
       kind: z.literal('pat'),
       studentId: z.string().uuid(),
       language: z.enum(['fr', 'en', 'es']),
       pat: PATSchema,
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('bulletin'),
+      studentId: z.string().uuid(),
+      subject: z.string().min(1),
+      grade: z.string().min(1),
+      comment: z.string().min(1),
     })
     .strict(),
 ])

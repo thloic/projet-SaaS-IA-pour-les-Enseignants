@@ -196,3 +196,42 @@ export async function deleteBulletinAction(id: string): Promise<DeleteBulletinSt
     return { error: 'Le commentaire n’a pas pu être supprimé.', success: false }
   }
 }
+
+// Persistance d'un commentaire genere depuis l'agent conversationnel : meme
+// table que le formulaire classique, pour que l'historique /bulletin reste
+// unique quel que soit le canal de generation. userId n'est jamais accepte en
+// parametre : on retrouve l'utilisateur de confiance via la session en cours.
+export async function saveAgentBulletinComment(record: {
+  studentId: string
+  studentName: string
+  classId: string
+  subject: string
+  grade: string
+  observations?: string
+  tone: 'bienveillant' | 'encourageant' | 'factuel'
+  comment: string
+}): Promise<void> {
+  const user = await getCurrentUser()
+  if (!user) throw new Error('AUTH_REQUIRED')
+
+  const supabase = await createClient()
+  const { error } = await supabase.from('bulletin_comments').insert({
+    user_id: user.id,
+    student_name: record.studentName,
+    class_id: record.classId,
+    student_id: record.studentId,
+    subject: record.subject,
+    grade: record.grade,
+    observations: record.observations ?? null,
+    tone: record.tone,
+    comment: record.comment,
+  })
+
+  if (error) {
+    console.error('[bulletin] insertion depuis l’agent refusee', error)
+    throw new Error('BULLETIN_INSERT_FAILED')
+  }
+
+  revalidatePath('/bulletin')
+  revalidatePath('/dashboard', 'layout')
+}

@@ -8,7 +8,10 @@ import {
   ArrowRight,
   BookOpenCheck,
   Check,
+  FileText,
+  FileUp,
   Gauge,
+  Loader2,
   Pencil,
   Play,
   Plus,
@@ -27,7 +30,9 @@ import { useToast } from '@/components/shared/ToastProvider'
 import {
   createClassAction,
   deleteClassAction,
+  removeClassDocumentTemplatePdfAction,
   updateClassAction,
+  uploadClassDocumentTemplatePdfAction,
 } from '@/features/classroom/server/classroom.actions'
 import type {
   ClassOverviewItem,
@@ -44,9 +49,10 @@ interface ClassForm {
   name: string
   level: string
   subject: string
+  documentTemplate: string
 }
 
-const EMPTY_FORM: ClassForm = { name: '', level: '', subject: '' }
+const EMPTY_FORM: ClassForm = { name: '', level: '', subject: '', documentTemplate: '' }
 const EMPTY_OVERVIEW: ClassroomOverviewData = {
   classes: [],
   metrics: {
@@ -83,6 +89,8 @@ export default function ClassroomHome({
   const [isSaving, setIsSaving] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [templatePath, setTemplatePath] = useState<string | null>(null)
+  const [isUploadingTemplate, setIsUploadingTemplate] = useState(false)
 
   const visibleClasses = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase('fr')
@@ -110,6 +118,7 @@ export default function ClassroomHome({
   function openCreate() {
     setForm({ ...EMPTY_FORM, subject: subjects[0] ?? '' })
     setEditingClass(null)
+    setTemplatePath(null)
     setError(null)
     setDialogMode('create')
   }
@@ -121,10 +130,59 @@ export default function ClassroomHome({
     form.subject && !subjects.includes(form.subject) ? [form.subject, ...subjects] : subjects
 
   function openEdit(item: ClassOverviewItem) {
-    setForm({ name: item.name, level: item.level, subject: item.subject })
+    setForm({
+      name: item.name,
+      level: item.level,
+      subject: item.subject,
+      documentTemplate: item.documentTemplate ?? '',
+    })
     setEditingClass(item)
+    setTemplatePath(item.documentTemplatePath)
     setError(null)
     setDialogMode('edit')
+  }
+
+  async function handleUploadTemplatePdf(file: File) {
+    if (!editingClass) return
+    setIsUploadingTemplate(true)
+    const formData = new FormData()
+    formData.append('file', file)
+    const result = await uploadClassDocumentTemplatePdfAction(editingClass.id, formData)
+    setIsUploadingTemplate(false)
+
+    if (result.error || !result.data) {
+      showToast(result.error ?? 'Impossible de téléverser ce PDF.', 'error')
+      return
+    }
+
+    const path = result.data.document_template_path
+    setTemplatePath(path)
+    setClasses((current) =>
+      current.map((item) =>
+        item.id === editingClass.id ? { ...item, documentTemplatePath: path } : item
+      )
+    )
+    showToast('PDF téléversé.', 'success')
+  }
+
+  async function handleRemoveTemplatePdf() {
+    if (!editingClass) return
+    setIsUploadingTemplate(true)
+    const result = await removeClassDocumentTemplatePdfAction(editingClass.id)
+    setIsUploadingTemplate(false)
+
+    if (result.error) {
+      showToast(result.error, 'error')
+      return
+    }
+
+    setTemplatePath(null)
+    setClasses((current) =>
+      current.map((item) =>
+        item.id === editingClass.id ? { ...item, documentTemplatePath: null } : item
+      )
+    )
+    showToast('PDF retiré.', 'success')
   }
 
   async function saveClass(event: React.FormEvent<HTMLFormElement>) {
@@ -152,6 +210,8 @@ export default function ClassroomHome({
                 name: result.data!.name,
                 level: result.data!.level,
                 subject: result.data!.subject,
+                documentTemplate: result.data!.document_template,
+                documentTemplatePath: result.data!.document_template_path,
               }
             : item
         )
@@ -165,6 +225,8 @@ export default function ClassroomHome({
           name: result.data!.name,
           level: result.data!.level,
           subject: result.data!.subject,
+          documentTemplate: result.data!.document_template,
+          documentTemplatePath: result.data!.document_template_path,
           studentCount: 0,
           attendanceRate: null,
           absenceCount: 0,
@@ -333,6 +395,19 @@ export default function ClassroomHome({
                 </div>
 
                 <div className="mt-4 flex min-h-7 flex-wrap gap-2 text-xs">
+                  {item.documentTemplatePath ? (
+                    <span className="rounded-md bg-emerald-500/10 px-2 py-1 text-emerald-700 dark:text-emerald-300">
+                      Modèle de document configuré (PDF)
+                    </span>
+                  ) : item.documentTemplate ? (
+                    <span className="rounded-md bg-emerald-500/10 px-2 py-1 text-emerald-700 dark:text-emerald-300">
+                      Modèle de document configuré
+                    </span>
+                  ) : (
+                    <span className="rounded-md bg-amber-500/10 px-2 py-1 text-amber-700 dark:text-amber-300">
+                      Aucun modèle de document
+                    </span>
+                  )}
                   {item.absenceCount > 0 && (
                     <span className="rounded-md bg-rose-500/10 px-2 py-1 text-rose-700 dark:text-rose-300">
                       {item.absenceCount} absence{item.absenceCount > 1 ? 's' : ''}
@@ -471,6 +546,71 @@ export default function ClassroomHome({
                     />
                   )}
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="class-document-template">
+                  Modèle de document (pour le PAT généré par l’agent)
+                </Label>
+                <textarea
+                  id="class-document-template"
+                  value={form.documentTemplate}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, documentTemplate: event.target.value }))
+                  }
+                  placeholder="Collez ou décrivez ici le format du document que vous utilisez déjà pour cette classe. L’agent s’en inspirera pour générer un PAT — sans ce modèle, la génération est bloquée."
+                  rows={5}
+                  className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Ou téléversez le PDF de votre gabarit</Label>
+                {!editingClass ? (
+                  <p className="text-xs text-muted-foreground">
+                    Enregistrez d’abord la classe pour pouvoir téléverser un PDF.
+                  </p>
+                ) : templatePath ? (
+                  <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm">
+                    <span className="flex items-center gap-2 truncate">
+                      <FileText size={15} className="shrink-0 text-primary" />
+                      PDF configuré — prioritaire sur le texte ci-dessus
+                    </span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      disabled={isUploadingTemplate}
+                      onClick={() => void handleRemoveTemplatePdf()}
+                    >
+                      {isUploadingTemplate ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <Trash2 size={14} />
+                      )}
+                      Retirer
+                    </Button>
+                  </div>
+                ) : (
+                  <label className="flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 py-2 text-sm text-muted-foreground hover:bg-muted/30">
+                    {isUploadingTemplate ? (
+                      <Loader2 size={15} className="animate-spin" />
+                    ) : (
+                      <FileUp size={15} />
+                    )}
+                    {isUploadingTemplate ? 'Envoi en cours…' : 'Choisir un PDF (10 Mo max)'}
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      className="hidden"
+                      disabled={isUploadingTemplate}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0]
+                        event.target.value = ''
+                        if (file) void handleUploadTemplatePdf(file)
+                      }}
+                    />
+                  </label>
+                )}
               </div>
               {error && (
                 <div className="flex gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-700 dark:text-rose-300">

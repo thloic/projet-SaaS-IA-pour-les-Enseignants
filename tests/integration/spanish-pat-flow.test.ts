@@ -31,6 +31,8 @@ const context: StudentContext = {
     name: 'Clase ficticia 2B',
     level: '2.º de secundaria',
     subject: 'Lengua',
+    documentTemplate: 'Plantilla del docente: fortalezas, necesidades, intervenciones previstas.',
+    documentTemplatePath: null,
   }],
   observations: [],
   participations: [],
@@ -68,8 +70,11 @@ test('demande espagnole → contexte isolé → PAT validé → aperçu structur
     },
     {
       getStudentContext: async () => context,
-      generatePAT: ({ studentContext, language }) =>
-        generateRealPAT({ studentContext, language }, async (receivedPrompt) => {
+      fetchTemplatePdfBase64: async () => {
+        throw new Error('Aucune lecture de PDF attendue pour un modèle texte')
+      },
+      generatePAT: ({ studentContext, language, documentTemplate }) =>
+        generateRealPAT({ studentContext, language, documentTemplate }, async (receivedPrompt) => {
           prompt = receivedPrompt
           return generatedPAT
         }),
