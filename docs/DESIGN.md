@@ -22,12 +22,12 @@
 - **Scale** : 12 / 14 / 16 / 20 / 22 / 28 / 40 / 56 px.
 
 ## Color
-- **Approche** : restreinte — un seul accent fort, le reste en neutres et sémantique.
-- **Primary** : `#534AB7` — accent de marque déjà utilisé partout (boutons primaires, éléments actifs). À conserver tel quel, pas de changement de teinte.
-- **Secondary** : neutres existants du thème shadcn (`--secondary`, `--muted`) — pas de deuxième couleur forte.
-- **Neutrals** : thème shadcn existant (oklch), clair en light mode / sombre en dark mode, déjà en place dans `globals.css`.
-- **Semantic** : succès `#10B981` (emerald), attention/en cours `#F59E0B` (amber), erreur `#DC2626` (`--destructive` existant) — ces trois couleurs sont déjà utilisées de façon éparpillée dans le code (classes Tailwind `emerald-*`/`amber-*`) ; ce document les formalise comme palette sémantique officielle plutôt que d'en introduire de nouvelles.
-- **Dark mode** : déjà supporté via les variables CSS du thème shadcn (`.dark` dans `globals.css`) ; les couleurs sémantiques (emerald/amber/destructive) restent lisibles sur fond sombre sans ajustement supplémentaire.
+- **Approche** : restreinte — un seul accent fort, le reste en neutres teintés et sémantique.
+- **Primary** : `#534AB7` (light) / `#8B7FE0` (dark, plus clair pour le contraste sur fond sombre) — **désormais la vraie variable `--primary` du thème shadcn** (`globals.css`), plus seulement une constante locale par composant. Corrige un défaut réel : tous les `focus:ring-primary/20`, `bg-primary/10 text-primary` déjà écrits dans le code s'affichaient en gris (l'ancien `--primary` neutre) au lieu du violet de marque.
+- **Secondary** : neutres teintés violet plutôt que gris neutre pur — `--muted` `#F3F1FA` (light) / `#221F2E` (dark), `--border` `#E7E3F5` (light) / violet à 16% d'opacité (dark).
+- **Neutrals / Background** : `#FBFAFE` (light) — léger, presque imperceptible, mais retire le blanc pur froid d'origine (`oklch(1 0 0)`). `--card` reste blanc pur (`#FFFFFF`) pour que les cartes se détachent légèrement du fond au lieu d'un aplat unique. Dark : `#17151F` (fond), `#1E1B29` (cartes).
+- **Semantic** : inchangé — succès `#10B981`, attention `#F59E0B`, erreur `#DC2626`.
+- **Dark mode** : primary éclairci (`#8B7FE0`) pour rester lisible sur fond sombre ; `--brand-foreground` passe de blanc à `#1A1825` (texte sombre sur bouton primary clair) en dark mode.
 
 ## Spacing
 - **Base** : 4px.
@@ -50,4 +50,5 @@
 |------|----------|-----------|
 | 2026-07-25 | Création initiale | /design — système pour EducAssist, cadré autour du Module 1 Correction IA. Reprend et formalise ce qui existait déjà de façon éparpillée dans le code (couleur de marque, cards arrondies, couleurs sémantiques ad-hoc) plutôt que d'introduire un nouveau système parallèle. |
 | 2026-07-25 | Badges de statut systématiques | Nouveauté (RISK assumé) pour le module Correction : statut visuel (validée/en cours/échec/brouillon) sur chaque copie d'un lot, pour un scan rapide de 30 copies — sert directement le critère de succès du PRD sur la vitesse de correction. |
-| 2026-07-25 | `#534AB7` non branché sur `--primary` du thème shadcn | Observation : la couleur de marque est aujourd'hui redéfinie localement (`const BRAND = '#534AB7'`) dans chaque composant plutôt que d'être la vraie variable `--primary` du thème. Décision : suivre ce pattern existant pour le module Correction (cohérence avec le reste du produit), sans le corriger — un vrai branchement dans `globals.css` serait un chantier transverse séparé, hors périmètre ici. |
+| 2026-07-25 | `#534AB7` non branché sur `--primary` du thème shadcn | Observation initiale : la couleur de marque était redéfinie localement (`const BRAND`) dans chaque composant plutôt que d'être la vraie variable `--primary`. Décision d'origine : ne pas corriger tout de suite (hors périmètre du lot en cours). |
+| 2026-07-25 | Correction du mode clair — `--primary` réellement branché sur le violet, fond/neutres teintés | Le développeur n'aimait pas le rendu du mode clair (trop plat/blanc). Cause : `--primary` restait un gris neutre jamais utilisé comme vrai accent, fond blanc pur sans chaleur. Palette revue (voir section Color) ; `--primary` devient enfin la vraie couleur de marque dans le thème, pas seulement une constante par composant. |
