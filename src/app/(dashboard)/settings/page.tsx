@@ -23,6 +23,7 @@ export default async function SettingsPage() {
       initialGradingSystem={normalizeGradingSystem(profile?.grading_system)}
       initialLanguage={profile?.language ?? 'fr'}
       initialInterfaceLanguage={profile?.interface_language ?? profile?.language ?? 'fr'}
+      initialTimezone={profile?.timezone ?? 'UTC'}
       generationsUsed={usage.used}
       generationsLimit={usage.limit}
     />

@@ -143,11 +143,43 @@ export default function ClassroomHome({
   }
 
   async function handleUploadTemplatePdf(file: File) {
-    if (!editingClass) return
     setIsUploadingTemplate(true)
+    let targetClassId = editingClass?.id ?? null
+
+    // En creation, on n'attend plus que la classe soit enregistree pour
+    // pouvoir ajouter le PDF : elle est creee silencieusement des qu'un
+    // fichier est choisi, avec les valeurs deja saisies dans le formulaire.
+    if (!targetClassId) {
+      const created = await createClassAction(form)
+      if (created.error || !created.data) {
+        setIsUploadingTemplate(false)
+        setError(created.error ?? 'Impossible de créer cette classe pour le moment.')
+        return
+      }
+      targetClassId = created.data.id
+      const newItem: ClassOverviewItem = {
+        id: created.data.id,
+        name: created.data.name,
+        level: created.data.level,
+        subject: created.data.subject,
+        documentTemplate: created.data.document_template,
+        documentTemplatePath: created.data.document_template_path,
+        studentCount: 0,
+        attendanceRate: null,
+        absenceCount: 0,
+        lateCount: 0,
+        attentionCount: 0,
+        activeSessionId: null,
+        lastSessionDate: null,
+      }
+      setClasses((current) => [...current, newItem])
+      setEditingClass(newItem)
+      setDialogMode('edit')
+    }
+
     const formData = new FormData()
     formData.append('file', file)
-    const result = await uploadClassDocumentTemplatePdfAction(editingClass.id, formData)
+    const result = await uploadClassDocumentTemplatePdfAction(targetClassId, formData)
     setIsUploadingTemplate(false)
 
     if (result.error || !result.data) {
@@ -158,11 +190,10 @@ export default function ClassroomHome({
     const path = result.data.document_template_path
     setTemplatePath(path)
     setClasses((current) =>
-      current.map((item) =>
-        item.id === editingClass.id ? { ...item, documentTemplatePath: path } : item
-      )
+      current.map((item) => (item.id === targetClassId ? { ...item, documentTemplatePath: path } : item))
     )
     showToast('PDF téléversé.', 'success')
+    router.refresh()
   }
 
   async function handleRemoveTemplatePdf() {
@@ -565,11 +596,7 @@ export default function ClassroomHome({
 
               <div className="space-y-2">
                 <Label>Ou téléversez le PDF de votre gabarit</Label>
-                {!editingClass ? (
-                  <p className="text-xs text-muted-foreground">
-                    Enregistrez d’abord la classe pour pouvoir téléverser un PDF.
-                  </p>
-                ) : templatePath ? (
+                {templatePath ? (
                   <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm">
                     <span className="flex items-center gap-2 truncate">
                       <FileText size={15} className="shrink-0 text-primary" />

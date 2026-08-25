@@ -3,7 +3,13 @@ import test from 'node:test'
 
 import { getAuthCallbackErrorMessage, getAuthErrorMessage } from '../../src/features/auth/utils/authError.ts'
 import { magicLinkSchema } from '../../src/features/auth/schemas/authSchema.ts'
-import { classSchema, observationSchema, studentSchema } from '../../src/features/classroom/schemas/classroomSchema.ts'
+import {
+  classSchema,
+  evaluationResultBatchSchema,
+  evaluationResultUpdateSchema,
+  observationSchema,
+  studentSchema,
+} from '../../src/features/classroom/schemas/classroomSchema.ts'
 import { classroomPeriodSchema } from '../../src/features/classroom/schemas/classroomDashboardSchema.ts'
 import {
   dashboardPeriodQuerySchema,
@@ -73,6 +79,7 @@ test('profileSchema validates the complete onboarding payload', () => {
     gradingSystem: '20',
     language: 'fr',
     interfaceLanguage: 'fr',
+    timezone: 'America/Toronto',
     styleNotes: 'Ton bienveillant',
   })
 
@@ -128,6 +135,16 @@ test('classroom schemas validate classes, students, and observations', () => {
 
   assert.equal(observationSchema.safeParse({ category: 'progress', tag: 'Participation' }).success, true)
   assert.equal(observationSchema.safeParse({ category: 'invalid', tag: '' }).success, false)
+  assert.equal(evaluationResultBatchSchema.safeParse({
+    classId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+    title: 'Contrôle fictif',
+    results: [{ studentId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', grade: '16/20' }],
+  }).success, true)
+  assert.equal(evaluationResultBatchSchema.safeParse({
+    classId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+    results: [],
+  }).success, false)
+  assert.equal(evaluationResultUpdateSchema.safeParse({ grade: '  ' }).success, false)
   assert.equal(classroomPeriodSchema.safeParse('30d').success, true)
   assert.equal(classroomPeriodSchema.safeParse('365d').success, false)
 })
@@ -237,8 +254,29 @@ test('prompt builders expose structured generation instructions', () => {
       gradingSystem: '20',
       language: 'fr',
     },
+    evaluationResults: [{
+      id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+      classId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      title: 'Évaluation fictive',
+      grade: '14/20',
+      createdAt: '2026-03-01T12:00:00.000Z',
+    }],
+    studentObservations: [{
+      id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+      sessionId: null,
+      category: 'progress',
+      tag: 'Progrès fictif',
+      note: 'Mobilise les stratégies travaillées.',
+      createdAt: '2026-03-02T12:00:00.000Z',
+    }],
+    previousComment: 'Awa mobilise ses acquis avec constance. Elle participe activement. La précision constitue son prochain axe de progression.',
+    modificationInstruction: 'Rends uniquement le ton plus factuel.',
   })
   assert.match(bulletinPrompt.systemPrompt, /JSON strict/)
+  assert.match(bulletinPrompt.userPrompt, /Évaluation fictive : 14\/20/)
+  assert.match(bulletinPrompt.userPrompt, /Progrès fictif : Mobilise les stratégies/)
+  assert.match(bulletinPrompt.userPrompt, /COMMENTAIRE PRÉCÉDENT/)
+  assert.match(bulletinPrompt.userPrompt, /Rends uniquement le ton plus factuel\./)
 
   const variantPrompt = buildVariantPrompt({
     sourceContent: 'Cours complet sur les fractions et exercices associés.',

@@ -10,6 +10,8 @@ export interface GeneratePATInput {
   studentContext: StudentContext
   language?: ContentLanguage
   documentTemplate: ResolvedDocumentTemplate
+  previousPat?: PAT
+  modificationInstruction?: string
 }
 
 export type PATGenerationMode = 'mock' | 'real'
@@ -85,7 +87,15 @@ export async function generateRealPAT(
   input: GeneratePATInput,
   generator: StructuredPATGenerator
 ): Promise<PAT> {
-  const prompt = buildPATPrompt(input.studentContext, input.documentTemplate, input.language ?? 'fr')
+  const prompt = buildPATPrompt(
+    input.studentContext,
+    input.documentTemplate,
+    input.language ?? 'fr',
+    {
+      previousPat: input.previousPat,
+      modificationInstruction: input.modificationInstruction,
+    }
+  )
   const attachment =
     input.documentTemplate.kind === 'pdf'
       ? { base64: input.documentTemplate.base64, mediaType: 'application/pdf' }
@@ -98,6 +108,8 @@ export async function generatePAT({
   studentContext,
   language = 'fr',
   documentTemplate,
+  previousPat,
+  modificationInstruction,
 }: GeneratePATInput): Promise<PAT> {
   const mode = getPATGenerationMode()
   if (mode === 'mock') {
@@ -105,5 +117,8 @@ export async function generatePAT({
   }
 
   const { generateStructuredPATWithAnthropic } = await import('./patModel.ts')
-  return generateRealPAT({ studentContext, language, documentTemplate }, generateStructuredPATWithAnthropic)
+  return generateRealPAT(
+    { studentContext, language, documentTemplate, previousPat, modificationInstruction },
+    generateStructuredPATWithAnthropic
+  )
 }

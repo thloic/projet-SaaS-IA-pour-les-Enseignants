@@ -7,6 +7,8 @@ import {
 import { buildDocx } from '@/features/export/utils/buildDocx'
 import { buildPdf } from '@/features/export/utils/buildPdf'
 import { getCurrentUser } from '@/features/profile/server/profile'
+import { getAttendanceRegisterForUser } from '@/features/classroom/server/attendanceRegister'
+import { buildAttendanceRegisterDocument } from '@/features/classroom/reports/attendanceRegisterDocument'
 
 // @react-pdf/renderer et docx utilisent des API Node (Buffer, etc.), donc pas de runtime edge ici.
 export const runtime = 'nodejs'
@@ -50,6 +52,8 @@ export async function POST(req: Request) {
     period = '30d',
     includeNames = true,
     includeObservations = true,
+    from,
+    to,
   } = parsed.data
 
   const document =
@@ -57,11 +61,15 @@ export async function POST(req: Request) {
       ? await loadCourseExportDocument(sourceId, user.id)
       : source === 'adaptation_variant'
         ? await loadAdaptationVariantExportDocument(sourceId, variantType!, user.id)
-        : await loadClassroomExportDocument(sourceId, user.id, {
-            period,
-            includeNames,
-            includeObservations,
-          })
+        : source === 'classroom'
+          ? await loadClassroomExportDocument(sourceId, user.id, {
+              period,
+              includeNames,
+              includeObservations,
+            })
+          : await getAttendanceRegisterForUser(sourceId, { from: from!, to: to! }, user.id).then(
+              (register) => register ? buildAttendanceRegisterDocument(register, includeNames) : null
+            )
 
   if (!document) {
     return Response.json({ error: 'Ce contenu est introuvable ou pas encore prêt.' }, { status: 404 })

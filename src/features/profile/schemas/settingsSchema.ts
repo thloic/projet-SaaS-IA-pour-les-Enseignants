@@ -10,6 +10,7 @@ export const settingsProfileSchema = profileSchema.pick({
   subjects: true,
   language: true,
   interfaceLanguage: true,
+  timezone: true,
 }).extend({
   gradingSystem: z.enum(['20', '10', 'letter', 'percentage', 'letter_ca', 'levels']),
 })

@@ -11,12 +11,14 @@ import type {
   StudentContentVariantContext,
   StudentContext,
   StudentContextResult,
+  StudentEvaluationResultContext,
   StudentObservationContext,
   StudentParticipationContext,
 } from '../types/memory.types.ts'
 
 export const RECENT_STUDENT_ACTIVITY_LIMIT = 25
 export const RECENT_STUDENT_CONTENT_VARIANT_LIMIT = 10
+export const RECENT_EVALUATION_RESULT_LIMIT = 25
 
 type StudentContextErrorCode =
   | 'INVALID_INPUT'
@@ -47,6 +49,11 @@ export interface StudentContextRepository {
     studentId: string,
     limit: number
   ): Promise<StudentContentVariantContext[]>
+  listRecentEvaluationResults(
+    userId: string,
+    studentId: string,
+    limit: number
+  ): Promise<StudentEvaluationResultContext[]>
   studentBelongsToUser(userId: string, studentId: string): Promise<boolean>
   insertObservation(
     userId: string,
@@ -65,7 +72,9 @@ export class StudentContextError extends Error {
   }
 }
 
-function normalizeName(value: string): string {
+// Exportees : reutilisees par studentMentionDetection.ts pour reperer un nom
+// d'eleve dans un message libre, sans dupliquer cette normalisation.
+export function normalizeName(value: string): string {
   return value
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -74,7 +83,7 @@ function normalizeName(value: string): string {
     .trim()
 }
 
-function candidateNames(student: OwnedStudentRecord): string[] {
+export function candidateNames(student: OwnedStudentRecord): string[] {
   return [student.firstName, student.lastName, student.fullName].map(normalizeName)
 }
 
@@ -154,7 +163,7 @@ export async function getStudentContextCore(
   if (!resolution || 'kind' in resolution) return resolution
 
   try {
-    const [observations, participations, attendance, contentVariants] = await Promise.all([
+    const [observations, participations, attendance, contentVariants, evaluationResults] = await Promise.all([
       repository.listRecentObservations(
         trustedUserId,
         resolution.id,
@@ -175,6 +184,11 @@ export async function getStudentContextCore(
         resolution.id,
         RECENT_STUDENT_CONTENT_VARIANT_LIMIT
       ),
+      repository.listRecentEvaluationResults(
+        trustedUserId,
+        resolution.id,
+        RECENT_EVALUATION_RESULT_LIMIT
+      ),
     ])
 
     const recentActivity = keepMostRecentActivity(observations, participations, attendance)
@@ -187,6 +201,7 @@ export async function getStudentContextCore(
       participations: recentActivity.participations,
       attendance: recentActivity.attendance,
       contentVariants,
+      evaluationResults,
     }
     return context
   } catch {

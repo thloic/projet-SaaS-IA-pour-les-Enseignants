@@ -58,6 +58,15 @@ function fictitiousContext(
     participations: [],
     attendance: [],
     contentVariants: [],
+    evaluationResults: [
+      {
+        id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+        classId: CLASS_ID,
+        title: 'Contrôle fictif',
+        grade: '85%',
+        createdAt: '2026-02-10T10:00:00.000Z',
+      },
+    ],
   }
 }
 
@@ -212,6 +221,84 @@ test('sans modèle configuré sur la classe : blocage, aucun appel de générati
   assert.equal(result?.kind, 'template_missing')
   assert.equal(usageCalls, 0)
   assert.equal(generationCalls, 0)
+})
+
+test('sans résultat et sans observation : blocage avant génération et quota', async () => {
+  let usageCalls = 0
+  let generationCalls = 0
+  const empty = fictitiousContext(SAMPLE_TEMPLATE)
+  empty.evaluationResults = []
+
+  const result = await orchestrateBulletinRequest(
+    { message: 'Bulletin pour Naya', trustedUserId: USER_ID, interfaceLanguage: 'fr' },
+    baseDependencies({
+      getStudentContext: async () => empty,
+      checkUsage: async () => { usageCalls += 1; return { allowed: true } },
+      generateBulletinComment: async () => { generationCalls += 1; return { comment: 'x'.repeat(60) } },
+    })
+  )
+
+  assert.equal(result?.kind, 'student_data_missing')
+  assert.equal(usageCalls, 0)
+  assert.equal(generationCalls, 0)
+})
+
+test('un résultat de la classe sans observation autorise la génération et est transmis', async () => {
+  let receivedResults = 0
+  const result = await orchestrateBulletinRequest(
+    { message: 'Bulletin pour Naya', trustedUserId: USER_ID },
+    baseDependencies({
+      generateBulletinComment: async ({ evaluationResults, studentObservations }) => {
+        receivedResults = evaluationResults.length
+        assert.equal(studentObservations.length, 0)
+        return { comment: 'Naya mobilise ses acquis avec sérieux et poursuit ses progrès avec régularité.' }
+      },
+    })
+  )
+  assert.equal(result?.kind, 'bulletin')
+  assert.equal(receivedResults, 1)
+})
+
+test('une observation sans résultat autorise la génération et est transmise', async () => {
+  const context = fictitiousContext(SAMPLE_TEMPLATE)
+  context.evaluationResults = []
+  context.observations = [{
+    id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+    sessionId: null,
+    category: 'progress',
+    tag: 'Progression fictive',
+    note: 'Mobilise les stratégies travaillées.',
+    createdAt: '2026-02-11T10:00:00.000Z',
+  }]
+  let receivedObservations = 0
+  const result = await orchestrateBulletinRequest(
+    { message: 'Bulletin pour Naya', trustedUserId: USER_ID },
+    baseDependencies({
+      getStudentContext: async () => context,
+      generateBulletinComment: async ({ evaluationResults, studentObservations }) => {
+        assert.equal(evaluationResults.length, 0)
+        receivedObservations = studentObservations.length
+        return { comment: 'Naya mobilise ses stratégies avec sérieux et construit des acquis durables.' }
+      },
+    })
+  )
+  assert.equal(result?.kind, 'bulletin')
+  assert.equal(receivedObservations, 1)
+})
+
+test('un résultat appartenant à une autre classe ne permet pas la génération', async () => {
+  let usageCalls = 0
+  const context = fictitiousContext(SAMPLE_TEMPLATE)
+  context.evaluationResults[0]!.classId = 'ffffffff-ffff-4fff-8fff-ffffffffffff'
+  const result = await orchestrateBulletinRequest(
+    { message: 'Bulletin pour Naya', trustedUserId: USER_ID },
+    baseDependencies({
+      getStudentContext: async () => context,
+      checkUsage: async () => { usageCalls += 1; return { allowed: true } },
+    })
+  )
+  assert.equal(result?.kind, 'student_data_missing')
+  assert.equal(usageCalls, 0)
 })
 
 test('avec un modèle texte configuré : génération, enregistrement avec le bon class_id, une seule charge de quota', async () => {

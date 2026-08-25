@@ -1,6 +1,8 @@
 'use client'
 
-import { History } from 'lucide-react'
+import Link from 'next/link'
+import { FileText, History } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import DashboardPeriodFilter from '@/features/dashboard/components/DashboardPeriodFilter'
 import UnifiedHistory from '@/features/dashboard/history/UnifiedHistory'
 import { useAppLocale } from '@/features/i18n/AppLocaleProvider'
@@ -26,7 +28,12 @@ export default function HistoryPageContent({ data }: { data: CentralDashboardDat
             </p>
           </div>
         </div>
-        <DashboardPeriodFilter period={data.period} basePath="/history" />
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline">
+            <Link href="/history/documents"><FileText /> {locale === 'fr' ? 'Documents générés' : locale === 'es' ? 'Documentos generados' : 'Generated documents'}</Link>
+          </Button>
+          <DashboardPeriodFilter period={data.period} basePath="/history" />
+        </div>
       </header>
       <UnifiedHistory items={data.history} />
     </div>

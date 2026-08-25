@@ -61,3 +61,32 @@ export function buildTemplateMissingResponse(
         : `Aucun modèle de document n’est configuré pour les classes de ${studentFullName} (${classNames}). Configurez un modèle dans les paramètres de la classe avant de générer ${documentLabel.fr}.`
   return { kind: 'template_missing', message }
 }
+
+export function buildStudentDataMissingResponse(
+  studentFullName: string,
+  interfaceLanguage?: AppLocale
+): Extract<AgentStructuredResponse, { kind: 'student_data_missing' }> {
+  const message =
+    interfaceLanguage === 'es'
+      ? `Aún no hay resultados ni observaciones registrados para ${studentFullName}. Añade al menos un dato al expediente antes de generar el comentario de boletín.`
+      : interfaceLanguage === 'en'
+        ? `There are no saved results or observations for ${studentFullName} yet. Add at least one item to the student record before generating a report card comment.`
+        : `Aucun résultat ni aucune observation n’est encore enregistré pour ${studentFullName}. Ajoutez au moins un élément au dossier avant de générer le commentaire de bulletin.`
+  return { kind: 'student_data_missing', message }
+}
+
+export function buildDocumentNotFoundForModificationResponse(
+  studentFullName: string,
+  documentType: 'pat' | 'bulletin',
+  interfaceLanguage?: AppLocale
+): Extract<AgentStructuredResponse, { kind: 'document_not_found_for_modification' }> {
+  const label = documentType === 'pat'
+    ? { fr: 'PAT', en: 'support plan', es: 'PAT' }
+    : { fr: 'commentaire de bulletin', en: 'report card comment', es: 'comentario de boletín' }
+  const message = interfaceLanguage === 'es'
+    ? `No encuentro ningún ${label.es} anterior para ${studentFullName}. Genera primero uno antes de pedir una modificación.`
+    : interfaceLanguage === 'en'
+      ? `I cannot find a previous ${label.en} for ${studentFullName}. Generate one first before requesting a modification.`
+      : `Je ne trouve aucun ${label.fr} précédent pour ${studentFullName}. Générez-en d’abord un avant de demander une modification.`
+  return { kind: 'document_not_found_for_modification', message }
+}

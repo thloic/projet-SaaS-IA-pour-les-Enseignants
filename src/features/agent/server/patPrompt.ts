@@ -1,12 +1,14 @@
 import type { StudentContext } from '../types/memory.types.ts'
 import type { ResolvedDocumentTemplate } from '../types/documentTemplate.types.ts'
 import type { ContentLanguage } from '@/features/i18n/locale'
+import type { PAT } from '../schemas/patSchema.ts'
 import { languageLabel } from '../../i18n/locale.ts'
 
 export function buildPATPrompt(
   studentContext: StudentContext,
   documentTemplate: ResolvedDocumentTemplate,
-  language: ContentLanguage = 'fr'
+  language: ContentLanguage = 'fr',
+  modification?: { previousPat?: PAT; modificationInstruction?: string }
 ): string {
   const source = {
     eleve: {
@@ -41,6 +43,17 @@ export function buildPATPrompt(
     'Formule chaque besoin comme un axe de progrès bienveillant, par exemple « Développer… », « Consolider… » ou « Renforcer… ».',
     'Les adaptations offertes doivent reprendre uniquement adaptationsInstitutionnelles, sans ajout ni substitution.',
     'Ne mentionne aucune variante de contenu pédagogique.',
+    modification?.previousPat && modification.modificationInstruction
+      ? [
+          'Tu modifies un PAT déjà généré. Applique uniquement l’instruction demandée, conserve tous les autres éléments pertinents et respecte exactement le même schéma JSON.',
+          '',
+          'DOCUMENT PRÉCÉDENT :',
+          JSON.stringify(modification.previousPat),
+          '',
+          'INSTRUCTION DE MODIFICATION :',
+          modification.modificationInstruction,
+        ].join('\n')
+      : '',
     documentTemplate.kind === 'text'
       ? [
           'L’enseignant a fourni un modèle de document ci-dessous, propre à son établissement : inspire-toi de son style, de son vocabulaire et de sa structure pour rédiger le document, sans pour autant t’écarter du schéma JSON demandé ni y intégrer du texte du modèle qui ne concerne pas cet élève.',

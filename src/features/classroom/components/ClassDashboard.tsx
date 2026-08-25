@@ -119,6 +119,11 @@ export default function ClassDashboard({ data, activeTab }: ClassDashboardProps)
               <UsersRound /> Gérer les élèves
             </Link>
           </Button>
+          <Button asChild variant="outline" className="min-h-10">
+            <Link href={`/classroom/${data.classroom.id}/evaluations`}>
+              <ClipboardList /> Résultats
+            </Link>
+          </Button>
           <Button asChild className="min-h-10">
             <Link href={`/classroom/${data.classroom.id}/session`}>
               <Play /> {data.activeSessionId ? 'Reprendre la séance' : 'Démarrer la séance'}

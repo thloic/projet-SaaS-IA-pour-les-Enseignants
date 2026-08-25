@@ -32,6 +32,25 @@ export const observationSchema = z.object({
   note: z.string().trim().max(500, 'La note est trop longue').optional(),
 })
 
+export const evaluationResultEntrySchema = z.object({
+  studentId: z.string().uuid(),
+  grade: z.string().trim().min(1).max(50),
+})
+
+export const evaluationResultBatchSchema = z.object({
+  classId: z.string().uuid(),
+  title: z.string().trim().max(120).optional(),
+  results: z.array(evaluationResultEntrySchema).min(1),
+})
+
+export const evaluationResultUpdateSchema = z.object({
+  title: z.string().trim().max(120).optional(),
+  grade: z.string().trim().min(1).max(50),
+})
+
 export type ClassInput = z.infer<typeof classSchema>
 export type StudentInput = z.infer<typeof studentSchema>
 export type ObservationInput = z.infer<typeof observationSchema>
+export type EvaluationResultEntryInput = z.infer<typeof evaluationResultEntrySchema>
+export type EvaluationResultBatchInput = z.infer<typeof evaluationResultBatchSchema>
+export type EvaluationResultUpdateInput = z.infer<typeof evaluationResultUpdateSchema>

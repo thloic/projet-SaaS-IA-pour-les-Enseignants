@@ -38,6 +38,7 @@ const context: StudentContext = {
   participations: [],
   attendance: [],
   contentVariants: [],
+  evaluationResults: [],
 }
 
 const generatedPAT: PAT = {
@@ -78,6 +79,7 @@ test('demande espagnole → contexte isolé → PAT validé → aperçu structur
           prompt = receivedPrompt
           return generatedPAT
         }),
+      savePAT: async () => {},
       checkUsage: async () => ({ allowed: true }),
       refundUsage: async () => 0,
     }

@@ -21,11 +21,26 @@ export const bulletinGenerationInputSchema = bulletinInputSchema
     student_name: z.string().trim().min(1, 'Indiquez le prénom de l’élève.'),
   })
 
+// Forme finale, celle que l'enseignant copie dans le bulletin officiel — un
+// seul bloc de texte, inchangee pour ne pas casser l'historique/l'affichage
+// existants.
 export const generatedBulletinSchema = z.object({
   comment: z.string().trim().min(50, 'Le commentaire généré est trop court.'),
+})
+
+// Forme demandee a l'IA : structure imposee par le client (deux points forts
+// distincts + une prochaine etape, jamais un point faible formule
+// negativement). Assemblee en un seul texte par bulletinValidation.ts avant
+// de prendre la forme ci-dessus.
+export const bulletinDraftSchema = z.object({
+  strengths: z
+    .array(z.string().trim().min(1))
+    .length(2, 'Il faut exactement deux points forts.'),
+  nextStep: z.string().trim().min(1, 'La prochaine étape est requise.'),
 })
 
 export type BulletinTone = z.infer<typeof bulletinToneSchema>
 export type BulletinInput = z.infer<typeof bulletinInputSchema>
 export type BulletinGenerationInput = z.infer<typeof bulletinGenerationInputSchema>
 export type GeneratedBulletin = z.infer<typeof generatedBulletinSchema>
+export type BulletinDraft = z.infer<typeof bulletinDraftSchema>

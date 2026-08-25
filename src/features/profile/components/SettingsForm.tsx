@@ -16,10 +16,11 @@ import {
 import { defaultGrading, type GradingSystem, type ContentLanguage } from '@/features/profile/types/profile.types'
 import type { AppLocale } from '@/features/i18n/locale'
 import { APP_LOCALES } from '@/features/i18n/locale'
+import { suggestedTimeZone, TIME_ZONE_OPTIONS } from '@/lib/timezone'
 
 const BRAND = '#534AB7'
 
-const COUNTRIES = ['Canada', 'Sénégal', "Côte d'Ivoire", 'Cameroun', 'Mali', 'Bénin', 'Togo', 'Burkina Faso', 'Guinée', 'Madagascar', 'Congo', 'France', 'Autre']
+const COUNTRIES = ['Canada', 'Mexique', 'Sénégal', "Côte d'Ivoire", 'Cameroun', 'Mali', 'Bénin', 'Togo', 'Burkina Faso', 'Guinée', 'Madagascar', 'Congo', 'France', 'Autre']
 const CANADA_PROVINCES = ['Quebec', 'Ontario']
 const SUBJECTS_OPTIONS = ['Mathématiques', 'Français', 'Histoire-Géographie', 'SVT', 'Physique-Chimie', 'Anglais', 'Espagnol', 'Philosophie', 'Arts', 'EPS', 'Technologie', 'Autre']
 const GRADING_OPTIONS = [
@@ -39,6 +40,7 @@ interface SettingsFormProps {
   initialGradingSystem: GradingSystem
   initialLanguage: ContentLanguage
   initialInterfaceLanguage: AppLocale
+  initialTimezone: string
   generationsUsed: number
   generationsLimit: number
 }
@@ -60,6 +62,7 @@ export default function SettingsForm({
   initialGradingSystem,
   initialLanguage,
   initialInterfaceLanguage,
+  initialTimezone,
   generationsUsed,
   generationsLimit,
 }: SettingsFormProps) {
@@ -80,6 +83,14 @@ export default function SettingsForm({
   const [gradingSystem, setGradingSystem] = useState<GradingSystem>(initialGradingSystem)
   const [language, setLanguage] = useState<ContentLanguage>(initialLanguage)
   const [interfaceLanguage, setInterfaceLanguage] = useState<AppLocale>(initialInterfaceLanguage)
+  const [timezone, setTimezone] = useState(() => {
+    if (initialTimezone !== 'UTC') return initialTimezone
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || initialTimezone
+    } catch {
+      return initialTimezone
+    }
+  })
 
   function toggleSubject(subject: string) {
     if (subject === 'Autre') {
@@ -106,6 +117,8 @@ export default function SettingsForm({
   function handleCountryChange(nextCountryName: string) {
     setCountryName(nextCountryName)
     setGradingSystem(defaultGrading(getCountryValue(nextCountryName, province)))
+    const nextTimezone = suggestedTimeZone(getCountryValue(nextCountryName, province))
+    if (nextTimezone !== 'UTC') setTimezone(nextTimezone)
   }
 
   function handleProvinceChange(nextProvince: string) {
@@ -153,6 +166,7 @@ export default function SettingsForm({
         <input type="hidden" name="gradingSystem" value={gradingSystem} />
         <input type="hidden" name="language" value={language} />
         <input type="hidden" name="interfaceLanguage" value={interfaceLanguage} />
+        <input type="hidden" name="timezone" value={timezone} />
         {normalizedSubjects.map((subject) => (
           <input key={subject} type="hidden" name="subjects" value={subject} />
         ))}
@@ -343,6 +357,25 @@ export default function SettingsForm({
                   </button>
                 ))}
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="timezone">Fuseau horaire</Label>
+              <select
+                id="timezone"
+                value={timezone}
+                onChange={(event) => setTimezone(event.target.value)}
+                className="w-full rounded-xl border border-border bg-muted/40 px-3 py-2.5 text-sm outline-none"
+              >
+                {!TIME_ZONE_OPTIONS.includes(timezone as (typeof TIME_ZONE_OPTIONS)[number]) && (
+                  <option value={timezone}>{timezone}</option>
+                )}
+                {TIME_ZONE_OPTIONS.map((value) => (
+                  <option key={value} value={value}>{value}</option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                Utilisé pour dater correctement les séances et les registres de présence.
+              </p>
             </div>
           </div>
         </div>

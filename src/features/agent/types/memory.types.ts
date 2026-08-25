@@ -66,6 +66,14 @@ export interface StudentContentVariantContext {
   createdAt: string
 }
 
+export interface StudentEvaluationResultContext {
+  id: string
+  classId: string
+  title: string | null
+  grade: string
+  createdAt: string
+}
+
 export interface StudentContext {
   kind: 'context'
   student: Omit<OwnedStudentRecord, 'classes' | 'fullName'> & { fullName: string }
@@ -74,6 +82,7 @@ export interface StudentContext {
   participations: StudentParticipationContext[]
   attendance: StudentAttendanceContext[]
   contentVariants: StudentContentVariantContext[]
+  evaluationResults: StudentEvaluationResultContext[]
 }
 
 export interface StudentAmbiguity {

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { isValidTimeZone } from '../../../lib/timezone.ts'
 
 export const profileSchema = z.object({
   firstName: z.string().trim().min(1, 'Le prenom est requis'),
@@ -9,6 +10,7 @@ export const profileSchema = z.object({
   gradingSystem: z.enum(['20', '10', 'letter', 'percentage', 'letter_ca', 'levels']),
   language: z.enum(['fr', 'en', 'es']),
   interfaceLanguage: z.enum(['fr', 'en', 'es']),
+  timezone: z.string().trim().refine(isValidTimeZone, 'Le fuseau horaire est invalide'),
   styleNotes: z.string().trim().max(1000, 'Les notes de style sont trop longues').optional(),
 })
 

@@ -8,6 +8,7 @@ import type {
   ParticipationEvent,
   StudentObservation,
   StudentProfile,
+  EvaluationResult,
 } from '@/features/classroom/types/classroom.types'
 import type {
   GetStudentContextInput,
@@ -219,6 +220,29 @@ async function createRepository(): Promise<StudentContextRepository> {
       })
     },
 
+    async listRecentEvaluationResults(userId, studentId, limit) {
+      const { data, error } = await supabase
+        .from('evaluation_results')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('student_id', studentId)
+        .order('created_at', { ascending: false })
+        .limit(limit)
+
+      if (error) {
+        console.error('[agent:student-context] chargement des résultats refusé', error)
+        throw new Error('EVALUATION_RESULT_LIST_FAILED')
+      }
+
+      return ((data ?? []) as EvaluationResult[]).map((result) => ({
+        id: result.id,
+        classId: result.class_id,
+        title: result.title,
+        grade: result.grade,
+        createdAt: result.created_at,
+      }))
+    },
+
     async studentBelongsToUser(userId, studentId) {
       const { data, error } = await supabase
         .from('class_students')
@@ -272,6 +296,14 @@ export async function getStudentContext(
 ): Promise<StudentContextResult> {
   const userId = await getTrustedUserId()
   return getStudentContextCore(input, userId, await createRepository())
+}
+
+// Liste legere du roster (sans historique) : sert a detecter si un message
+// mentionne un eleve reel, sans passer par la resolution complete.
+export async function listOwnedStudents(): Promise<OwnedStudentRecord[]> {
+  const userId = await getTrustedUserId()
+  const repository = await createRepository()
+  return repository.listOwnedStudents(userId)
 }
 
 export async function saveStudentObservation(

@@ -57,6 +57,7 @@ export type DashboardHistoryType =
   | 'quiz'
   | 'adaptation'
   | 'bulletin'
+  | 'pat'
   | 'correction'
   | 'document'
   | 'session'

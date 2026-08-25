@@ -6,6 +6,7 @@ import {
   agentMessageSchema,
 } from '../../src/features/agent/schemas/agentSchema.ts'
 import { buildAgentSystemPrompt } from '../../src/lib/prompts/agent.ts'
+import type { StudentContext } from '../../src/features/agent/types/memory.types.ts'
 
 test('agentMessageSchema accepts a valid message and rejects empty content or bad role', () => {
   assert.equal(
@@ -54,4 +55,45 @@ test('buildAgentSystemPrompt omits empty profile fields instead of leaving blank
 
   assert.match(prompt, /anglais/i)
   assert.doesNotMatch(prompt, /Matière\(s\) : $/m)
+})
+
+test('buildAgentSystemPrompt omits the student section when no student is mentioned', () => {
+  const prompt = buildAgentSystemPrompt({ language: 'fr' })
+
+  assert.doesNotMatch(prompt, /DOSSIER DE L’ÉLÈVE MENTIONNÉ/)
+})
+
+test('buildAgentSystemPrompt injects the mentioned student’s real record when provided', () => {
+  const context: StudentContext = {
+    kind: 'context',
+    student: {
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      firstName: 'Loïc',
+      lastName: 'Martin',
+      fullName: 'Loïc Martin',
+      sex: 'M',
+      familyLanguage: 'fr',
+      needs: [],
+      institutionalAdaptations: [],
+      interventionPlan: false,
+      generalNotes: '',
+    },
+    classes: [{ id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', name: 'Classe 8A', level: '8e année', subject: 'Français', documentTemplate: null, documentTemplatePath: null }],
+    observations: [
+      { id: 'o1', sessionId: null, category: 'progress', tag: 'Progrès visible', note: 'Répond bien en classe.', createdAt: '2026-02-10T10:00:00.000Z' },
+    ],
+    participations: [],
+    attendance: [],
+    contentVariants: [],
+    evaluationResults: [
+      { id: 'e1', classId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', title: 'Contrôle', grade: '16/20', createdAt: '2026-02-12T10:00:00.000Z' },
+    ],
+  }
+
+  const prompt = buildAgentSystemPrompt({ language: 'fr' }, context)
+
+  assert.match(prompt, /DOSSIER DE L’ÉLÈVE MENTIONNÉ : Loïc Martin/)
+  assert.match(prompt, /16\/20/)
+  assert.match(prompt, /Répond bien en classe/)
+  assert.match(prompt, /base ta réponse uniquement sur les informations ci-dessus/i)
 })

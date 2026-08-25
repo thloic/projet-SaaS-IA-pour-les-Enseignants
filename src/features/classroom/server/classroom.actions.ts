@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/features/profile/server/profile'
+import { normalizeTimeZone } from '@/lib/timezone'
+import { buildSessionStartMetadata } from '@/features/classroom/utils/sessionLifecycle'
 import { classSchema, observationSchema } from '@/features/classroom/schemas/classroomSchema'
 import {
   deleteClassTemplatePdf,
@@ -13,6 +15,7 @@ import type {
   AttendanceRecord,
   AttendanceStatus,
   ClassRoom,
+  ClassSession,
   ObservationCategory,
   ParticipationEvent,
   StudentObservation,
@@ -129,6 +132,87 @@ export interface ClassroomMutationResult<T = null> {
   error: string | null
 }
 
+export interface CloseClassSessionResult extends ClassroomMutationResult {
+  incompleteCount: number
+}
+
+export async function startClassSessionAction(
+  classId: string,
+  title?: string
+): Promise<ClassroomMutationResult<ClassSession>> {
+  const normalizedTitle = title?.trim() ?? ''
+  if (normalizedTitle.length > 120) {
+    return { data: null, error: 'Le titre de la séance est trop long.' }
+  }
+
+  const user = await getCurrentUser()
+  if (!user) return { data: null, error: 'Votre session a expiré.' }
+
+  const supabase = await createClient()
+  const [classResult, profileResult, activeResult] = await Promise.all([
+    supabase.from('classes').select('id').eq('id', classId).eq('user_id', user.id).maybeSingle(),
+    supabase.from('teacher_profiles').select('timezone').eq('user_id', user.id).maybeSingle(),
+    supabase
+      .from('class_sessions')
+      .select('*')
+      .eq('class_id', classId)
+      .eq('user_id', user.id)
+      .is('ended_at', null)
+      .limit(1)
+      .maybeSingle(),
+  ])
+
+  if (classResult.error || !classResult.data) {
+    return { data: null, error: 'Cette classe est introuvable.' }
+  }
+  if (profileResult.error || activeResult.error) {
+    console.error('[classroom] préparation de séance refusée', profileResult.error ?? activeResult.error)
+    return { data: null, error: 'Impossible de préparer cette séance.' }
+  }
+  if (activeResult.data) {
+    return {
+      data: activeResult.data as ClassSession,
+      error: null,
+    }
+  }
+
+  const now = new Date()
+  const timezone = normalizeTimeZone(profileResult.data?.timezone)
+  const metadata = buildSessionStartMetadata({ now, timeZone: timezone, title: normalizedTitle })
+  const { data, error } = await supabase
+    .from('class_sessions')
+    .insert({
+      user_id: user.id,
+      class_id: classId,
+      title: metadata.title,
+      session_date: metadata.sessionDate,
+    })
+    .select('*')
+    .single()
+
+  if (error || !data) {
+    if ((error as { code?: string } | null)?.code === '23505') {
+      const { data: concurrentSession } = await supabase
+        .from('class_sessions')
+        .select('*')
+        .eq('class_id', classId)
+        .eq('user_id', user.id)
+        .is('ended_at', null)
+        .maybeSingle()
+      if (concurrentSession) return { data: concurrentSession as ClassSession, error: null }
+    }
+    console.error('[classroom] création de séance refusée', error)
+    return { data: null, error: 'Impossible de démarrer cette séance.' }
+  }
+
+  revalidatePath('/classroom')
+  revalidatePath(`/classroom/${classId}`)
+  return {
+    data: data as ClassSession,
+    error: null,
+  }
+}
+
 export async function createClassAction(input: {
   name: string
   level: string
@@ -229,6 +313,7 @@ async function verifySessionStudent(
     .select('class_id')
     .eq('id', sessionId)
     .eq('user_id', userId)
+    .is('ended_at', null)
     .maybeSingle()
 
   if (sessionError || !session) return false
@@ -281,6 +366,65 @@ export async function markAttendanceAction(
   }
 
   return { data: data as AttendanceRecord, error: null }
+}
+
+export async function markAllStudentsPresentAction(
+  sessionId: string
+): Promise<ClassroomMutationResult<AttendanceRecord[]>> {
+  const user = await getCurrentUser()
+  if (!user) return { data: null, error: 'Votre session a expiré.' }
+
+  const supabase = await createClient()
+  const { data: session, error: sessionError } = await supabase
+    .from('class_sessions')
+    .select('class_id')
+    .eq('id', sessionId)
+    .eq('user_id', user.id)
+    .is('ended_at', null)
+    .maybeSingle()
+  if (sessionError || !session) {
+    return { data: null, error: 'Cette séance est introuvable ou déjà terminée.' }
+  }
+
+  const { data: links, error: linksError } = await supabase
+    .from('class_students')
+    .select('student_id')
+    .eq('class_id', session.class_id)
+    .eq('user_id', user.id)
+  if (linksError) {
+    return { data: null, error: 'Impossible de charger les élèves de cette classe.' }
+  }
+
+  const { data: existing, error: existingError } = await supabase
+    .from('attendance_records')
+    .select('*')
+    .eq('session_id', sessionId)
+    .eq('user_id', user.id)
+  if (existingError) {
+    return { data: null, error: 'Impossible de charger l’appel existant.' }
+  }
+
+  const existingStudentIds = new Set((existing ?? []).map((record) => record.student_id))
+  const missingLinks = (links ?? []).filter((link) => !existingStudentIds.has(link.student_id))
+  if (missingLinks.length === 0) return { data: (existing ?? []) as AttendanceRecord[], error: null }
+  const { data, error } = await supabase
+    .from('attendance_records')
+    .upsert(
+      missingLinks.map((link) => ({
+        user_id: user.id,
+        session_id: sessionId,
+        student_id: link.student_id,
+        status: 'present' as const,
+      })),
+      { onConflict: 'session_id,student_id' }
+    )
+    .select('*')
+
+  if (error || !data) {
+    console.error('[classroom] appel groupé refusé', error)
+    return { data: null, error: 'Impossible d’enregistrer l’appel groupé.' }
+  }
+  return { data: [...((existing ?? []) as AttendanceRecord[]), ...(data as AttendanceRecord[])], error: null }
 }
 
 export async function addParticipationAction(
@@ -371,27 +515,58 @@ export async function addObservationAction(input: {
 
 export async function closeClassSessionAction(
   sessionId: string,
-  classId: string
-): Promise<ClassroomMutationResult> {
+  classId: string,
+  force = false
+): Promise<CloseClassSessionResult> {
   const user = await getCurrentUser()
-  if (!user) return { data: null, error: 'Votre session a expiré.' }
+  if (!user) return { data: null, error: 'Votre session a expiré.', incompleteCount: 0 }
 
   const supabase = await createClient()
-  const { error } = await supabase
+  const [studentsResult, attendanceResult] = await Promise.all([
+    supabase
+      .from('class_students')
+      .select('student_id')
+      .eq('class_id', classId)
+      .eq('user_id', user.id),
+    supabase
+      .from('attendance_records')
+      .select('student_id')
+      .eq('session_id', sessionId)
+      .eq('user_id', user.id),
+  ])
+  if (studentsResult.error || attendanceResult.error) {
+    return { data: null, error: 'Impossible de vérifier l’appel.', incompleteCount: 0 }
+  }
+  const marked = new Set((attendanceResult.data ?? []).map((item) => item.student_id))
+  const incompleteCount = (studentsResult.data ?? []).filter(
+    (item) => !marked.has(item.student_id)
+  ).length
+  if (!force && incompleteCount > 0) {
+    return {
+      data: null,
+      error: `L’appel est incomplet pour ${incompleteCount} élève${incompleteCount > 1 ? 's' : ''}.`,
+      incompleteCount,
+    }
+  }
+
+  const { data: closedSession, error } = await supabase
     .from('class_sessions')
     .update({ ended_at: new Date().toISOString() })
     .eq('id', sessionId)
     .eq('class_id', classId)
     .eq('user_id', user.id)
+    .is('ended_at', null)
+    .select('id')
+    .maybeSingle()
 
-  if (error) {
+  if (error || !closedSession) {
     console.error('[classroom] clôture de séance refusée', error)
-    return { data: null, error: 'Impossible de terminer cette séance.' }
+    return { data: null, error: 'Impossible de terminer cette séance.', incompleteCount }
   }
 
   revalidatePath('/classroom')
   revalidatePath(`/classroom/${classId}`)
-  return { data: null, error: null }
+  return { data: null, error: null, incompleteCount }
 }
 
 export async function uploadClassDocumentTemplatePdfAction(

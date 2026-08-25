@@ -5,6 +5,7 @@ import {
   getStudentContextCore,
   RECENT_STUDENT_ACTIVITY_LIMIT,
   RECENT_STUDENT_CONTENT_VARIANT_LIMIT,
+  RECENT_EVALUATION_RESULT_LIMIT,
   saveStudentObservationCore,
   StudentContextError,
   type StudentContextRepository,
@@ -123,6 +124,16 @@ function createFakeRepository(): FakeRepository {
         createdAt: new Date(2026, 0, 30 - index).toISOString(),
       })).slice(0, limit)
     },
+    async listRecentEvaluationResults(userId, studentId, limit) {
+      if (!(studentsByUser.get(userId) ?? []).some(({ id }) => id === studentId)) return []
+      return Array.from({ length: 30 }, (_, index) => ({
+        id: `evaluation-${index}`,
+        classId: (studentsByUser.get(userId) ?? []).find(({ id }) => id === studentId)?.classes[0]?.id ?? '',
+        title: `Évaluation fictive ${index}`,
+        grade: `${15 + (index % 4)}/20`,
+        createdAt: new Date(2026, 0, 30 - index).toISOString(),
+      })).slice(0, limit)
+    },
     async studentBelongsToUser(userId, studentId) {
       return (studentsByUser.get(userId) ?? []).some(({ id }) => id === studentId)
     },
@@ -167,6 +178,8 @@ test('getStudentContext agrège le dossier existant avec un historique borné', 
     RECENT_STUDENT_ACTIVITY_LIMIT
   )
   assert.equal(result.contentVariants.length, RECENT_STUDENT_CONTENT_VARIANT_LIMIT)
+  assert.equal(result.evaluationResults.length, RECENT_EVALUATION_RESULT_LIMIT)
+  assert.equal(result.evaluationResults[0]?.title, 'Évaluation fictive 0')
   assert.equal(result.contentVariants[0]?.title, 'Support de cours différencié 0')
   assert.equal(
     result.student.institutionalAdaptations.includes('Support de cours différencié 0'),
@@ -221,6 +234,7 @@ test('getStudentContext isole strictement les élèves de chaque enseignant', as
   assert.deepEqual(ownStudent.student.institutionalAdaptations, [
     'Accès à un référentiel',
   ])
+  assert.equal(ownStudent.evaluationResults.length, RECENT_EVALUATION_RESULT_LIMIT)
 })
 
 test('saveStudentObservation enrichit uniquement un dossier élève existant', async () => {

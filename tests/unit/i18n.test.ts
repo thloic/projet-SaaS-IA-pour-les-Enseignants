@@ -50,6 +50,7 @@ test('le profil sépare la langue de l’interface de celle des contenus', () =>
     subjects: ['Matemáticas'],
     levels: ['Secundaria'],
     gradingSystem: '10',
+    timezone: 'Europe/Madrid',
     styleNotes: '',
   }
 

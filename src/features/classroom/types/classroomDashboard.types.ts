@@ -120,3 +120,14 @@ export interface ActiveClassSessionData {
   participation: ParticipationEvent[]
   observations: StudentObservation[]
 }
+
+export interface ClassSessionWorkspaceData {
+  classroom: ClassRoom
+  session: ClassSession | null
+  students: StudentProfile[]
+  attendance: AttendanceRecord[]
+  participation: ParticipationEvent[]
+  observations: StudentObservation[]
+  timeZone: string
+  isStale: boolean
+}

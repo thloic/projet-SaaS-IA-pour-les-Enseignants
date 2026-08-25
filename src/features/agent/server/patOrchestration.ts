@@ -34,6 +34,12 @@ export interface PATOrchestrationDependencies {
     language?: ContentLanguage
     documentTemplate: ResolvedDocumentTemplate
   }): Promise<PAT>
+  savePAT(record: {
+    studentId: string
+    classId: string
+    language: ContentLanguage
+    pat: PAT
+  }): Promise<void>
   checkUsage(userId: string): Promise<{ allowed: boolean }>
   refundUsage(userId: string): Promise<unknown>
 }
@@ -80,6 +86,12 @@ export async function orchestratePATRequest(
       studentContext: context,
       language,
       documentTemplate,
+    })
+    await dependencies.savePAT({
+      studentId: context.student.id,
+      classId: selectedTemplate.classId,
+      language,
+      pat,
     })
     return { kind: 'pat', studentId: context.student.id, language, pat }
   } catch {

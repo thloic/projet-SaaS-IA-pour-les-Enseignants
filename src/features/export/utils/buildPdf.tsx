@@ -73,8 +73,16 @@ function renderBlock(block: ExportBlock, styles: Styles, key: number) {
       return (
         <View key={key} style={styles.table} wrap>
           <View style={[styles.tableRow, styles.tableHeader]} fixed>
-            {block.headers.map((header) => (
-              <Text key={header} style={styles.tableCell}>
+            {block.headers.map((header, cellIndex) => (
+              <Text
+                key={header}
+                style={[
+                  styles.tableCell,
+                  block.columnWidths?.[cellIndex]
+                    ? { flexBasis: 0, flexGrow: block.columnWidths[cellIndex] }
+                    : {},
+                ]}
+              >
                 {header}
               </Text>
             ))}
@@ -82,7 +90,15 @@ function renderBlock(block: ExportBlock, styles: Styles, key: number) {
           {block.rows.map((row, rowIndex) => (
             <View key={rowIndex} style={styles.tableRow} wrap={false}>
               {block.headers.map((_, cellIndex) => (
-                <Text key={cellIndex} style={styles.tableCell}>
+                <Text
+                  key={cellIndex}
+                  style={[
+                    styles.tableCell,
+                    block.columnWidths?.[cellIndex]
+                      ? { flexBasis: 0, flexGrow: block.columnWidths[cellIndex] }
+                      : {},
+                  ]}
+                >
                   {row[cellIndex] ?? ''}
                 </Text>
               ))}
@@ -100,7 +116,7 @@ export async function buildPdf(document: ExportDocument): Promise<Buffer> {
 
   return renderToBuffer(
     <Document>
-      <Page size="A4" style={styles.page}>
+      <Page size="A4" orientation={document.orientation ?? 'portrait'} style={styles.page}>
         <Text style={styles.title}>{document.title}</Text>
         {document.meta.length > 0 && <Text style={styles.meta}>{document.meta.join('  ·  ')}</Text>}
         {document.blocks.map((block, index) => renderBlock(block, styles, index))}

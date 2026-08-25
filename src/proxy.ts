@@ -29,7 +29,7 @@ function redirectWithSession(request: NextRequest, pathname: string, sourceRespo
   return response
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const { supabaseResponse, user, supabase } = await updateSession(request)
 
@@ -71,7 +71,7 @@ export async function middleware(request: NextRequest) {
   const isProfileComplete = Boolean(profile?.first_name?.trim() && profile?.last_name?.trim())
 
   if (error) {
-    console.error('[middleware] échec de la vérification du profil enseignant :', error.message)
+    console.error('[proxy] échec de la vérification du profil enseignant :', error.message)
   }
 
   if (!isProfileComplete) {

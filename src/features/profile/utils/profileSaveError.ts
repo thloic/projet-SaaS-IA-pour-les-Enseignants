@@ -53,6 +53,15 @@ export function isMissingInterfaceLanguageColumnError(error: unknown) {
   )
 }
 
+export function isMissingTimezoneColumnError(error: unknown) {
+  const normalized = normalizeProfileSaveError(error)
+  const text = [normalized.message, normalized.details, normalized.hint].filter(Boolean).join(' ')
+  return (
+    (normalized.code === '42703' || normalized.code === 'PGRST204') &&
+    text.includes('timezone')
+  )
+}
+
 export function isUnsupportedGradingSystemError(error: unknown) {
   const normalized = normalizeProfileSaveError(error)
   const text = [normalized.message, normalized.details, normalized.hint].filter(Boolean).join(' ')
@@ -105,6 +114,12 @@ export function withoutInterfaceLanguageColumn<T extends { interface_language?: 
   return legacyPayload
 }
 
+export function withoutTimezoneColumn<T extends { timezone?: unknown }>(payload: T) {
+  const legacyPayload = { ...payload }
+  delete legacyPayload.timezone
+  return legacyPayload
+}
+
 export function withLegacyGradingSystem<T extends { grading_system?: unknown }>(payload: T) {
   const legacyPayload = { ...payload }
 
@@ -121,7 +136,9 @@ export function withLegacyGradingSystem<T extends { grading_system?: unknown }>(
 }
 
 export function withLegacyProfileCompatibility<
-  T extends { subjects?: unknown; grading_system?: unknown; interface_language?: unknown },
+  T extends { subjects?: unknown; grading_system?: unknown; interface_language?: unknown; timezone?: unknown },
 >(payload: T) {
-  return withoutInterfaceLanguageColumn(withoutSubjectsColumn(withLegacyGradingSystem(payload)))
+  return withoutTimezoneColumn(
+    withoutInterfaceLanguageColumn(withoutSubjectsColumn(withLegacyGradingSystem(payload)))
+  )
 }

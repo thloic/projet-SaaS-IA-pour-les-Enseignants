@@ -14,6 +14,8 @@ export interface TeacherProfile {
   grading_system: GradingSystem
   language: ContentLanguage
   interface_language: AppLocale
+  onboarding_tour_seen: boolean
+  timezone: string
   style_notes: string | null
   created_at: string
   updated_at: string

@@ -86,3 +86,13 @@ export interface StudentObservation {
   note: string | null
   created_at: string
 }
+
+export interface EvaluationResult {
+  id: string
+  user_id: string
+  class_id: string
+  student_id: string
+  title: string | null
+  grade: string
+  created_at: string
+}

@@ -3,16 +3,12 @@
 import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { AlertCircle, Check, Copy, MessageSquare, RefreshCw, Sparkles, Trash2 } from 'lucide-react'
+import { AlertCircle, Check, Copy, History, MessageSquare, RefreshCw, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/shared/ToastProvider'
-import {
-  deleteBulletinAction,
-  generateBulletinAction,
-  type BulletinCommentListItem,
-} from '@/features/bulletin/server/bulletin.actions'
+import { generateBulletinAction } from '@/features/bulletin/server/bulletin.actions'
 import type { ClassWithStudents } from '@/features/classroom/server/classroom.actions'
 
 const BRAND = '#534AB7'
@@ -28,12 +24,10 @@ const TONES: { value: Tone; label: string; desc: string }[] = [
 const SUBJECTS = ['Mathématiques', 'Français', 'Histoire-Géo', 'SVT', 'Physique-Chimie', 'Anglais', 'Espagnol', 'Philosophie', 'EPS', 'Arts plastiques']
 
 interface BulletinGeneratorProps {
-  initialBulletins: BulletinCommentListItem[]
-  loadError: string | null
   classes: ClassWithStudents[]
 }
 
-export default function BulletinGenerator({ initialBulletins, loadError, classes }: BulletinGeneratorProps) {
+export default function BulletinGenerator({ classes }: BulletinGeneratorProps) {
   const router = useRouter()
   const { showToast } = useToast()
   const [classId, setClassId] = useState('')
@@ -44,11 +38,8 @@ export default function BulletinGenerator({ initialBulletins, loadError, classes
   const [tone, setTone] = useState<Tone>('bienveillant')
   const [result, setResult] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
-  const [copiedHistoryId, setCopiedHistoryId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [isGeneratePending, startGenerateTransition] = useTransition()
-  const [isDeletePending, startDeleteTransition] = useTransition()
 
   // Classes et eleves sont precharges par la page (une seule requete au
   // chargement) : selectionner une classe est un lookup local, sans aller-retour reseau.
@@ -94,33 +85,12 @@ export default function BulletinGenerator({ initialBulletins, loadError, classes
     })
   }
 
-  function handleHistoryCopy(item: BulletinCommentListItem) {
-    navigator.clipboard.writeText(item.comment).then(() => {
-      setCopiedHistoryId(item.id)
-      setTimeout(() => setCopiedHistoryId(null), 2000)
-    })
-  }
-
   function handleReset() {
     setResult(null)
     setClassId('')
     setStudentId('')
     setGrade('')
     setObservations('')
-  }
-
-  function handleDelete(item: BulletinCommentListItem) {
-    setDeletingId(item.id)
-    startDeleteTransition(async () => {
-      const deleteState = await deleteBulletinAction(item.id)
-      setDeletingId(null)
-      if (deleteState.error) {
-        showToast(deleteState.error, 'error')
-        return
-      }
-      showToast('Commentaire supprimé.', 'success')
-      router.refresh()
-    })
   }
 
   const isSubmitDisabled =
@@ -141,12 +111,9 @@ export default function BulletinGenerator({ initialBulletins, loadError, classes
         </div>
       </div>
 
-      {loadError && (
-        <div className="flex gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-200">
-          <AlertCircle size={14} className="mt-0.5 shrink-0" />
-          <span>{loadError}</span>
-        </div>
-      )}
+      <Button asChild variant="outline" className="w-fit">
+        <Link href="/history/documents"><History /> Voir l’historique des documents</Link>
+      </Button>
 
       <form onSubmit={handleGenerate} className="space-y-5" noValidate>
         {classes.length === 0 ? (
@@ -333,61 +300,6 @@ export default function BulletinGenerator({ initialBulletins, loadError, classes
         </div>
       )}
 
-      <section className="space-y-3">
-        <div className="flex items-center gap-2">
-          <MessageSquare size={17} className="text-muted-foreground" />
-          <h2 className="text-lg font-bold">Historique des commentaires</h2>
-        </div>
-
-        {initialBulletins.length === 0 ? (
-          <div className="rounded-2xl border border-border bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
-            Aucun commentaire généré pour le moment.
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {initialBulletins.map((item) => (
-              <article key={item.id} className="space-y-3 rounded-2xl border border-border bg-muted/20 p-4">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
-                    <h3 className="font-semibold">{item.student_name}</h3>
-                    <p className="text-xs text-muted-foreground">
-                      {item.subject} · {item.grade} · {new Date(item.created_at).toLocaleDateString('fr-FR')}
-                    </p>
-                  </div>
-                  <span className="w-fit rounded-full border border-border px-2 py-1 text-[11px] text-muted-foreground">
-                    {item.tone}
-                  </span>
-                </div>
-                <p className="text-sm leading-relaxed">{item.comment}</p>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="gap-2 sm:flex-1"
-                    onClick={() => handleHistoryCopy(item)}
-                  >
-                    {copiedHistoryId === item.id ? (
-                      <><Check size={15} className="text-emerald-400" /> Copié !</>
-                    ) : (
-                      <><Copy size={15} /> Copier</>
-                    )}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    className="gap-2 sm:w-auto"
-                    disabled={isDeletePending && deletingId === item.id}
-                    onClick={() => handleDelete(item)}
-                  >
-                    <Trash2 size={15} />
-                    {isDeletePending && deletingId === item.id ? 'Suppression…' : 'Supprimer'}
-                  </Button>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import type { AgentStructuredResponse } from '../schemas/agentSchema.ts'
 import type { StudentContextResult } from '../types/memory.types.ts'
+import type { StudentEvaluationResultContext, StudentObservationContext } from '../types/memory.types.ts'
 import {
   bulletinExtractionSchema,
   resolveBulletinExtraction,
@@ -10,6 +11,7 @@ import type { AppLocale } from '@/features/i18n/locale'
 import {
   buildClarificationResponse,
   buildStudentNotFoundResponse,
+  buildStudentDataMissingResponse,
   buildTemplateMissingResponse,
 } from './agentResponses.ts'
 import { resolveDocumentTemplateContent, selectDocumentTemplate } from './documentTemplateResolution.ts'
@@ -54,6 +56,8 @@ export interface BulletinOrchestrationDependencies {
     subject: string
     grade: string
     observations?: string
+    evaluationResults: StudentEvaluationResultContext[]
+    studentObservations: StudentObservationContext[]
     tone: BulletinTone
     documentTemplate: ResolvedDocumentTemplate
   }): Promise<{ comment: string }>
@@ -101,6 +105,13 @@ export async function orchestrateBulletinRequest(
     )
   }
 
+  const evaluationResults = context.evaluationResults.filter(
+    ({ classId }) => classId === selectedTemplate.classId
+  )
+  if (evaluationResults.length === 0 && context.observations.length === 0) {
+    return buildStudentDataMissingResponse(context.student.fullName, input.interfaceLanguage)
+  }
+
   const usage = await dependencies.checkUsage(input.trustedUserId)
   if (!usage.allowed) throw new BulletinOrchestrationError('BULLETIN_QUOTA_EXCEEDED')
 
@@ -114,6 +125,8 @@ export async function orchestrateBulletinRequest(
       subject: resolved.subject,
       grade: resolved.grade,
       observations: resolved.observations,
+      evaluationResults,
+      studentObservations: context.observations,
       tone: resolved.tone,
       documentTemplate,
     })

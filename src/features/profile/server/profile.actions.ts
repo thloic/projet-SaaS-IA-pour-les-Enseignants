@@ -11,12 +11,14 @@ import {
   isInvalidAuthUserReferenceError,
   isMissingInterfaceLanguageColumnError,
   isMissingSubjectsColumnError,
+  isMissingTimezoneColumnError,
   isUnsupportedGradingSystemError,
   normalizeProfileSaveError,
   withLegacyGradingSystem,
   withLegacyProfileCompatibility,
   withoutInterfaceLanguageColumn,
   withoutSubjectsColumn,
+  withoutTimezoneColumn,
 } from '@/features/profile/utils/profileSaveError'
 
 export interface UpdateProfileState {
@@ -52,7 +54,37 @@ export async function updateInterfaceLanguageAction(
     return { error: 'INTERFACE_LANGUAGE_SAVE_FAILED' }
   }
 
-  revalidatePath('/dashboard', 'layout')
+  // Le layout du tableau de bord est partage par toutes les pages
+  // (/classroom, /agent, /bulletin, /history...), pas seulement /dashboard —
+  // revalider seulement '/dashboard' laissait les autres pages avec un cache
+  // perime (langue, tutoriel, profil affiches comme avant la modification).
+  revalidatePath('/', 'layout')
+  return { error: null }
+}
+
+export async function markOnboardingTourSeenAction(): Promise<{ error: string | null }> {
+  const user = await getCurrentUser()
+  if (!user) return { error: 'AUTH_REQUIRED' }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('teacher_profiles')
+    .update({ onboarding_tour_seen: true })
+    .eq('user_id', user.id)
+    .select('user_id')
+    .maybeSingle()
+
+  if (error) {
+    console.error('[onboarding-tour] impossible de mémoriser la fermeture', normalizeProfileSaveError(error))
+    return { error: 'ONBOARDING_TOUR_SAVE_FAILED' }
+  }
+  if (!data) return { error: 'PROFILE_NOT_FOUND' }
+
+  // Le layout du tableau de bord est partage par toutes les pages
+  // (/classroom, /agent, /bulletin, /history...), pas seulement /dashboard —
+  // revalider seulement '/dashboard' laissait les autres pages avec un cache
+  // perime (langue, tutoriel, profil affiches comme avant la modification).
+  revalidatePath('/', 'layout')
   return { error: null }
 }
 
@@ -65,6 +97,7 @@ export async function saveOnboardingProfileAction(data: {
   gradingSystem: string
   language: string
   interfaceLanguage: string
+  timezone: string
   styleNotes: string
 }): Promise<OnboardingProfileState> {
   try {
@@ -100,6 +133,7 @@ export async function saveOnboardingProfileAction(data: {
       grading_system: parsed.data.gradingSystem,
       language: parsed.data.language,
       interface_language: parsed.data.interfaceLanguage,
+      timezone: parsed.data.timezone,
       style_notes: parsed.data.styleNotes || null,
     }
     console.log('[onboarding:server] upsert teacher profile attempt', {
@@ -111,6 +145,7 @@ export async function saveOnboardingProfileAction(data: {
       gradingSystem: profilePayload.grading_system,
       language: profilePayload.language,
       interfaceLanguage: profilePayload.interface_language,
+      timezone: profilePayload.timezone,
     })
 
     const { error: profileError } = await supabase
@@ -141,9 +176,10 @@ export async function saveOnboardingProfileAction(data: {
 
       const missingSubjectsColumn = isMissingSubjectsColumnError(profileError)
       const missingInterfaceLanguageColumn = isMissingInterfaceLanguageColumnError(profileError)
+      const missingTimezoneColumn = isMissingTimezoneColumnError(profileError)
       const unsupportedGradingSystem = isUnsupportedGradingSystemError(profileError)
 
-      if (!missingSubjectsColumn && !missingInterfaceLanguageColumn && !unsupportedGradingSystem) {
+      if (!missingSubjectsColumn && !missingInterfaceLanguageColumn && !missingTimezoneColumn && !unsupportedGradingSystem) {
         throw profileError
       }
 
@@ -153,9 +189,12 @@ export async function saveOnboardingProfileAction(data: {
       const withoutSubjects = missingSubjectsColumn
         ? withoutSubjectsColumn(compatiblePayload)
         : compatiblePayload
-      const retryPayload = missingInterfaceLanguageColumn
-        ? withoutInterfaceLanguageColumn(withoutSubjects)
+      const withoutTimezone = missingTimezoneColumn
+        ? withoutTimezoneColumn(withoutSubjects)
         : withoutSubjects
+      const retryPayload = missingInterfaceLanguageColumn
+        ? withoutInterfaceLanguageColumn(withoutTimezone)
+        : withoutTimezone
 
       const { error: legacyError } = await supabase
         .from('teacher_profiles')
@@ -166,6 +205,7 @@ export async function saveOnboardingProfileAction(data: {
         const canUseFullCompatibility =
           isMissingSubjectsColumnError(legacyError) ||
           isMissingInterfaceLanguageColumnError(legacyError) ||
+          isMissingTimezoneColumnError(legacyError) ||
           isUnsupportedGradingSystemError(legacyError)
 
         if (!canUseFullCompatibility) {
@@ -185,7 +225,11 @@ export async function saveOnboardingProfileAction(data: {
       console.warn('[onboarding] profil enregistré en mode compatible, migration Supabase requise', profileError)
     }
 
-    revalidatePath('/dashboard', 'layout')
+    // Le layout du tableau de bord est partage par toutes les pages
+  // (/classroom, /agent, /bulletin, /history...), pas seulement /dashboard —
+  // revalider seulement '/dashboard' laissait les autres pages avec un cache
+  // perime (langue, tutoriel, profil affiches comme avant la modification).
+  revalidatePath('/', 'layout')
     return { error: null }
   } catch (error) {
     console.error('[onboarding] échec de la sauvegarde du profil', normalizeProfileSaveError(error))
@@ -211,6 +255,7 @@ export async function updateProfileAction(
       gradingSystem: formData.get('gradingSystem'),
       language: formData.get('language'),
       interfaceLanguage: formData.get('interfaceLanguage'),
+      timezone: formData.get('timezone'),
     })
 
     if (!parsedProfile.success) {
@@ -227,6 +272,7 @@ export async function updateProfileAction(
       grading_system: parsedProfile.data.gradingSystem,
       language: parsedProfile.data.language,
       interface_language: parsedProfile.data.interfaceLanguage,
+      timezone: parsedProfile.data.timezone,
     }
 
     const { error: profileError } = await supabase
@@ -237,9 +283,10 @@ export async function updateProfileAction(
     if (profileError) {
       const missingSubjectsColumn = isMissingSubjectsColumnError(profileError)
       const missingInterfaceLanguageColumn = isMissingInterfaceLanguageColumnError(profileError)
+      const missingTimezoneColumn = isMissingTimezoneColumnError(profileError)
       const unsupportedGradingSystem = isUnsupportedGradingSystemError(profileError)
 
-      if (!missingSubjectsColumn && !missingInterfaceLanguageColumn && !unsupportedGradingSystem) {
+      if (!missingSubjectsColumn && !missingInterfaceLanguageColumn && !missingTimezoneColumn && !unsupportedGradingSystem) {
         throw profileError
       }
 
@@ -249,9 +296,12 @@ export async function updateProfileAction(
       const withoutSubjects = missingSubjectsColumn
         ? withoutSubjectsColumn(compatiblePayload)
         : compatiblePayload
-      const retryPayload = missingInterfaceLanguageColumn
-        ? withoutInterfaceLanguageColumn(withoutSubjects)
+      const withoutTimezone = missingTimezoneColumn
+        ? withoutTimezoneColumn(withoutSubjects)
         : withoutSubjects
+      const retryPayload = missingInterfaceLanguageColumn
+        ? withoutInterfaceLanguageColumn(withoutTimezone)
+        : withoutTimezone
 
       const { error: legacyProfileError } = await supabase
         .from('teacher_profiles')
@@ -262,6 +312,7 @@ export async function updateProfileAction(
         const canUseFullCompatibility =
           isMissingSubjectsColumnError(legacyProfileError) ||
           isMissingInterfaceLanguageColumnError(legacyProfileError) ||
+          isMissingTimezoneColumnError(legacyProfileError) ||
           isUnsupportedGradingSystemError(legacyProfileError)
 
         if (!canUseFullCompatibility) {
@@ -299,7 +350,11 @@ export async function updateProfileAction(
       info = `Un email de confirmation a été envoyé à ${parsedEmail.data.email}. Le changement prendra effet une fois confirmé.`
     }
 
-    revalidatePath('/dashboard', 'layout')
+    // Le layout du tableau de bord est partage par toutes les pages
+  // (/classroom, /agent, /bulletin, /history...), pas seulement /dashboard —
+  // revalider seulement '/dashboard' laissait les autres pages avec un cache
+  // perime (langue, tutoriel, profil affiches comme avant la modification).
+  revalidatePath('/', 'layout')
     return { error: null, info }
   } catch (error) {
     console.error('[settings] échec de la mise à jour du profil', normalizeProfileSaveError(error))

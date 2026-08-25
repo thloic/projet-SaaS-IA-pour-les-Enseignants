@@ -1,14 +1,5 @@
 import { PATSchema, type PAT } from '../schemas/patSchema.ts'
-
-const NEGATIVE_DIRECT_PATTERNS = [
-  /en\s+difficult[eé]/iu,
-  /incapable/iu,
-  /faible/iu,
-  /[eé]choue/iu,
-  /ne\s+[^.!?]{0,60}\s+pas/iu,
-  /\b(?:unable|incapable|weak|fails?|cannot|can['’]?t|struggles?\s+with)\b/iu,
-  /\b(?:incapaz|d[eé]bil|fracasa|no\s+puede|tiene\s+dificultades)\b/iu,
-]
+import { containsNegativeLanguage } from '../../../lib/validation/negativeLanguage.ts'
 
 export class PATValidationError extends Error {
   readonly code: 'INVALID_PAT' | 'NEGATIVE_NEED'
@@ -28,7 +19,7 @@ export function parseAndValidatePAT(value: unknown): PAT {
     ...parsed.data.habiletes.besoins,
     ...(parsed.data.francisation?.besoins ?? []),
   ]
-  if (needs.some((need) => NEGATIVE_DIRECT_PATTERNS.some((pattern) => pattern.test(need)))) {
+  if (containsNegativeLanguage(needs)) {
     throw new PATValidationError('NEGATIVE_NEED')
   }
 

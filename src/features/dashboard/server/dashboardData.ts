@@ -40,6 +40,16 @@ interface ObservationRow extends ActivityRow, DatedRow {
   category: string
 }
 
+interface StudentNameRelation {
+  first_name: string
+  last_name: string
+}
+
+interface PatGenerationRow extends DatedRow {
+  id: string
+  student_profiles: StudentNameRelation | StudentNameRelation[] | null
+}
+
 function firstQueryValue(value: QueryValue) {
   return Array.isArray(value) ? value[0] : value
 }
@@ -232,6 +242,7 @@ export async function loadCentralDashboard(
     adaptationsResult,
     correctionsResult,
     documentsResult,
+    patGenerationsResult,
     usageResult,
   ] = await Promise.all([
     supabase
@@ -285,6 +296,12 @@ export async function loadCentralDashboard(
       .gte('created_at', fromTimestamp)
       .lte('created_at', toTimestamp),
     supabase
+      .from('pat_generations')
+      .select('id, created_at, student_profiles(first_name, last_name)')
+      .eq('user_id', user.id)
+      .gte('created_at', fromTimestamp)
+      .lte('created_at', toTimestamp),
+    supabase
       .from('usage_counters')
       .select('count')
       .eq('user_id', user.id)
@@ -301,6 +318,7 @@ export async function loadCentralDashboard(
   const adaptations = safeRows('adaptations', adaptationsResult)
   const corrections = safeRows('corrections', correctionsResult)
   const documents = safeRows('documents', documentsResult)
+  const patGenerations = safeRows('PAT', patGenerationsResult) as unknown as PatGenerationRow[]
 
   const sessionIds = allSessions.map((session) => session.id)
   const correctionIds = corrections.map((batch) => batch.id)
@@ -361,6 +379,7 @@ export async function loadCentralDashboard(
   const currentAdaptations = currentRows(adaptations)
   const currentCorrections = currentRows(corrections)
   const currentDocuments = currentRows(documents)
+  const currentPatGenerations = currentRows(patGenerations)
   const classNames = new Map(classes.map((item) => [item.id, item.name]))
   const classEngagement = classes.map((classroom) => {
     const classSessionIds = new Set(
@@ -531,6 +550,21 @@ export async function loadCentralDashboard(
       createdAt: item.created_at,
       href: '/documents',
     })),
+    ...currentPatGenerations.map((item) => {
+      const student = Array.isArray(item.student_profiles)
+        ? item.student_profiles[0]
+        : item.student_profiles
+      const studentName = student ? `${student.first_name} ${student.last_name}`.trim() : 'Élève'
+      return {
+        id: `pat:${item.id}`,
+        type: 'pat' as const,
+        title: `PAT — ${studentName}`,
+        subtitle: 'Plan d’appui temporaire',
+        status: 'complete' as const,
+        createdAt: item.created_at,
+        href: `/api/agent/pat/export/${item.id}`,
+      }
+    }),
     ...currentSessions.map((item) => ({
       id: `session:${item.id}`,
       type: 'session' as const,

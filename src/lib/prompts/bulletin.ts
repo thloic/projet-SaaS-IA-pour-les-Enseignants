@@ -1,6 +1,7 @@
 import type { BulletinGenerationInput } from '@/features/bulletin/schemas/bulletinSchema'
 import type { GradingSystem, ContentLanguage } from '@/features/profile/types/profile.types'
 import type { ResolvedDocumentTemplate } from '@/features/agent/types/documentTemplate.types'
+import type { StudentEvaluationResultContext, StudentObservationContext } from '@/features/agent/types/memory.types'
 import { languageLabel } from '../../features/i18n/locale.ts'
 
 interface BuildBulletinPromptInput {
@@ -13,6 +14,10 @@ interface BuildBulletinPromptInput {
   }
   validationError?: string
   documentTemplate?: ResolvedDocumentTemplate
+  evaluationResults?: StudentEvaluationResultContext[]
+  studentObservations?: StudentObservationContext[]
+  previousComment?: string
+  modificationInstruction?: string
 }
 
 const toneInstructions: Record<BulletinGenerationInput['tone'], string> = {
@@ -29,6 +34,10 @@ export function buildBulletinPrompt({
   teacherProfile,
   validationError,
   documentTemplate,
+  evaluationResults = [],
+  studentObservations = [],
+  previousComment,
+  modificationInstruction,
 }: BuildBulletinPromptInput): { systemPrompt: string; userPrompt: string } {
   const teacherSubjects = teacherProfile.subjects?.length
     ? teacherProfile.subjects.join(', ')
@@ -36,12 +45,19 @@ export function buildBulletinPrompt({
       ? teacherProfile.subject
       : 'matière non précisée'
 
+  const resultLines = evaluationResults.map((result) =>
+    `- ${result.createdAt.slice(0, 10)} · ${result.title || 'Évaluation'} : ${result.grade}`
+  )
+  const observationLines = studentObservations.map((observation) =>
+    `- ${observation.createdAt.slice(0, 10)} · ${observation.tag}${observation.note ? ` : ${observation.note}` : ''}`
+  )
+
   const systemPrompt = [
-    'Tu es un enseignant expérimenté qui rédige des commentaires de bulletin destinés à une famille.',
-    'Tu écris un commentaire professionnel, utile et directement exploitable par un professeur.',
-    'Règle absolue : aucune formulation négative directe. Les difficultés doivent toujours être reformulées en axes de progrès.',
+    'Tu es un enseignant expérimenté qui rédige des commentaires de bulletin scolaire officiel destinés à une famille.',
+    'Un commentaire de bulletin suit toujours la même structure, utilisée par les écoles : deux points forts distincts observés chez l’élève, puis une prochaine étape (jamais un point faible formulé négativement — une seule direction de progrès, jamais deux).',
+    'Règle absolue : aucune formulation négative directe, nulle part. Les difficultés se reformulent toujours en axe de progrès pour la prochaine étape.',
     'Exemple obligatoire à suivre : PAS "élève en difficulté à l’écrit" MAIS "l’expression écrite constitue son prochain axe de progression".',
-    'La sortie doit être uniquement un objet JSON strict au format { "comment": "..." }, sans markdown, sans backticks, sans texte autour.',
+    'La sortie doit être uniquement un objet JSON strict au format { "strengths": ["...", "..."], "nextStep": "..." }, sans markdown, sans backticks, sans texte autour. "strengths" contient exactement deux phrases complètes et distinctes. "nextStep" contient une seule phrase complète.',
   ].join('\n')
 
   const userPrompt = [
@@ -54,12 +70,30 @@ export function buildBulletinPrompt({
     `- Matière : ${input.subject}`,
     `- Note ou appréciation : ${input.grade}`,
     `- Observations du professeur : ${input.observations?.trim() || 'Aucune observation complémentaire.'}`,
+    previousComment && modificationInstruction
+      ? [
+          '',
+          'COMMENTAIRE PRÉCÉDENT :',
+          previousComment,
+          '',
+          'INSTRUCTION DE MODIFICATION :',
+          modificationInstruction,
+          'Applique uniquement cette modification, conserve le reste du commentaire et renvoie toujours la structure JSON obligatoire.',
+        ].join('\n')
+      : '',
     '',
-    'Contraintes de rédaction :',
-    '- 3 à 6 lignes.',
-    '- Un seul paragraphe.',
-    '- Mentionner les éléments observables fournis sans inventer de faits précis.',
-    '- Formuler les axes d’amélioration de manière constructive.',
+    'Résultats enregistrés dans le carnet pour cette classe :',
+    ...(resultLines.length > 0 ? resultLines : ['- Aucun résultat enregistré.']),
+    '',
+    'Observations récentes enregistrées dans le dossier élève :',
+    ...(observationLines.length > 0 ? observationLines : ['- Aucune observation enregistrée.']),
+    '',
+    'Structure obligatoire du commentaire, en 3 phrases complètes et distinctes :',
+    '1. Un premier point fort observé chez l’élève dans cette matière.',
+    '2. Un second point fort, différent du premier.',
+    '3. Une prochaine étape : ce que l’élève devrait travailler ensuite pour progresser, jamais formulée comme un point faible.',
+    '- Appuie les deux points forts et la prochaine étape sur les résultats et observations enregistrés ci-dessus.',
+    '- Mentionne uniquement les éléments observables fournis ci-dessus, sans inventer de faits précis.',
     `- ${toneInstructions[input.tone]}`,
     '',
     documentTemplate?.kind === 'text'
@@ -75,7 +109,7 @@ export function buildBulletinPrompt({
         : '',
     '',
     'Sortie attendue :',
-    '{ "comment": "..." }',
+    '{ "strengths": ["...", "..."], "nextStep": "..." }',
     validationError
       ? [
           '',

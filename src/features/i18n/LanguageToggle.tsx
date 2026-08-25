@@ -1,6 +1,7 @@
 'use client'
 
 import { useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAppLocale } from '@/features/i18n/AppLocaleProvider'
 import { APP_LOCALES } from '@/features/i18n/locale'
 import { updateInterfaceLanguageAction } from '@/features/profile/server/profile.actions'
@@ -12,6 +13,7 @@ interface LanguageToggleProps {
 
 export default function LanguageToggle({ compact = false, className = '' }: LanguageToggleProps) {
   const { locale, setLocale, t } = useAppLocale()
+  const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
   function changeLocale(nextLocale: typeof locale) {
@@ -19,7 +21,14 @@ export default function LanguageToggle({ compact = false, className = '' }: Lang
     setLocale(nextLocale)
     startTransition(async () => {
       const result = await updateInterfaceLanguageAction(nextLocale)
-      if (result.error) setLocale(previousLocale)
+      if (result.error) {
+        setLocale(previousLocale)
+        return
+      }
+      // Rafraichit immediatement les composants serveur de la page courante
+      // (ex. le tutoriel, qui lit la langue depuis le profil) plutot que
+      // d'attendre la prochaine navigation.
+      router.refresh()
     })
   }
 

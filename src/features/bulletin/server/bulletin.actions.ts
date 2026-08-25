@@ -132,6 +132,7 @@ export async function generateBulletinAction(
     }
 
     revalidatePath('/bulletin')
+    revalidatePath('/history/documents')
     revalidatePath('/dashboard', 'layout')
     return { error: null, comment: generated.comment }
   } catch (error) {
@@ -233,5 +234,6 @@ export async function saveAgentBulletinComment(record: {
   }
 
   revalidatePath('/bulletin')
+  revalidatePath('/history/documents')
   revalidatePath('/dashboard', 'layout')
 }

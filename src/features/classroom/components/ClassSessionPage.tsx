@@ -9,6 +9,7 @@ import {
   Clock,
   MessageSquarePlus,
   Minus,
+  Play,
   Plus,
   Sparkles,
   UserCheck,
@@ -21,7 +22,9 @@ import {
   addObservationAction,
   addParticipationAction,
   closeClassSessionAction,
+  markAllStudentsPresentAction,
   markAttendanceAction,
+  startClassSessionAction,
 } from '@/features/classroom/server/classroom.actions'
 import type {
   AttendanceRecord,
@@ -31,7 +34,7 @@ import type {
   StudentObservation,
   StudentProfile,
 } from '@/features/classroom/types/classroom.types'
-import type { ActiveClassSessionData } from '@/features/classroom/types/classroomDashboard.types'
+import type { ClassSessionWorkspaceData } from '@/features/classroom/types/classroomDashboard.types'
 
 const BRAND = '#534AB7'
 
@@ -59,7 +62,7 @@ const observationTags: Array<{ category: ObservationCategory; tag: string }> = [
 
 interface ClassSessionPageProps {
   classId: string
-  initialData: ActiveClassSessionData
+  initialData: ClassSessionWorkspaceData
 }
 
 export default function ClassSessionPage({ classId, initialData }: ClassSessionPageProps) {
@@ -77,6 +80,9 @@ export default function ClassSessionPage({ classId, initialData }: ClassSessionP
   const [isSavingObservation, setIsSavingObservation] = useState(false)
   const [savingAttendance, setSavingAttendance] = useState<string[]>([])
   const [isClosing, setIsClosing] = useState(false)
+  const [isStarting, setIsStarting] = useState(false)
+  const [isMarkingAll, setIsMarkingAll] = useState(false)
+  const [sessionTitle, setSessionTitle] = useState('')
   const [error, setError] = useState<string | null>(null)
   const optimisticEventId = useRef(0)
 
@@ -113,6 +119,7 @@ export default function ClassSessionPage({ classId, initialData }: ClassSessionP
   }, [attendance])
 
   async function markAttendance(studentId: string, status: AttendanceStatus) {
+    if (!session) return
     setError(null)
     const previous = attendance.find((record) => record.student_id === studentId) ?? null
     const optimistic: AttendanceRecord = previous
@@ -152,6 +159,7 @@ export default function ClassSessionPage({ classId, initialData }: ClassSessionP
   }
 
   async function addParticipation(studentId: string, value: -1 | 1 | 2, label: string) {
+    if (!session) return
     setError(null)
     optimisticEventId.current += 1
     const temporaryId = `pending-participation-${optimisticEventId.current}`
@@ -204,8 +212,28 @@ export default function ClassSessionPage({ classId, initialData }: ClassSessionP
   }
 
   async function closeSession() {
+    if (!session) return
     setIsClosing(true)
     const result = await closeClassSessionAction(session.id, classId)
+    if (result.incompleteCount > 0) {
+      const confirmed = window.confirm(
+        `${result.error}\n\nTerminer quand même la séance ? Les élèves concernés resteront « non renseignés » dans le registre.`
+      )
+      if (!confirmed) {
+        setIsClosing(false)
+        return
+      }
+      const forcedResult = await closeClassSessionAction(session.id, classId, true)
+      setIsClosing(false)
+      if (forcedResult.error) {
+        setError(forcedResult.error)
+        showToast(forcedResult.error, 'error')
+        return
+      }
+      router.push(`/classroom/${classId}`)
+      router.refresh()
+      return
+    }
     setIsClosing(false)
     if (result.error) {
       setError(result.error)
@@ -213,6 +241,91 @@ export default function ClassSessionPage({ classId, initialData }: ClassSessionP
       return
     }
     router.push(`/classroom/${classId}`)
+  }
+
+  async function startSession() {
+    setIsStarting(true)
+    setError(null)
+    const result = await startClassSessionAction(classId, sessionTitle)
+    setIsStarting(false)
+    if (result.error) {
+      setError(result.error)
+      showToast(result.error, 'error')
+      return
+    }
+    router.refresh()
+  }
+
+  async function markAllPresent() {
+    if (!session) return
+    setIsMarkingAll(true)
+    const result = await markAllStudentsPresentAction(session.id)
+    setIsMarkingAll(false)
+    if (result.error || !result.data) {
+      setError(result.error ?? 'Impossible d’enregistrer l’appel groupé.')
+      showToast(result.error ?? 'Impossible d’enregistrer l’appel groupé.', 'error')
+      return
+    }
+    setAttendance(result.data)
+    showToast('Tous les élèves ont été marqués présents.', 'success')
+  }
+
+  if (!session) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-5 pb-24 lg:pb-8">
+        <button
+          onClick={() => router.push(`/classroom/${classId}`)}
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft size={14} /> Retour à la classe
+        </button>
+        <section className="rounded-2xl border border-border bg-card/50 p-5 sm:p-7">
+          <h1 className="text-2xl font-black">Démarrer une séance</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {classroom.name} · {students.length} élèves. La séance ne sera créée qu’après confirmation.
+          </p>
+          <label className="mt-6 block text-sm font-semibold" htmlFor="session-title">
+            Titre du cours (optionnel)
+          </label>
+          <input
+            id="session-title"
+            value={sessionTitle}
+            onChange={(event) => setSessionTitle(event.target.value)}
+            maxLength={120}
+            placeholder={`Ex. ${classroom.subject} — Fractions`}
+            className="mt-2 min-h-11 w-full rounded-xl border border-border bg-muted/30 px-3 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+          />
+          {error && <p className="mt-3 text-sm text-rose-700 dark:text-rose-300">{error}</p>}
+          <Button className="mt-5 min-h-11 w-full" onClick={startSession} disabled={isStarting}>
+            <Play size={16} /> {isStarting ? 'Démarrage...' : 'Démarrer maintenant'}
+          </Button>
+        </section>
+      </div>
+    )
+  }
+
+  if (initialData.isStale) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-5 pb-24 lg:pb-8">
+        <button
+          onClick={() => router.push(`/classroom/${classId}`)}
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft size={14} /> Retour à la classe
+        </button>
+        <section className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 sm:p-7">
+          <h1 className="text-2xl font-black">Ancienne séance encore ouverte</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            « {session.title} » date du {new Date(`${session.session_date}T12:00:00Z`).toLocaleDateString('fr-FR', { timeZone: 'UTC' })}.
+            Clôturez-la avant de démarrer le cours d’aujourd’hui afin de ne pas mélanger les journées.
+          </p>
+          {error && <p className="mt-3 text-sm text-rose-700 dark:text-rose-300">{error}</p>}
+          <Button className="mt-5 min-h-11 w-full" onClick={closeSession} disabled={isClosing}>
+            {isClosing ? 'Clôture...' : 'Clôturer cette ancienne séance'}
+          </Button>
+        </section>
+      </div>
+    )
   }
 
   return (
@@ -237,6 +350,17 @@ export default function ClassSessionPage({ classId, initialData }: ClassSessionP
           <SummaryBadge label="Notes" value={observations.length} color="text-sky-700 dark:text-sky-300" />
         </div>
       </section>
+
+      {students.length > 0 && attendance.length < students.length && (
+        <section className="flex flex-col gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-amber-800 dark:text-amber-200">
+            Appel incomplet : {students.length - attendance.length} élève{students.length - attendance.length > 1 ? 's' : ''} non renseigné{students.length - attendance.length > 1 ? 's' : ''}.
+          </p>
+          <Button variant="outline" onClick={markAllPresent} disabled={isMarkingAll}>
+            <UserCheck size={16} /> {isMarkingAll ? 'Enregistrement...' : 'Tous présents'}
+          </Button>
+        </section>
+      )}
 
       {error && (
         <div className="flex gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-700 dark:text-rose-300">

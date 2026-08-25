@@ -29,6 +29,8 @@ import {
   institutionalAdaptationsToText,
   normalizeInstitutionalAdaptations,
 } from '@/features/classroom/utils/institutionalAdaptations'
+import { useAppLocale } from '@/features/i18n/AppLocaleProvider'
+import { getFallbackLanguageOptions, listWorldLanguages } from '@/features/i18n/worldLanguages'
 
 const BRAND = '#534AB7'
 
@@ -500,9 +502,9 @@ export default function ClassDetail({
     if (!selectedStudent) return
 
     const accepted = await confirm({
-      title: 'Supprimer cet eleve ?',
-      message: `Le profil de ${selectedStudent.first_name} ${selectedStudent.last_name} sera supprime de cette classe et des donnees associees.`,
-      confirmLabel: 'Supprimer',
+      title: 'Retirer cet eleve de la classe ?',
+      message: `${selectedStudent.first_name} ${selectedStudent.last_name} ne figurera plus dans la classe active. Son historique de présence restera conservé dans les registres.`,
+      confirmLabel: 'Retirer',
     })
     if (!accepted) return
 
@@ -511,20 +513,24 @@ export default function ClassDetail({
       setError(null)
 
       const supabase = createClient()
+      const { data: authData, error: authError } = await supabase.auth.getUser()
+      if (authError || !authData.user) throw authError ?? new Error('AUTH_REQUIRED')
       const { error: deleteError } = await supabase
-        .from('student_profiles')
+        .from('class_students')
         .delete()
-        .eq('id', selectedStudent.id)
+        .eq('class_id', classId)
+        .eq('student_id', selectedStudent.id)
+        .eq('user_id', authData.user.id)
 
       if (deleteError) throw deleteError
 
       setStudents((current) => current.filter((student) => student.id !== selectedStudent.id))
       setSelectedStudent(null)
       setIsEditingStudent(false)
-      showToast('Eleve supprime.', 'success')
+      showToast('Eleve retire de la classe. Son historique est conserve.', 'success')
     } catch (err) {
-      console.error('[classroom] échec de la suppression de l’élève', err)
-      const message = 'Impossible de supprimer cet élève pour le moment. Réessayez.'
+      console.error('[classroom] échec du retrait de l’élève', err)
+      const message = 'Impossible de retirer cet élève pour le moment. Réessayez.'
       setError(message)
       showToast(message, 'error')
     } finally {
@@ -551,14 +557,19 @@ export default function ClassDetail({
             {classroom?.level} · {classroom?.subject}
           </p>
         </div>
-        <Button
-          onClick={() => router.push(`/classroom/${classId}/session`)}
-          className="h-11 text-white"
-          style={{ backgroundColor: BRAND }}
-          disabled={students.length === 0}
-        >
-          <Play size={16} /> Demarrer une session
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => router.push(`/classroom/${classId}/evaluations`)}>
+            <FileSpreadsheet size={16} /> Résultats
+          </Button>
+          <Button
+            onClick={() => router.push(`/classroom/${classId}/session`)}
+            className="h-11 text-white"
+            style={{ backgroundColor: BRAND }}
+            disabled={students.length === 0}
+          >
+            <Play size={16} /> Demarrer une session
+          </Button>
+        </div>
       </section>
 
       {error && (
@@ -819,6 +830,27 @@ interface StudentFieldsProps {
 }
 
 function StudentFields({ form, onChange, prefix }: StudentFieldsProps) {
+  const { locale } = useAppLocale()
+  // Intl.DisplayNames peut differer entre le serveur et le navigateur pour
+  // des codes rares : on ne calcule les vrais libelles traduits qu'apres le
+  // montage cote client, pour ne jamais faire diverger le rendu serveur du
+  // premier rendu client (sinon erreur d'hydratation React).
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true)
+  }, [])
+
+  // Garde la valeur existante visible meme si elle ne figure pas dans la
+  // liste (code non standard importe via CSV) — ne jamais l'ecraser en silence.
+  const languageOptions = useMemo(() => {
+    const options = mounted ? listWorldLanguages(locale) : getFallbackLanguageOptions()
+    if (form.familyLanguage && !options.some((option) => option.code === form.familyLanguage)) {
+      return [{ code: form.familyLanguage, label: form.familyLanguage }, ...options]
+    }
+    return options
+  }, [mounted, locale, form.familyLanguage])
+
   return (
     <>
       <div className="grid grid-cols-2 gap-3">
@@ -865,13 +897,18 @@ function StudentFields({ form, onChange, prefix }: StudentFieldsProps) {
       </div>
       <div className="space-y-2">
         <Label htmlFor={`${prefix}-language`}>Langue familiale</Label>
-        <Input
+        <select
           id={`${prefix}-language`}
           value={form.familyLanguage}
           onChange={(event) => onChange('familyLanguage', event.target.value)}
-          placeholder="fr"
-          className="bg-muted/40"
-        />
+          className="h-10 w-full rounded-lg border border-input bg-muted/40 px-3 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+        >
+          {languageOptions.map((option) => (
+            <option key={option.code} value={option.code}>
+              {option.label}
+            </option>
+          ))}
+        </select>
       </div>
       <div className="space-y-2">
         <Label htmlFor={`${prefix}-needs`}>Besoins pedagogiques</Label>

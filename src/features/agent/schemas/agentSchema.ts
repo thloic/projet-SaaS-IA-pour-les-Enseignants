@@ -40,6 +40,18 @@ export const agentStructuredResponseSchema = z.discriminatedUnion('kind', [
     .strict(),
   z
     .object({
+      kind: z.literal('student_data_missing'),
+      message: z.string().min(1),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('document_not_found_for_modification'),
+      message: z.string().min(1),
+    })
+    .strict(),
+  z
+    .object({
       kind: z.literal('pat'),
       studentId: z.string().uuid(),
       language: z.enum(['fr', 'en', 'es']),

@@ -2,6 +2,8 @@ import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/features/profile/server/profile'
+import { normalizeTimeZone } from '@/lib/timezone'
+import { isSessionStale } from '@/features/classroom/utils/sessionLifecycle'
 import type {
   AttendanceRecord,
   AttendanceStatus,
@@ -12,7 +14,7 @@ import type {
   StudentProfile,
 } from '@/features/classroom/types/classroom.types'
 import type {
-  ActiveClassSessionData,
+  ClassSessionWorkspaceData,
   AttendanceTrendPoint,
   ClassDashboardData,
   ClassOverviewItem,
@@ -381,15 +383,14 @@ export async function getClassDashboardForUser(
   }
 }
 
-export async function getOrCreateClassSession(
+export async function getClassSessionWorkspace(
   classId: string
-): Promise<ActiveClassSessionData | null> {
+): Promise<ClassSessionWorkspaceData | null> {
   const user = await getCurrentUser()
   if (!user) return null
 
   const supabase = await createClient()
-  const today = new Date().toISOString().slice(0, 10)
-  const [classResult, linksResult, sessionResult] = await Promise.all([
+  const [classResult, linksResult, sessionResult, profileResult] = await Promise.all([
     supabase
       .from('classes')
       .select('*')
@@ -408,44 +409,38 @@ export async function getOrCreateClassSession(
       .select('*')
       .eq('class_id', classId)
       .eq('user_id', user.id)
-      .eq('session_date', today)
       .is('ended_at', null)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
+    supabase
+      .from('teacher_profiles')
+      .select('timezone')
+      .eq('user_id', user.id)
+      .maybeSingle(),
   ])
 
-  const initialError = classResult.error ?? linksResult.error ?? sessionResult.error
+  const initialError = classResult.error ?? linksResult.error ?? sessionResult.error ?? profileResult.error
   if (initialError) {
     console.error('[classroom:session] préparation refusée', initialError)
     throw new Error('Impossible de préparer cette séance.')
   }
   if (!classResult.data) return null
 
-  let session = sessionResult.data as ClassSession | null
-  if (!session) {
-    const { data, error } = await supabase
-      .from('class_sessions')
-      .insert({
-        user_id: user.id,
-        class_id: classId,
-        title: `Séance du ${today}`,
-        session_date: today,
-      })
-      .select('*')
-      .single()
-    if (error || !data) {
-      console.error('[classroom:session] création refusée', error)
-      throw new Error('Impossible de démarrer cette séance.')
-    }
-    session = data as ClassSession
-  }
+  const session = sessionResult.data as ClassSession | null
+  const timeZone = normalizeTimeZone(profileResult.data?.timezone)
 
-  const [attendanceResult, participationResult, observationsResult] = await Promise.all([
-    supabase.from('attendance_records').select('*').eq('session_id', session.id),
-    supabase.from('participation_events').select('*').eq('session_id', session.id),
-    supabase.from('student_observations').select('*').eq('session_id', session.id),
-  ])
+  const [attendanceResult, participationResult, observationsResult] = session
+    ? await Promise.all([
+        supabase.from('attendance_records').select('*').eq('session_id', session.id).eq('user_id', user.id),
+        supabase.from('participation_events').select('*').eq('session_id', session.id).eq('user_id', user.id),
+        supabase.from('student_observations').select('*').eq('session_id', session.id).eq('user_id', user.id),
+      ])
+    : [
+        { data: [], error: null },
+        { data: [], error: null },
+        { data: [], error: null },
+      ]
   const relatedError =
     attendanceResult.error ?? participationResult.error ?? observationsResult.error
   if (relatedError) {
@@ -462,6 +457,8 @@ export async function getOrCreateClassSession(
     attendance: (attendanceResult.data ?? []) as AttendanceRecord[],
     participation: (participationResult.data ?? []) as ParticipationEvent[],
     observations: (observationsResult.data ?? []) as StudentObservation[],
+    timeZone,
+    isStale: Boolean(session && isSessionStale(session.session_date, new Date(), timeZone)),
   }
 }
 

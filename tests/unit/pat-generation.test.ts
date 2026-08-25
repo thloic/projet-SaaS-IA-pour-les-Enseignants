@@ -69,6 +69,7 @@ function fictitiousContext(): StudentContext {
         createdAt: '2026-01-10T12:00:00.000Z',
       },
     ],
+    evaluationResults: [],
   }
 }
 
@@ -87,6 +88,7 @@ test('la chaîne mock traverse génération, réponse structurée et export DOCX
         getStudentContext: async () => fictitiousContext(),
         fetchTemplatePdfBase64: failPdfFetch,
         generatePAT,
+        savePAT: async () => {},
         checkUsage: async () => ({ allowed: true }),
         refundUsage: async () => 0,
       }
@@ -113,6 +115,7 @@ test('ambiguïté et élève inconnu ne déclenchent ni génération ni quota', 
       generationCalls += 1
       return patMock
     },
+    savePAT: async () => {},
     checkUsage: async () => {
       usageCalls += 1
       return { allowed: true }
@@ -168,6 +171,7 @@ test('un échec de génération rembourse exactement une fois', async () => {
           generatePAT: async () => {
             throw new Error('Sortie invalide')
           },
+          savePAT: async () => {},
           checkUsage: async () => ({ allowed: true }),
           refundUsage: async () => {
             refundCalls += 1
@@ -184,6 +188,7 @@ test('une génération réussie débite le quota une seule fois sans rembourseme
   let usageCalls = 0
   let generationCalls = 0
   let refundCalls = 0
+  let saveCalls = 0
 
   const response = await orchestratePATRequest(
     { studentQuery: 'Maélis Roy', trustedUserId: USER_ID },
@@ -193,6 +198,11 @@ test('une génération réussie débite le quota une seule fois sans rembourseme
       generatePAT: async () => {
         generationCalls += 1
         return patMock
+      },
+      savePAT: async (record) => {
+        saveCalls += 1
+        assert.equal(record.studentId, STUDENT_ID)
+        assert.equal(record.classId, fictitiousContext().classes[0]?.id)
       },
       checkUsage: async () => {
         usageCalls += 1
@@ -208,6 +218,17 @@ test('une génération réussie débite le quota une seule fois sans rembourseme
   assert.equal(usageCalls, 1)
   assert.equal(generationCalls, 1)
   assert.equal(refundCalls, 0)
+  assert.equal(saveCalls, 1)
+})
+
+test('le prompt de modification inclut le PAT précédent et conserve l’instruction exacte', () => {
+  const prompt = buildPATPrompt(fictitiousContext(), TEXT_TEMPLATE, 'fr', {
+    previousPat: patMock,
+    modificationInstruction: 'Rends uniquement la recommandation plus concise.',
+  })
+  assert.match(prompt, /DOCUMENT PRÉCÉDENT/)
+  assert.match(prompt, /Rends uniquement la recommandation plus concise\./)
+  assert.match(prompt, /Applique uniquement l’instruction demandée/)
 })
 
 test('rejette une sortie invalide et les besoins formulés négativement', () => {
@@ -314,6 +335,7 @@ test('le parcours PAT transmet la langue espagnole jusqu’au prompt structuré'
         capturedLanguage = language
         return patMock
       },
+      savePAT: async () => {},
       checkUsage: async () => ({ allowed: true }),
       refundUsage: async () => 0,
     }
@@ -455,6 +477,7 @@ test('sans modèle configuré sur aucune classe de l’élève, l’agent bloque
         generationCalls += 1
         return patMock
       },
+      savePAT: async () => {},
       checkUsage: async () => {
         usageCalls += 1
         return { allowed: true }
@@ -481,6 +504,7 @@ test('avec un modèle texte configuré, l’agent transmet ce modèle exact à l
         receivedTemplate = documentTemplate
         return patMock
       },
+      savePAT: async () => {},
       checkUsage: async () => ({ allowed: true }),
       refundUsage: async () => 0,
     }
@@ -517,6 +541,7 @@ test('avec un modèle PDF configuré, l’agent lit le PDF et le transmet en pi�
         receivedTemplate = documentTemplate
         return patMock
       },
+      savePAT: async () => {},
       checkUsage: async () => ({ allowed: true }),
       refundUsage: async () => 0,
     }

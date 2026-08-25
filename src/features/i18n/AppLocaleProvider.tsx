@@ -23,10 +23,15 @@ const AppLocaleContext = createContext<AppLocaleContextValue | null>(null)
 export function AppLocaleProvider({
   initialLocale = DEFAULT_APP_LOCALE,
   restoreStoredLocale = true,
+  timeZone = 'UTC',
   children,
 }: {
   initialLocale?: AppLocale | null
   restoreStoredLocale?: boolean
+  // Fuseau horaire de l'enseignant (teacher_profiles.timezone) quand connu ;
+  // 'UTC' sinon (pages publiques, ou avant que le profil soit chargé) — sans
+  // valeur, next-intl avertit et risque un decalage d'affichage serveur/client.
+  timeZone?: string
   children: React.ReactNode
 }) {
   // Le premier rendu est toujours identique sur le serveur et dans le navigateur.
@@ -40,7 +45,12 @@ export function AppLocaleProvider({
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocaleState(savedLocale)
     }
-  }, [locale, restoreStoredLocale])
+    // Restauration unique juste apres l'hydratation. Ne pas dependre de
+    // `locale` : cet effet mettrait alors a jour l'etat a chaque changement,
+    // ce qui re-declenche l'effet suivant (qui reecrit le localStorage avec
+    // la valeur *avant* mise a jour) et cree une boucle de rendu infinie.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restoreStoredLocale])
 
   useEffect(() => {
     window.localStorage.setItem('educassist-locale', locale)
@@ -63,7 +73,7 @@ export function AppLocaleProvider({
   )
 
   return (
-    <NextIntlClientProvider locale={locale} messages={{}}>
+    <NextIntlClientProvider locale={locale} messages={{}} timeZone={timeZone}>
       <AppLocaleContext.Provider value={value}>{children}</AppLocaleContext.Provider>
     </NextIntlClientProvider>
   )

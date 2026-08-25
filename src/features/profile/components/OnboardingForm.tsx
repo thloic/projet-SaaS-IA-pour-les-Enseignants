@@ -51,6 +51,7 @@ const SUBJECTS_OPTIONS = [
 
 const COUNTRIES = [
   'Canada',
+  'Mexique',
   'France',
   'Senegal',
   "Cote d'Ivoire",
@@ -92,6 +93,13 @@ export default function OnboardingForm({
   const [language, setLanguage] = useState<ContentLanguage>('en')
   const [interfaceLanguage, setInterfaceLanguage] = useState<AppLocale>('en')
   const [styleNotes, setStyleNotes] = useState('')
+  const [timezone] = useState(() => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+    } catch {
+      return 'UTC'
+    }
+  })
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const t = appTranslations[interfaceLanguage]
@@ -187,6 +195,7 @@ export default function OnboardingForm({
         gradingSystem,
         language,
         interfaceLanguage,
+        timezone,
         styleNotes,
       })
 
@@ -228,7 +237,7 @@ export default function OnboardingForm({
       }
 
       showToast(t.onboarding.saved, 'success')
-      router.push('/dashboard')
+      router.push('/classroom')
     } catch (err) {
       const message = t.onboarding.saveError
       console.error("[onboarding] erreur inattendue", err)

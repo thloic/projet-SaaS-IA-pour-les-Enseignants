@@ -7,7 +7,10 @@ import {
   agentStructuredResponseSchema,
 } from '@/features/agent/schemas/agentSchema'
 import { generatePAT } from '@/features/agent/server/generatePAT'
-import { getStudentContext } from '@/features/agent/server/memory'
+import { getStudentContext, listOwnedStudents } from '@/features/agent/server/memory'
+import { detectMentionedStudent } from '@/features/agent/server/studentMentionDetection'
+import { buildClarificationResponse } from '@/features/agent/server/agentResponses'
+import type { StudentContext } from '@/features/agent/types/memory.types'
 import {
   orchestratePATRequest,
   PATOrchestrationError,
@@ -24,6 +27,16 @@ import { saveAgentBulletinComment } from '@/features/bulletin/server/bulletin.ac
 import { downloadClassTemplatePdfBase64 } from '@/features/classroom/server/documentTemplateStorage'
 import { buildAgentSystemPrompt } from '@/lib/prompts/agent'
 import { getCurrentTeacherProfile, getCurrentUser } from '@/features/profile/server/profile'
+import {
+  findLatestGeneratedDocument,
+  saveAgentPATGeneration,
+} from '@/features/generated-documents/server/generatedDocuments'
+import { looksLikeDocumentModificationRequest } from '@/features/agent/server/documentModificationIntent'
+import { extractDocumentModificationFieldsWithAnthropic } from '@/features/agent/server/documentModificationExtractionModel'
+import {
+  DocumentModificationError,
+  orchestrateDocumentModification,
+} from '@/features/agent/server/documentModificationOrchestration'
 
 const USAGE_FEATURE = 'agent'
 
@@ -32,18 +45,21 @@ const ROUTE_COPY = {
     limit: 'Vous avez atteint votre limite de générations gratuites pour l’agent ce mois-ci.',
     patFailed: 'Le PAT n’a pas pu être généré. Votre quota n’a pas été débité.',
     bulletinFailed: 'Le commentaire de bulletin n’a pas pu être généré. Votre quota n’a pas été débité.',
+    modificationFailed: 'Le document n’a pas pu être modifié. Votre quota n’a pas été débité.',
     quotaFailed: 'Impossible de vérifier votre quota pour le moment.',
   },
   en: {
     limit: 'You have reached your free agent generation limit for this month.',
     patFailed: 'The support plan could not be generated. Your quota was not charged.',
     bulletinFailed: 'The report card comment could not be generated. Your quota was not charged.',
+    modificationFailed: 'The document could not be modified. Your quota was not charged.',
     quotaFailed: 'Your quota could not be checked right now.',
   },
   es: {
     limit: 'Has alcanzado el límite de generaciones gratuitas del agente para este mes.',
     patFailed: 'No se ha podido generar el PAT. No se ha descontado de tu cuota.',
     bulletinFailed: 'No se ha podido generar el comentario de boletín. No se ha descontado de tu cuota.',
+    modificationFailed: 'No se ha podido modificar el documento. No se ha descontado de tu cuota.',
     quotaFailed: 'No se puede comprobar tu cuota en este momento.',
   },
 } as const
@@ -80,8 +96,77 @@ export async function POST(request: Request) {
     .reverse()
     .find((message) => message.role === 'user')
   const patIntent = latestUserMessage ? detectPATIntent(latestUserMessage.content) : null
+  const modificationIntent = latestUserMessage
+    ? looksLikeDocumentModificationRequest(latestUserMessage.content)
+    : false
 
-  if (patIntent) {
+  if (modificationIntent && latestUserMessage) {
+    try {
+      const result = await orchestrateDocumentModification(
+        {
+          message: latestUserMessage.content,
+          trustedUserId: user.id,
+          contentLanguage: profile.language,
+          interfaceLanguage: profile.interface_language,
+        },
+        {
+          extractModificationFields: extractDocumentModificationFieldsWithAnthropic,
+          getStudentContext,
+          findLatestDocument: findLatestGeneratedDocument,
+          fetchTemplatePdfBase64: downloadClassTemplatePdfBase64,
+          regeneratePAT: generatePAT,
+          regenerateBulletinComment: ({
+            studentContext,
+            previousDocument,
+            evaluationResults,
+            studentObservations,
+            documentTemplate,
+            modificationInstruction,
+          }) => generateBulletinCommentService({
+            input: {
+              student_name: studentContext.student.fullName,
+              subject: previousDocument.subject,
+              grade: previousDocument.grade,
+              observations: previousDocument.observations,
+              tone: previousDocument.tone,
+            },
+            teacherProfile: {
+              subject: profile.subject,
+              subjects: profile.subjects,
+              gradingSystem: profile.grading_system,
+              language: profile.language,
+            },
+            documentTemplate,
+            evaluationResults,
+            studentObservations,
+            previousComment: previousDocument.comment,
+            modificationInstruction,
+          }),
+          saveDocument: async (document) => {
+            if (document.documentType === 'pat') {
+              await saveAgentPATGeneration(document)
+            } else {
+              await saveAgentBulletinComment(document)
+            }
+          },
+          checkUsage: async (userId) => checkAndIncrementUsage(userId, USAGE_FEATURE),
+          refundUsage: async (userId) => decrementUsage(userId, USAGE_FEATURE),
+        }
+      )
+      if (result) return NextResponse.json(agentStructuredResponseSchema.parse(result))
+    } catch (error) {
+      if (
+        error instanceof DocumentModificationError &&
+        error.code === 'DOCUMENT_MODIFICATION_QUOTA_EXCEEDED'
+      ) {
+        return jsonError(copy.limit, 403)
+      }
+      console.error('[agent:document-modification] echec de la modification structuree')
+      return jsonError(copy.modificationFailed, 500)
+    }
+  }
+
+  if (!modificationIntent && patIntent) {
     try {
       const result = await orchestratePATRequest(
         {
@@ -94,6 +179,7 @@ export async function POST(request: Request) {
           getStudentContext,
           fetchTemplatePdfBase64: downloadClassTemplatePdfBase64,
           generatePAT,
+          savePAT: saveAgentPATGeneration,
           checkUsage: async (userId) => checkAndIncrementUsage(userId, USAGE_FEATURE),
           refundUsage: async (userId) => decrementUsage(userId, USAGE_FEATURE),
         }
@@ -108,7 +194,7 @@ export async function POST(request: Request) {
     }
   }
 
-  if (!patIntent && latestUserMessage && looksLikeBulletinRequest(latestUserMessage.content)) {
+  if (!modificationIntent && !patIntent && latestUserMessage && looksLikeBulletinRequest(latestUserMessage.content)) {
     try {
       const result = await orchestrateBulletinRequest(
         {
@@ -120,7 +206,7 @@ export async function POST(request: Request) {
           extractBulletinFields: extractBulletinFieldsWithAnthropic,
           getStudentContext,
           fetchTemplatePdfBase64: downloadClassTemplatePdfBase64,
-          generateBulletinComment: ({ studentName, subject, grade, observations, tone, documentTemplate }) =>
+          generateBulletinComment: ({ studentName, subject, grade, observations, tone, documentTemplate, evaluationResults, studentObservations }) =>
             generateBulletinCommentService({
               input: { student_name: studentName, subject, grade, observations, tone },
               teacherProfile: {
@@ -130,6 +216,8 @@ export async function POST(request: Request) {
                 language: profile.language,
               },
               documentTemplate,
+              evaluationResults,
+              studentObservations,
             }),
           saveBulletinComment: saveAgentBulletinComment,
           checkUsage: async (userId) => checkAndIncrementUsage(userId, USAGE_FEATURE),
@@ -151,6 +239,31 @@ export async function POST(request: Request) {
     }
   }
 
+  // Filet de securite conversationnel : si aucune des trois demandes
+  // structurees ci-dessus n'a intercepte le message, on regarde quand meme
+  // si un eleve reel est mentionne, pour ancrer la reponse sur son vrai
+  // dossier plutot que de repondre a l'aveugle. Detection par nom, pas par
+  // mot-cle : une question libre n'a pas de verbe declencheur fixe.
+  let mentionedStudentContext: StudentContext | null = null
+
+  if (latestUserMessage) {
+    const ownedStudents = await listOwnedStudents()
+    const mention = detectMentionedStudent(latestUserMessage.content, ownedStudents)
+
+    if (mention.kind === 'ambiguous') {
+      return NextResponse.json(
+        agentStructuredResponseSchema.parse(
+          buildClarificationResponse(mention.candidates, profile.interface_language)
+        )
+      )
+    }
+
+    if (mention.kind === 'match') {
+      const resolved = await getStudentContext({ studentQuery: mention.student.fullName })
+      if (resolved && resolved.kind === 'context') mentionedStudentContext = resolved
+    }
+  }
+
   let usage
   try {
     usage = await checkAndIncrementUsage(user.id, USAGE_FEATURE)
@@ -163,12 +276,15 @@ export async function POST(request: Request) {
     return jsonError(copy.limit, 403)
   }
 
-  const systemPrompt = buildAgentSystemPrompt({
-    subjects: profile.subjects,
-    levels: profile.levels,
-    country: profile.country,
-    language: profile.language,
-  })
+  const systemPrompt = buildAgentSystemPrompt(
+    {
+      subjects: profile.subjects,
+      levels: profile.levels,
+      country: profile.country,
+      language: profile.language,
+    },
+    mentionedStudentContext ?? undefined
+  )
 
   const encoder = new TextEncoder()
   let settled = false
