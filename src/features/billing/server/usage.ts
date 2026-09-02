@@ -1,6 +1,8 @@
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
+import { hasActiveProAccess } from '@/features/billing/server/subscription'
+import { checkAndIncrementUsageCore, getUsageCore, type UsageCoreDeps } from '@/features/billing/server/usageCore'
 
 const DEFAULT_GENERATION_LIMIT = 3
 
@@ -17,29 +19,51 @@ function getCurrentPeriod() {
   return new Date().toISOString().slice(0, 7)
 }
 
+async function createUsageDeps(): Promise<UsageCoreDeps> {
+  const supabase = await createClient()
+
+  return {
+    hasActiveProAccess,
+    async incrementCounter(userId, feature, limit) {
+      const { data, error } = await supabase.rpc('increment_usage', {
+        p_user_id: userId,
+        p_limit: limit,
+        p_feature: feature,
+      })
+
+      if (error) {
+        console.error('[usage] increment_usage refuse', error)
+        throw new Error('USAGE_INCREMENT_FAILED')
+      }
+
+      const used = typeof data === 'number' ? data : Number(data)
+      return Number.isFinite(used) ? used : -1
+    },
+    async readCounter(userId, feature) {
+      const { data, error } = await supabase
+        .from('usage_counters')
+        .select('count')
+        .eq('user_id', userId)
+        .eq('period', getCurrentPeriod())
+        .eq('feature', feature)
+        .maybeSingle()
+
+      if (error) {
+        console.error('[usage] lecture du compteur refusee', error)
+        return 0
+      }
+
+      return data?.count ?? 0
+    },
+  }
+}
+
 export async function checkAndIncrementUsage(
   userId: string,
   feature = 'general'
 ): Promise<{ allowed: boolean; used: number; limit: number }> {
   const limit = getGenerationLimit(feature)
-  const supabase = await createClient()
-  const { data, error } = await supabase.rpc('increment_usage', {
-    p_user_id: userId,
-    p_limit: limit,
-    p_feature: feature,
-  })
-
-  if (error) {
-    console.error('[usage] increment_usage refuse', error)
-    throw new Error('USAGE_INCREMENT_FAILED')
-  }
-
-  const used = typeof data === 'number' ? data : Number(data)
-  if (!Number.isFinite(used) || used < 0) {
-    return { allowed: false, used: limit, limit }
-  }
-
-  return { allowed: true, used, limit }
+  return checkAndIncrementUsageCore(userId, feature, limit, await createUsageDeps())
 }
 
 export async function decrementUsage(userId: string, feature = 'general'): Promise<number> {
@@ -63,19 +87,5 @@ export async function getUsage(
   feature = 'general'
 ): Promise<{ used: number; limit: number }> {
   const limit = getGenerationLimit(feature)
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('usage_counters')
-    .select('count')
-    .eq('user_id', userId)
-    .eq('period', getCurrentPeriod())
-    .eq('feature', feature)
-    .maybeSingle()
-
-  if (error) {
-    console.error('[usage] lecture du compteur refusee', error)
-    return { used: 0, limit }
-  }
-
-  return { used: data?.count ?? 0, limit }
+  return getUsageCore(userId, feature, limit, await createUsageDeps())
 }

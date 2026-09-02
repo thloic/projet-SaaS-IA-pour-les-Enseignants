@@ -2,6 +2,9 @@
 
 import { Resend } from 'resend'
 import { contactSchema } from '@/features/contact/schemas/contactSchema'
+import { buildContactEmail } from '@/features/contact/server/contactEmail'
+
+const DEFAULT_CONTACT_EMAIL = 'dorcyb7@gmail.com'
 
 export interface ContactActionResult {
   success: boolean
@@ -9,11 +12,21 @@ export interface ContactActionResult {
 }
 
 export async function submitContactAction(formData: FormData): Promise<ContactActionResult> {
+  // A filled honeypot indicates an automated submission. Return a neutral success
+  // response so bots do not learn how the protection works.
+  if (String(formData.get('website') ?? '').trim()) {
+    return { success: true, error: null }
+  }
+
   const parsed = contactSchema.safeParse({
     name: formData.get('name'),
     email: formData.get('email'),
-    subject: formData.get('subject'),
-    phone: formData.get('phone'),
+    phone: formData.get('phone') ?? '',
+    organization: formData.get('organization') ?? '',
+    reason: formData.get('reason'),
+    message: formData.get('message'),
+    locale: formData.get('locale'),
+    website: '',
   })
 
   if (!parsed.success) {
@@ -21,27 +34,21 @@ export async function submitContactAction(formData: FormData): Promise<ContactAc
   }
 
   const apiKey = process.env.RESEND_API_KEY
-  const contactEmail = process.env.CONTACT_EMAIL
+  const contactEmail = process.env.CONTACT_EMAIL?.trim() || DEFAULT_CONTACT_EMAIL
   const fromEmail = process.env.RESEND_FROM_EMAIL ?? 'EducAssist <onboarding@resend.dev>'
 
-  if (!apiKey || !contactEmail) {
-    console.error('[contact] RESEND_API_KEY ou CONTACT_EMAIL manquant')
+  if (!apiKey) {
+    console.error('[contact] RESEND_API_KEY manquant')
     return { success: false, error: 'Le formulaire de contact est momentanément indisponible.' }
   }
 
   try {
     const resend = new Resend(apiKey)
+    const email = buildContactEmail(parsed.data)
     const { error } = await resend.emails.send({
       from: fromEmail,
       to: contactEmail,
-      replyTo: parsed.data.email,
-      subject: `[EducAssist] ${parsed.data.subject}`,
-      text: [
-        `Nom : ${parsed.data.name}`,
-        `Email : ${parsed.data.email}`,
-        `Téléphone : ${parsed.data.phone}`,
-        `Sujet : ${parsed.data.subject}`,
-      ].join('\n'),
+      ...email,
     })
 
     if (error) throw error

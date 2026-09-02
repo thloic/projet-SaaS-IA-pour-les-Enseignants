@@ -1,11 +1,17 @@
 import { getUsage } from '@/features/billing/server/usage'
+import { getSubscriptionSummary } from '@/features/billing/server/subscription'
 import { getCurrentUser, getCurrentTeacherProfile } from '@/features/profile/server/profile'
 import SettingsForm from '@/features/profile/components/SettingsForm'
 import { normalizeGradingSystem } from '@/features/profile/types/profile.types'
 
 export default async function SettingsPage() {
   const [user, profile] = await Promise.all([getCurrentUser(), getCurrentTeacherProfile()])
-  const usage = user ? await getUsage(user.id) : { used: 0, limit: 3 }
+  const [usage, subscription] = await Promise.all([
+    user ? getUsage(user.id) : Promise.resolve({ used: 0, limit: 3 }),
+    user
+      ? getSubscriptionSummary(user.id)
+      : Promise.resolve({ plan: 'free' as const, interval: null, currentPeriodEnd: null, cancelAtPeriodEnd: false }),
+  ])
 
   return (
     <SettingsForm
@@ -26,6 +32,7 @@ export default async function SettingsPage() {
       initialTimezone={profile?.timezone ?? 'UTC'}
       generationsUsed={usage.used}
       generationsLimit={usage.limit}
+      subscription={subscription}
     />
   )
 }
