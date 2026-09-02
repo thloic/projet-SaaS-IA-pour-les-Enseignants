@@ -17,6 +17,15 @@ export default function GenerationCounter({
   label = 'générations',
   className = '',
 }: GenerationCounterProps) {
+  if (limit < 0) {
+    return (
+      <div className={`flex items-center justify-between gap-3 text-xs text-muted-foreground ${className}`}>
+        <span>{label} illimitées</span>
+        <span className="text-emerald-400">Pro</span>
+      </div>
+    )
+  }
+
   const safeLimit = Math.max(limit, 1)
   const safeUsed = Math.max(0, Math.min(used, safeLimit))
   const progress = Math.round((safeUsed / safeLimit) * 100)

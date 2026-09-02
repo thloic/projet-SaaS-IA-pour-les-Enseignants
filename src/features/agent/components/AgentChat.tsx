@@ -15,8 +15,16 @@ import PATReviewCard from '@/features/agent/components/PATReviewCard'
 import BulletinReviewCard from '@/features/agent/components/BulletinReviewCard'
 import { useAppLocale } from '@/features/i18n/AppLocaleProvider'
 import { agentTranslations } from '@/features/agent/i18n/agentTranslations'
+import { AGENT_LIMIT_REACHED_MESSAGES } from '@/features/billing/upgradeMessages'
+import { useBilling } from '@/features/billing/hooks/useBilling'
 
 const BRAND = '#534AB7'
+
+const UPGRADE_CTA_LABEL: Record<'fr' | 'en' | 'es', string> = {
+  fr: 'Passer au plan Pro →',
+  en: 'Upgrade to Pro →',
+  es: 'Pasar al plan Pro →',
+}
 
 interface TextChatMessage {
   kind: 'text'
@@ -46,6 +54,7 @@ type ChatMessage = TextChatMessage | PATChatMessage | BulletinChatMessage
 export default function AgentChat() {
   const { showToast } = useToast()
   const { locale } = useAppLocale()
+  const { startCheckout, pendingAction } = useBilling()
   const copy = agentTranslations[locale]
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
@@ -230,6 +239,20 @@ export default function AgentChat() {
                 style={message.role === 'user' ? { backgroundColor: BRAND } : {}}
               >
                 {message.content || (isStreaming && index === messages.length - 1 ? '…' : '')}
+                {message.role === 'assistant' &&
+                  Object.values(AGENT_LIMIT_REACHED_MESSAGES).includes(message.content) && (
+                    <div className="mt-3">
+                      <button
+                        type="button"
+                        onClick={() => startCheckout('month')}
+                        disabled={pendingAction !== null}
+                        className="inline-block rounded-full px-3 py-1.5 text-xs font-bold text-white disabled:opacity-60"
+                        style={{ backgroundColor: BRAND }}
+                      >
+                        {UPGRADE_CTA_LABEL[locale]}
+                      </button>
+                    </div>
+                  )}
                 {message.candidates && (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {message.candidates.map((candidate) => (

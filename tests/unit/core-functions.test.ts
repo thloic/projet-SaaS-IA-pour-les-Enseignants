@@ -197,12 +197,59 @@ test('contactSchema validates a complete contact request', () => {
     contactSchema.safeParse({
       name: 'Marie Dupont',
       email: 'marie@example.com',
-      subject: 'Demande demo',
       phone: '+15145550101',
+      organization: 'École des Lilas',
+      reason: 'demo',
+      message: 'Nous aimerions voir une démonstration du produit pour notre équipe.',
+      locale: 'fr',
+      website: '',
     }).success,
     true
   )
-  assert.equal(contactSchema.safeParse({ name: 'M', email: 'bad', subject: 'x', phone: '1' }).success, false)
+  assert.equal(
+    contactSchema.safeParse({
+      name: 'M',
+      email: 'bad',
+      phone: '1',
+      organization: '',
+      reason: 'unknown_reason',
+      message: 'trop court',
+      locale: 'fr',
+      website: '',
+    }).success,
+    false
+  )
+  // Le champ optionnel n'est pas envoyé du tout (ex. FormData sans "phone") :
+  // vide et absent doivent tous deux passer, aucun des deux n'est requis.
+  assert.equal(
+    contactSchema.safeParse({
+      name: 'Marie Dupont',
+      email: 'marie@example.com',
+      phone: '',
+      organization: '',
+      reason: 'support',
+      message: 'Un message suffisamment long pour être valide.',
+      locale: 'en',
+      website: '',
+    }).success,
+    true
+  )
+  // Le honeypot rempli est un signal de bot, pas une erreur de validation —
+  // il est intercepté avant l'appel au schéma (voir contact.actions.ts) et le
+  // schéma lui-même exige simplement une chaîne vide ici.
+  assert.equal(
+    contactSchema.safeParse({
+      name: 'Marie Dupont',
+      email: 'marie@example.com',
+      phone: '',
+      organization: '',
+      reason: 'support',
+      message: 'Un message suffisamment long pour être valide.',
+      locale: 'en',
+      website: 'http://spam.example',
+    }).success,
+    false
+  )
 })
 
 test('cn merges conditional and conflicting Tailwind classes', () => {

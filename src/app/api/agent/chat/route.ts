@@ -2,6 +2,7 @@ import { anthropic } from '@ai-sdk/anthropic'
 import { streamText } from 'ai'
 import { NextResponse } from 'next/server'
 import { checkAndIncrementUsage, decrementUsage } from '@/features/billing/server/usage'
+import { AGENT_LIMIT_REACHED_MESSAGES } from '@/features/billing/upgradeMessages'
 import {
   agentChatRequestSchema,
   agentStructuredResponseSchema,
@@ -42,21 +43,21 @@ const USAGE_FEATURE = 'agent'
 
 const ROUTE_COPY = {
   fr: {
-    limit: 'Vous avez atteint votre limite de générations gratuites pour l’agent ce mois-ci.',
+    limit: AGENT_LIMIT_REACHED_MESSAGES.fr,
     patFailed: 'Le PAT n’a pas pu être généré. Votre quota n’a pas été débité.',
     bulletinFailed: 'Le commentaire de bulletin n’a pas pu être généré. Votre quota n’a pas été débité.',
     modificationFailed: 'Le document n’a pas pu être modifié. Votre quota n’a pas été débité.',
     quotaFailed: 'Impossible de vérifier votre quota pour le moment.',
   },
   en: {
-    limit: 'You have reached your free agent generation limit for this month.',
+    limit: AGENT_LIMIT_REACHED_MESSAGES.en,
     patFailed: 'The support plan could not be generated. Your quota was not charged.',
     bulletinFailed: 'The report card comment could not be generated. Your quota was not charged.',
     modificationFailed: 'The document could not be modified. Your quota was not charged.',
     quotaFailed: 'Your quota could not be checked right now.',
   },
   es: {
-    limit: 'Has alcanzado el límite de generaciones gratuitas del agente para este mes.',
+    limit: AGENT_LIMIT_REACHED_MESSAGES.es,
     patFailed: 'No se ha podido generar el PAT. No se ha descontado de tu cuota.',
     bulletinFailed: 'No se ha podido generar el comentario de boletín. No se ha descontado de tu cuota.',
     modificationFailed: 'No se ha podido modificar el documento. No se ha descontado de tu cuota.',

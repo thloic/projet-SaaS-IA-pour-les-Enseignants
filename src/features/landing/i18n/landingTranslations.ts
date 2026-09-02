@@ -20,7 +20,7 @@ export const landingTranslations = {
       title: 'Plan your lessons',
       titleAccent: 'in just a few clicks.',
       description:
-        'Describe your lesson and AI creates a complete course, a quiz, and report card comments — in under 60 seconds.',
+        'Describe your lesson and your AI agent creates a complete course, a quiz, and report card comments — in under 60 seconds.',
       primaryCta: 'Create my free account →',
       demoCta: 'Watch the demo',
       generated: 'Lesson created',
@@ -37,13 +37,13 @@ export const landingTranslations = {
     },
     features: {
       title: 'Everything you need',
-      subtitle: 'Three AI-powered teaching tools',
+      subtitle: 'Three teaching tools powered by your AI agent',
       included: 'Included',
       items: [
         {
           title: 'Lesson generation',
           description:
-            'A guided, zero-prompt form. AI structures and writes your complete lesson, ready to export as PDF or Word.',
+            'A guided, zero-prompt form. Your AI agent structures and writes your complete lesson, ready to export as PDF or Word.',
         },
         {
           title: 'Automatic quizzes',
@@ -53,7 +53,7 @@ export const landingTranslations = {
         {
           title: 'Report card comments',
           description:
-            'Name, subject, grade, and observations — AI creates a supportive, personalized, and relevant comment.',
+            'Name, subject, grade, and observations — your AI agent creates a supportive, personalized, and relevant comment.',
         },
       ],
     },
@@ -73,7 +73,7 @@ export const landingTranslations = {
         },
         {
           n: '03',
-          title: 'AI generates in real time',
+          title: 'Your AI agent generates in real time',
           detail: 'Watch your complete lesson appear instantly as it is created.',
         },
         {
@@ -83,36 +83,72 @@ export const landingTranslations = {
         },
       ],
     },
+    why: {
+      eyebrow: 'BUILT ON TRUST',
+      title: 'Why choose EducAssist?',
+      subtitle:
+        'Save time without giving up control over student data or educational decisions.',
+      items: [
+        {
+          title: 'Student records stay private',
+          description:
+            'Student data is never public. Each teacher can only access students enrolled in their own classes.',
+        },
+        {
+          title: 'Immediate time savings',
+          description:
+            'Turn hours of repetitive work into minutes by reusing information already recorded in your workspace.',
+        },
+        {
+          title: 'An AI agent grounded in your class',
+          description:
+            'It uses existing observations, attendance, results, and adaptations. When information is missing, it says so instead of inventing it.',
+        },
+        {
+          title: 'You stay in control',
+          description:
+            'Review, adjust, and approve every generated document before exporting it as DOCX or PDF.',
+        },
+      ],
+    },
     pricing: {
       title: 'Simple pricing',
       subtitle: 'Choose the plan that fits your teaching environment',
       popular: 'Popular',
       tiers: [
         {
-          name: 'Starter',
-          audience: 'Independent teacher',
-          price: '$20',
+          name: 'Teacher Monthly',
+          audience: 'For one teacher — cancel anytime',
+          price: '$25',
           period: '/month',
-          features: ['Modules 1 to 4', 'Grading + planning'],
-          cta: 'Join the waitlist',
+          features: [
+            'Create and manage classes and student records',
+            'Attendance, observations, and assessment gradebook',
+            'AI agent connected to student history',
+            'Lessons, quizzes, grading, and adaptations',
+            'PATs and report card comments',
+            'DOCX/PDF exports and document history',
+          ],
+          cta: 'Subscribe',
+          ctaHref: '/register',
           highlight: false,
         },
         {
-          name: 'Pro',
-          audience: 'School teacher',
-          price: '$39',
-          period: '/month',
-          features: ['All 5 modules', 'Integrated dashboard'],
-          cta: 'Join the waitlist',
-          highlight: false,
-        },
-        {
-          name: 'Annual Pro',
-          audience: 'Teacher — 12-month access',
+          name: 'Teacher Annual',
+          audience: 'For one teacher — 12 months of access',
           price: '$250',
-          period: 'one-time / year',
-          features: ['All features included', '12 months of access', 'One annual payment'],
-          cta: 'Join the waitlist',
+          period: 'one payment / year',
+          features: [
+            'Create and manage classes and student records',
+            'Attendance, observations, and assessment gradebook',
+            'AI agent connected to student history',
+            'Lessons, quizzes, grading, and adaptations',
+            'PATs and report card comments',
+            'DOCX/PDF exports and document history',
+            'Save $50 compared with monthly billing',
+          ],
+          cta: 'Subscribe',
+          ctaHref: '/register',
           highlight: true,
         },
         {
@@ -120,8 +156,15 @@ export const landingTranslations = {
           audience: 'School leadership / Instructional coordinator',
           price: '$299',
           period: '/month',
-          features: ['Every teacher in your school', 'Leadership analytics', 'Integrations'],
-          cta: 'Join the waitlist',
+          features: [
+            'Multiple teacher accounts',
+            'All individual features',
+            'Centralized school management',
+            'School-wide class and teacher overview',
+            'Priority support',
+          ],
+          cta: 'Coming soon',
+          ctaHref: '',
           highlight: false,
         },
         {
@@ -129,8 +172,15 @@ export const landingTranslations = {
           audience: 'School district / Education authority',
           price: 'Custom',
           period: '',
-          features: ['Multi-school deployment', 'Institutional compliance'],
+          features: [
+            'Multiple schools',
+            'Centralized administration',
+            'Custom deployment and onboarding',
+            'Institutional security and compliance',
+            'Dedicated support',
+          ],
           cta: 'Contact us',
+          ctaHref: '/contact',
           highlight: false,
         },
       ],
@@ -170,7 +220,7 @@ export const landingTranslations = {
       title: 'Préparez vos cours',
       titleAccent: 'en quelques clics.',
       description:
-        "Décrivez votre séance, l’IA génère un cours complet, un quiz et les commentaires de bulletin — en moins de 60 secondes.",
+        "Décrivez votre séance, votre agent IA génère un cours complet, un quiz et les commentaires de bulletin — en moins de 60 secondes.",
       primaryCta: 'Créer mon compte gratuit →',
       demoCta: 'Voir la démo',
       generated: 'Cours généré',
@@ -187,13 +237,13 @@ export const landingTranslations = {
     },
     features: {
       title: 'Tout ce dont vous avez besoin',
-      subtitle: 'Trois outils pédagogiques propulsés par l’IA',
+      subtitle: 'Trois outils pédagogiques propulsés par votre agent IA',
       included: 'Inclus',
       items: [
         {
           title: 'Génération de cours',
           description:
-            'Un formulaire guidé, zéro prompt. L’IA structure et rédige votre cours complet, exportable en PDF ou Word.',
+            'Un formulaire guidé, zéro prompt. Votre agent IA structure et rédige votre cours complet, exportable en PDF ou Word.',
         },
         {
           title: 'Quiz & QCM auto',
@@ -203,7 +253,7 @@ export const landingTranslations = {
         {
           title: 'Commentaires bulletins',
           description:
-            'Nom, matière, note, observations — l’IA génère un commentaire bienveillant, personnalisé et adapté.',
+            'Nom, matière, note, observations — votre agent IA génère un commentaire bienveillant, personnalisé et adapté.',
         },
       ],
     },
@@ -223,7 +273,7 @@ export const landingTranslations = {
         },
         {
           n: '03',
-          title: 'L’IA génère en temps réel',
+          title: 'Votre agent IA génère en temps réel',
           detail: 'Cours complet en streaming, visible instantanément.',
         },
         {
@@ -233,36 +283,72 @@ export const landingTranslations = {
         },
       ],
     },
+    why: {
+      eyebrow: 'CONÇU POUR LA CONFIANCE',
+      title: 'Pourquoi choisir EducAssist ?',
+      subtitle:
+        'Gagnez du temps sans perdre le contrôle sur les données et les décisions pédagogiques.',
+      items: [
+        {
+          title: 'Des dossiers élèves confidentiels',
+          description:
+            'Les données des élèves ne sont jamais publiques. Chaque enseignant accède uniquement aux élèves de ses propres classes.',
+        },
+        {
+          title: 'Un gain de temps immédiat',
+          description:
+            'Transformez des heures de travail répétitif en quelques minutes grâce aux informations déjà enregistrées dans votre espace.',
+        },
+        {
+          title: 'Un agent IA qui connaît votre classe',
+          description:
+            'Il utilise les observations, présences, résultats et adaptations existantes. Si une information manque, il le signale au lieu de l’inventer.',
+        },
+        {
+          title: 'Vous gardez le contrôle',
+          description:
+            'Relisez, ajustez et validez chaque document généré avant de l’exporter en DOCX ou PDF.',
+        },
+      ],
+    },
     pricing: {
       title: 'Tarifs simples',
       subtitle: 'Choisissez le plan adapté à votre contexte pédagogique',
       popular: 'Populaire',
       tiers: [
         {
-          name: 'Starter',
-          audience: 'Enseignant indépendant',
-          price: '20 $',
+          name: 'Enseignant mensuel',
+          audience: 'Pour un enseignant — résiliable à tout moment',
+          price: '25 $',
           period: '/mois',
-          features: ['Modules 1 à 4', 'Correction + planification'],
-          cta: 'Rejoindre la liste d’attente',
+          features: [
+            'Création et gestion des classes et des dossiers élèves',
+            'Présences, observations et carnet de résultats',
+            'Agent IA connecté à l’historique des élèves',
+            'Cours, quiz, corrections et adaptations',
+            'PAT et commentaires de bulletin',
+            'Exports DOCX/PDF et historique des documents',
+          ],
+          cta: 'S’abonner',
+          ctaHref: '/register',
           highlight: false,
         },
         {
-          name: 'Pro',
-          audience: 'Enseignant en établissement',
-          price: '39 $',
-          period: '/mois',
-          features: ['Les 5 modules', 'Tableau de bord intégré'],
-          cta: 'Rejoindre la liste d’attente',
-          highlight: false,
-        },
-        {
-          name: 'Pro annuel',
-          audience: 'Enseignant — accès pendant 12 mois',
+          name: 'Enseignant annuel',
+          audience: 'Pour un enseignant — accès pendant 12 mois',
           price: '250 $',
-          period: 'en une fois / an',
-          features: ['Toutes les fonctionnalités incluses', '12 mois d’accès', 'Un seul paiement annuel'],
-          cta: 'Rejoindre la liste d’attente',
+          period: 'un paiement / an',
+          features: [
+            'Création et gestion des classes et des dossiers élèves',
+            'Présences, observations et carnet de résultats',
+            'Agent IA connecté à l’historique des élèves',
+            'Cours, quiz, corrections et adaptations',
+            'PAT et commentaires de bulletin',
+            'Exports DOCX/PDF et historique des documents',
+            '50 $ économisés par rapport au paiement mensuel',
+          ],
+          cta: 'S’abonner',
+          ctaHref: '/register',
           highlight: true,
         },
         {
@@ -270,8 +356,15 @@ export const landingTranslations = {
           audience: 'Direction / Coordinateur pédagogique',
           price: '299 $',
           period: '/mois',
-          features: ['Tous les enseignants de l’école', 'Analytics direction', 'Intégrations'],
-          cta: 'Rejoindre la liste d’attente',
+          features: [
+            'Plusieurs comptes enseignants',
+            'Toutes les fonctionnalités individuelles',
+            'Gestion centralisée de l’établissement',
+            'Vue globale des classes et des enseignants',
+            'Assistance prioritaire',
+          ],
+          cta: 'Bientôt disponible',
+          ctaHref: '',
           highlight: false,
         },
         {
@@ -279,8 +372,15 @@ export const landingTranslations = {
           audience: 'Commission scolaire / Académie',
           price: 'Sur devis',
           period: '',
-          features: ['Déploiement multi-établissements', 'Conformité institutionnelle'],
+          features: [
+            'Plusieurs établissements',
+            'Administration centralisée',
+            'Déploiement et accompagnement personnalisés',
+            'Sécurité et conformité institutionnelles',
+            'Support dédié',
+          ],
           cta: 'Nous contacter',
+          ctaHref: '/contact',
           highlight: false,
         },
       ],
@@ -320,7 +420,7 @@ export const landingTranslations = {
       title: 'Prepara tus clases',
       titleAccent: 'en unos pocos clics.',
       description:
-        'Describe tu clase y la IA crea una lección completa, un quiz y comentarios de evaluación en menos de 60 segundos.',
+        'Describe tu clase y tu agente de IA crea una lección completa, un quiz y comentarios de evaluación en menos de 60 segundos.',
       primaryCta: 'Crear mi cuenta gratis →',
       demoCta: 'Ver la demostración',
       generated: 'Lección creada',
@@ -337,13 +437,13 @@ export const landingTranslations = {
     },
     features: {
       title: 'Todo lo que necesitas',
-      subtitle: 'Tres herramientas docentes impulsadas por IA',
+      subtitle: 'Tres herramientas docentes impulsadas por tu agente de IA',
       included: 'Incluido',
       items: [
         {
           title: 'Generación de lecciones',
           description:
-            'Un formulario guiado, sin escribir prompts. La IA estructura y redacta tu lección completa, lista para exportar en PDF o Word.',
+            'Un formulario guiado, sin escribir prompts. Tu agente de IA estructura y redacta tu lección completa, lista para exportar en PDF o Word.',
         },
         {
           title: 'Quizzes automáticos',
@@ -353,7 +453,7 @@ export const landingTranslations = {
         {
           title: 'Comentarios de evaluación',
           description:
-            'Nombre, materia, nota y observaciones: la IA crea un comentario cercano, personalizado y pertinente.',
+            'Nombre, materia, nota y observaciones: tu agente de IA crea un comentario cercano, personalizado y pertinente.',
         },
       ],
     },
@@ -363,8 +463,36 @@ export const landingTranslations = {
       steps: [
         { n: '01', title: 'Crea tu perfil', detail: '90 s. Añade tu nombre, materia y nivel educativo.' },
         { n: '02', title: 'Elige el tema', detail: 'Indica título, objetivos, duración y nivel del alumnado.' },
-        { n: '03', title: 'La IA genera en tiempo real', detail: 'Observa cómo aparece la lección completa mientras se crea.' },
+        { n: '03', title: 'Tu agente de IA genera en tiempo real', detail: 'Observa cómo aparece la lección completa mientras se crea.' },
         { n: '04', title: 'Exporta', detail: 'Descarga en PDF o Word, listo para imprimir o compartir.' },
+      ],
+    },
+    why: {
+      eyebrow: 'DISEÑADO PARA GENERAR CONFIANZA',
+      title: '¿Por qué elegir EducAssist?',
+      subtitle:
+        'Ahorra tiempo sin perder el control de los datos del alumnado ni de tus decisiones educativas.',
+      items: [
+        {
+          title: 'Expedientes del alumnado confidenciales',
+          description:
+            'Los datos del alumnado nunca son públicos. Cada docente solo accede al alumnado de sus propias clases.',
+        },
+        {
+          title: 'Ahorro de tiempo inmediato',
+          description:
+            'Convierte horas de trabajo repetitivo en minutos reutilizando la información ya registrada en tu espacio.',
+        },
+        {
+          title: 'Un agente de IA que conoce tu clase',
+          description:
+            'Utiliza las observaciones, asistencias, resultados y adaptaciones existentes. Si falta información, lo indica en lugar de inventarla.',
+        },
+        {
+          title: 'Tú mantienes el control',
+          description:
+            'Revisa, ajusta y aprueba cada documento generado antes de exportarlo en DOCX o PDF.',
+        },
       ],
     },
     pricing: {
@@ -373,30 +501,38 @@ export const landingTranslations = {
       popular: 'Popular',
       tiers: [
         {
-          name: 'Starter',
-          audience: 'Docente independiente',
-          price: '20 $',
+          name: 'Docente mensual',
+          audience: 'Para un docente — cancela cuando quieras',
+          price: '25 $',
           period: '/mes',
-          features: ['Módulos 1 a 4', 'Corrección y planificación'],
-          cta: 'Unirme a la lista de espera',
+          features: [
+            'Creación y gestión de clases y expedientes del alumnado',
+            'Asistencia, observaciones y registro de resultados',
+            'Agente de IA conectado al historial del alumnado',
+            'Lecciones, quizzes, correcciones y adaptaciones',
+            'PAT y comentarios de evaluación',
+            'Exportaciones DOCX/PDF e historial de documentos',
+          ],
+          cta: 'Suscribirme',
+          ctaHref: '/register',
           highlight: false,
         },
         {
-          name: 'Pro',
-          audience: 'Docente de un centro',
-          price: '39 $',
-          period: '/mes',
-          features: ['Los 5 módulos', 'Panel integrado'],
-          cta: 'Unirme a la lista de espera',
-          highlight: false,
-        },
-        {
-          name: 'Pro anual',
-          audience: 'Docente — acceso durante 12 meses',
+          name: 'Docente anual',
+          audience: 'Para un docente — acceso durante 12 meses',
           price: '250 $',
-          period: 'pago único / año',
-          features: ['Todas las funciones incluidas', '12 meses de acceso', 'Un solo pago anual'],
-          cta: 'Unirme a la lista de espera',
+          period: 'un pago / año',
+          features: [
+            'Creación y gestión de clases y expedientes del alumnado',
+            'Asistencia, observaciones y registro de resultados',
+            'Agente de IA conectado al historial del alumnado',
+            'Lecciones, quizzes, correcciones y adaptaciones',
+            'PAT y comentarios de evaluación',
+            'Exportaciones DOCX/PDF e historial de documentos',
+            'Ahorra 50 $ frente al pago mensual',
+          ],
+          cta: 'Suscribirme',
+          ctaHref: '/register',
           highlight: true,
         },
         {
@@ -404,8 +540,15 @@ export const landingTranslations = {
           audience: 'Dirección / Coordinación pedagógica',
           price: '299 $',
           period: '/mes',
-          features: ['Todo el profesorado del centro', 'Análisis para dirección', 'Integraciones'],
-          cta: 'Unirme a la lista de espera',
+          features: [
+            'Varias cuentas docentes',
+            'Todas las funciones individuales',
+            'Gestión centralizada del centro',
+            'Vista global de clases y docentes',
+            'Asistencia prioritaria',
+          ],
+          cta: 'Próximamente',
+          ctaHref: '',
           highlight: false,
         },
         {
@@ -413,8 +556,15 @@ export const landingTranslations = {
           audience: 'Distrito escolar / Administración educativa',
           price: 'A medida',
           period: '',
-          features: ['Despliegue en varios centros', 'Cumplimiento institucional'],
+          features: [
+            'Varios centros educativos',
+            'Administración centralizada',
+            'Despliegue y acompañamiento personalizados',
+            'Seguridad y cumplimiento institucional',
+            'Soporte dedicado',
+          ],
           cta: 'Contactar',
+          ctaHref: '/contact',
           highlight: false,
         },
       ],

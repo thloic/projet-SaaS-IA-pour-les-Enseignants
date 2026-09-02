@@ -11,6 +11,10 @@ import {
   MessageSquare,
   Check,
   ArrowUpRight,
+  ShieldCheck,
+  Zap,
+  Bot,
+  FileCheck2,
 } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -28,6 +32,13 @@ const FOOTER_LINKS = [
   ['/faq'],
   ['/about', '/contact'],
   [null, null, null],
+] as const
+const WHY_ICONS = [ShieldCheck, Zap, Bot, FileCheck2] as const
+const WHY_ICON_STYLES = [
+  'bg-emerald-500/10 text-emerald-500',
+  'bg-amber-500/10 text-amber-500',
+  'bg-violet-500/10 text-violet-500',
+  'bg-sky-500/10 text-sky-500',
 ] as const
 
 export default function LandingPage() {
@@ -440,8 +451,60 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── POURQUOI NOUS ── */}
+      <section id="why-us" className="py-24 px-6">
+        <div className="max-w-6xl mx-auto grid gap-12 lg:grid-cols-[0.8fr_1.4fr] lg:items-center">
+          <div>
+            <p
+              className="mb-4 text-sm font-bold tracking-[0.2em]"
+              style={{ color: BRAND }}
+            >
+              {t.why.eyebrow}
+            </p>
+            <h2 className="text-3xl sm:text-4xl font-black leading-tight mb-5">
+              {t.why.title}
+            </h2>
+            <p className={`text-lg leading-relaxed ${muted}`}>
+              {t.why.subtitle}
+            </p>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            {t.why.items.map((item, index) => {
+              const Icon = WHY_ICONS[index] ?? ShieldCheck
+              const iconStyle = WHY_ICON_STYLES[index] ?? WHY_ICON_STYLES[0]
+
+              return (
+                <article
+                  key={item.title}
+                  className={`rounded-2xl border p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
+                    dark
+                      ? 'bg-white/5 border-white/10 hover:border-white/20'
+                      : 'bg-white border-gray-200'
+                  }`}
+                >
+                  <div
+                    className={`mb-5 flex h-12 w-12 items-center justify-center rounded-2xl ${iconStyle}`}
+                  >
+                    <Icon size={23} aria-hidden="true" />
+                  </div>
+                  <h3 className="mb-2 text-lg font-bold">{item.title}</h3>
+                  <p className={`text-sm leading-relaxed ${muted}`}>
+                    {item.description}
+                  </p>
+                </article>
+              )
+            })}
+          </div>
+        </div>
+      </section>
+
       {/* ── TARIFS ── */}
-      <section id="pricing" className="py-24 px-6">
+      <section id="pricing" className="relative overflow-hidden py-24 px-6">
+        <div
+          className="pointer-events-none absolute left-1/2 top-1/3 -z-10 h-96 w-96 -translate-x-1/2 rounded-full blur-3xl"
+          style={{ backgroundColor: `${BRAND}14` }}
+        />
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-black mb-4">
@@ -452,16 +515,16 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
             {t.pricing.tiers.map((tier) => (
               <div
                 key={tier.name}
-                className={`rounded-2xl p-6 border relative flex flex-col ${
+                className={`group rounded-3xl p-7 sm:p-8 border relative flex flex-col transition-all duration-300 hover:-translate-y-1 ${
                   tier.highlight
-                    ? 'border-2'
+                    ? 'border-2 shadow-xl lg:-translate-y-2 lg:hover:-translate-y-3'
                     : dark
-                      ? 'bg-white/5 border-white/10'
-                      : 'bg-gray-50 border-gray-200'
+                      ? 'bg-white/5 border-white/10 hover:border-white/25'
+                      : 'bg-white border-gray-200 shadow-sm hover:shadow-lg'
                 }`}
                 style={
                   tier.highlight
@@ -481,14 +544,16 @@ export default function LandingPage() {
                   </span>
                 ) : null}
 
-                <h3 className="font-bold text-xl mb-1">{tier.name}</h3>
-                <p className={`text-sm min-h-10 mb-6 ${muted}`}>
+                <h3 className="font-bold text-2xl mb-2">{tier.name}</h3>
+                <p className={`text-sm min-h-10 mb-5 ${muted}`}>
                   {tier.audience}
                 </p>
-                <div className="text-3xl font-black mb-6">
-                  {tier.price}{' '}
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 mb-7">
+                  <span className="text-4xl font-black tracking-tight">
+                    {tier.price}
+                  </span>
                   {tier.period ? (
-                    <span className="text-base font-normal opacity-60">
+                    <span className="text-sm font-medium opacity-60">
                       {tier.period}
                     </span>
                   ) : null}
@@ -500,25 +565,27 @@ export default function LandingPage() {
                 >
                   {tier.features.map((feature) => (
                     <li key={feature} className="flex items-start gap-2">
-                      <Check
-                        size={14}
-                        className="text-emerald-400 shrink-0 mt-0.5"
-                      />{' '}
+                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10">
+                        <Check size={13} className="text-emerald-500" />
+                      </span>
                       <span>{feature}</span>
                     </li>
                   ))}
                 </ul>
-                <Button
-                  className={`w-full ${
-                    tier.highlight ? 'text-white' : ''
-                  }`}
-                  variant={tier.highlight ? 'default' : 'outline'}
-                  style={
-                    tier.highlight ? { backgroundColor: BRAND } : undefined
-                  }
-                >
-                  {tier.cta}
-                </Button>
+                {tier.ctaHref ? (
+                  <Button
+                    asChild
+                    className={`w-full ${tier.highlight ? 'text-white' : ''}`}
+                    variant={tier.highlight ? 'default' : 'outline'}
+                    style={tier.highlight ? { backgroundColor: BRAND } : undefined}
+                  >
+                    <Link href={tier.ctaHref}>{tier.cta}</Link>
+                  </Button>
+                ) : (
+                  <Button className="w-full" variant="outline" disabled>
+                    {tier.cta}
+                  </Button>
+                )}
               </div>
             ))}
           </div>

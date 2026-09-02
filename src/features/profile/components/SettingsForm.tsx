@@ -1,12 +1,11 @@
 'use client'
 
 import { useActionState, useState } from 'react'
-import { Settings, User, Globe, CreditCard, Save, Crown, Check } from 'lucide-react'
+import { Settings, User, Globe, Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
-import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/shared/ToastProvider'
 import { useAppLocale } from '@/features/i18n/AppLocaleProvider'
 import {
@@ -17,6 +16,8 @@ import { defaultGrading, type GradingSystem, type ContentLanguage } from '@/feat
 import type { AppLocale } from '@/features/i18n/locale'
 import { APP_LOCALES } from '@/features/i18n/locale'
 import { suggestedTimeZone, TIME_ZONE_OPTIONS } from '@/lib/timezone'
+import SubscriptionSection from '@/features/billing/components/SubscriptionSection'
+import type { SubscriptionSummary } from '@/features/billing/server/subscriptionCore'
 
 const BRAND = '#534AB7'
 
@@ -43,6 +44,7 @@ interface SettingsFormProps {
   initialTimezone: string
   generationsUsed: number
   generationsLimit: number
+  subscription: SubscriptionSummary
 }
 
 const initialActionState: UpdateProfileState = { error: null, info: null }
@@ -65,6 +67,7 @@ export default function SettingsForm({
   initialTimezone,
   generationsUsed,
   generationsLimit,
+  subscription,
 }: SettingsFormProps) {
   const { showToast } = useToast()
   const { setLocale, t } = useAppLocale()
@@ -397,52 +400,12 @@ export default function SettingsForm({
         </Button>
       </form>
 
-      {/* Section 3 — Plan & Billing (hors périmètre, inchangé) */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <CreditCard size={16} style={{ color: BRAND }} />
-          <h2 className="font-bold text-sm uppercase tracking-wider" style={{ color: BRAND }}>{t.settings.planBilling}</h2>
-        </div>
-        <div className="rounded-2xl border border-border bg-muted/20 p-5 space-y-4">
-          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="font-semibold flex items-center gap-2">
-                {t.common.freePlan}
-                <Badge className="bg-muted text-muted-foreground border-border text-[10px]">{t.settings.current}</Badge>
-              </p>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                {generationsUsed} / {generationsLimit} {t.settings.usedThisMonth}
-              </p>
-            </div>
-          </div>
-
-          <div className="h-2 rounded-full bg-muted">
-            <div
-              className="h-2 rounded-full bg-amber-400 transition-all"
-              style={{ width: `${(generationsUsed / generationsLimit) * 100}%` }}
-            />
-          </div>
-
-          <Separator />
-
-          <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <Crown size={16} className="text-amber-400" />
-              <p className="font-bold">{t.settings.upgradeTitle}</p>
-            </div>
-            <ul className="space-y-1.5 text-sm text-muted-foreground">
-              {t.settings.planFeatures.map((f) => (
-                <li key={f} className="flex items-center gap-2">
-                  <Check size={12} className="text-emerald-400 shrink-0" /> {f}
-                </li>
-              ))}
-            </ul>
-            <Button className="w-full text-white font-bold h-10" style={{ backgroundColor: BRAND }}>
-              <Crown size={15} className="mr-2" /> {t.settings.upgradeCta}
-            </Button>
-          </div>
-        </div>
-      </div>
+      {/* Section 3 — Plan & Billing */}
+      <SubscriptionSection
+        subscription={subscription}
+        generationsUsed={generationsUsed}
+        generationsLimit={generationsLimit}
+      />
     </div>
   )
 }
