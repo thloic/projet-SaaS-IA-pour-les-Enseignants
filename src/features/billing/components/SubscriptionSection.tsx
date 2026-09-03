@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { CreditCard, Crown, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -33,14 +34,39 @@ export default function SubscriptionSection({
 
   useEffect(() => {
     if (checkoutStatus !== 'success') return
-    // Le webhook Stripe peut ne pas avoir encore traité l'événement au retour
-    // de la redirection — on laisse un court délai puis on rafraîchit une
-    // seule fois plutôt que d'afficher "Pro" en se fiant à la seule redirection.
-    const timeout = setTimeout(() => {
-      setActivating(false)
-      router.refresh()
-    }, 2500)
-    return () => clearTimeout(timeout)
+    // Le webhook Stripe arrive quelques secondes après la redirection.
+    // On interroge /api/billing/status toutes les 2 s (max 6 tentatives)
+    // jusqu'à ce que le plan passe à "pro", puis on rafraîchit les Server
+    // Components pour refléter le nouveau statut.
+    let stopped = false
+    let attempts = 0
+    const MAX = 6
+
+    async function poll() {
+      if (stopped) return
+      attempts++
+      try {
+        const res = await fetch('/api/billing/status')
+        const { plan } = await res.json()
+        if (plan === 'pro') {
+          setActivating(false)
+          router.refresh()
+          return
+        }
+      } catch {}
+      if (attempts < MAX) {
+        setTimeout(poll, 2000)
+      } else {
+        setActivating(false)
+        router.refresh()
+      }
+    }
+
+    const initial = setTimeout(poll, 2000)
+    return () => {
+      stopped = true
+      clearTimeout(initial)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -120,24 +146,15 @@ export default function SubscriptionSection({
                 </li>
               ))}
             </ul>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button
-                onClick={() => startCheckout('month')}
-                disabled={pendingAction !== null}
-                className="flex-1 text-white font-bold h-10"
-                style={{ backgroundColor: BRAND }}
-              >
-                <Crown size={15} className="mr-2" /> {t.settings.upgradeCtaMonthly}
-              </Button>
-              <Button
-                onClick={() => startCheckout('year')}
-                disabled={pendingAction !== null}
-                variant="outline"
-                className="flex-1 font-bold h-10"
-              >
-                {t.settings.upgradeCtaAnnual}
-              </Button>
-            </div>
+            <Button
+              asChild
+              className="w-full text-white font-bold h-10"
+              style={{ backgroundColor: BRAND }}
+            >
+              <Link href="/pricing">
+                <Crown size={15} className="mr-2" /> {t.settings.upgradeTitle}
+              </Link>
+            </Button>
           </div>
         )}
       </div>

@@ -23,7 +23,6 @@ import { Badge } from '@/components/ui/badge'
 import BrandLogo from '@/components/shared/BrandLogo'
 import GenerationCounter from '@/components/shared/GenerationCounter'
 import { useAppLocale } from '@/features/i18n/AppLocaleProvider'
-import { useBilling } from '@/features/billing/hooks/useBilling'
 import type { TeacherIdentity } from '@/features/profile/types/profile.types'
 
 const BRAND = '#534AB7'
@@ -39,7 +38,6 @@ interface SidebarProps {
 export default function Sidebar({ collapsed, mobileOpen, onMobileClose, onToggle, teacher }: SidebarProps) {
   const pathname = usePathname()
   const { t } = useAppLocale()
-  const { startCheckout, pendingAction } = useBilling()
   const generationsUsed = teacher?.generationsUsed ?? 0
   const generationsLimit = teacher?.generationsLimit ?? 3
   const navItems = [
@@ -155,13 +153,11 @@ export default function Sidebar({ collapsed, mobileOpen, onMobileClose, onToggle
                 label={t.common.generations}
               />
               <Button
-                type="button"
-                onClick={() => startCheckout('month')}
-                disabled={pendingAction !== null}
+                asChild
                 className="w-full text-white text-xs h-8"
                 style={{ backgroundColor: BRAND }}
               >
-                {t.common.upgrade}
+                <Link href="/pricing">{t.common.upgrade}</Link>
               </Button>
             </div>
           </div>

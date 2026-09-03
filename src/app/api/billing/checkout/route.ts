@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     return Response.json({ error: 'INVALID_INPUT' }, { status: 400 })
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? new URL(req.url).origin
+  const appUrl = new URL(req.url).origin
   const existingCustomerId = await getStripeCustomerId(user.id)
 
   try {
