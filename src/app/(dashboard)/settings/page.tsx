@@ -1,16 +1,20 @@
 import { getUsage } from '@/features/billing/server/usage'
 import { getSubscriptionSummary } from '@/features/billing/server/subscription'
+import { getAmbassadorSummary } from '@/features/billing/server/ambassador'
 import { getCurrentUser, getCurrentTeacherProfile } from '@/features/profile/server/profile'
 import SettingsForm from '@/features/profile/components/SettingsForm'
 import { normalizeGradingSystem } from '@/features/profile/types/profile.types'
 
 export default async function SettingsPage() {
   const [user, profile] = await Promise.all([getCurrentUser(), getCurrentTeacherProfile()])
-  const [usage, subscription] = await Promise.all([
+  const [usage, subscription, ambassador] = await Promise.all([
     user ? getUsage(user.id) : Promise.resolve({ used: 0, limit: 3 }),
     user
       ? getSubscriptionSummary(user.id)
       : Promise.resolve({ plan: 'free' as const, interval: null, currentPeriodEnd: null, cancelAtPeriodEnd: false }),
+    user
+      ? getAmbassadorSummary(user.id, profile?.first_name ?? '')
+      : Promise.resolve({ code: '', referralCount: 0, discountPercent: 0 }),
   ])
 
   return (
@@ -33,6 +37,7 @@ export default async function SettingsPage() {
       generationsUsed={usage.used}
       generationsLimit={usage.limit}
       subscription={subscription}
+      ambassador={ambassador}
     />
   )
 }

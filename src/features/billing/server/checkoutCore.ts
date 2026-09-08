@@ -7,6 +7,17 @@ export interface BuildCheckoutSessionParamsInput {
   existingCustomerId: string | null
   appUrl: string
   priceIds: { month: string; year: string }
+  // user_id de l'ambassadeur dont le code a été indiqué par l'enseignant qui
+  // s'abonne ici (le filleul) — déjà validé (existence, pas son propre code)
+  // avant d'arriver ici. Ne modifie jamais le prix de CETTE session : le
+  // webhook s'en sert uniquement pour créditer la recommandation côté
+  // ambassadeur (voir docs/PLAN-ambassadeurs.md, Phase 2/3).
+  ambassadorUserId?: string | null
+  // Coupon Stripe correspondant au palier de réduction déjà accumulé par
+  // l'enseignant qui s'abonne ici (s'il est lui-même ambassadeur d'un ou
+  // plusieurs collègues). Résolu en amont (voir ambassador.ts) à partir de
+  // son nombre de recommandations — jamais recalculé ici.
+  discountCouponId?: string | null
 }
 
 export function buildCheckoutSessionParams({
@@ -16,6 +27,8 @@ export function buildCheckoutSessionParams({
   existingCustomerId,
   appUrl,
   priceIds,
+  ambassadorUserId,
+  discountCouponId,
 }: BuildCheckoutSessionParamsInput): Stripe.Checkout.SessionCreateParams {
   const priceId = interval === 'month' ? priceIds.month : priceIds.year
   if (!priceId) {
@@ -29,7 +42,10 @@ export function buildCheckoutSessionParams({
     success_url: `${appUrl}/settings?checkout=success`,
     cancel_url: `${appUrl}/settings?checkout=cancelled`,
     subscription_data: {
-      metadata: { supabase_user_id: userId },
+      metadata: {
+        supabase_user_id: userId,
+        ...(ambassadorUserId ? { ambassador_user_id: ambassadorUserId } : {}),
+      },
     },
   }
 
@@ -37,6 +53,10 @@ export function buildCheckoutSessionParams({
     params.customer = existingCustomerId
   } else {
     params.customer_email = email
+  }
+
+  if (discountCouponId) {
+    params.discounts = [{ coupon: discountCouponId }]
   }
 
   return params

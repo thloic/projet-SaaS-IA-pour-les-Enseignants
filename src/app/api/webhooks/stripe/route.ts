@@ -1,6 +1,7 @@
 import type Stripe from 'stripe'
 import { getStripe } from '@/lib/stripe/client'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getAmbassadorCouponId } from '@/features/billing/server/ambassador'
 import {
   handleStripeEvent,
   type StripeSubscriptionLike,
@@ -75,6 +76,51 @@ function createWebhookRepository(admin: ReturnType<typeof createAdminClient>): W
         throw new Error('SUBSCRIPTION_UPSERT_FAILED')
       }
     },
+    async recordAmbassadorReferral(ambassadorUserId: string, referredUserId: string) {
+      const { error: insertError } = await admin
+        .from('ambassador_redemptions')
+        .insert({ ambassador_user_id: ambassadorUserId, referred_user_id: referredUserId })
+
+      if (insertError) {
+        // Code Postgres 23505 = violation de contrainte unique sur
+        // `referred_user_id` : ce filleul a déjà été enregistré (pour cet
+        // ambassadeur ou un autre, ex. réabonnement après résiliation) — c'est
+        // le comportement voulu (US-11), pas une erreur à faire remonter.
+        if (insertError.code === '23505') return null
+        console.error('[stripe-webhook] échec de l’enregistrement de la recommandation', insertError)
+        throw new Error('AMBASSADOR_REFERRAL_RECORD_FAILED')
+      }
+
+      const { count, error: countError } = await admin
+        .from('ambassador_redemptions')
+        .select('id', { count: 'exact', head: true })
+        .eq('ambassador_user_id', ambassadorUserId)
+
+      if (countError) {
+        console.error('[stripe-webhook] échec du comptage des recommandations', countError)
+        throw new Error('AMBASSADOR_REFERRAL_COUNT_FAILED')
+      }
+      return count ?? 1
+    },
+    async getAmbassadorStripeSubscriptionId(ambassadorUserId: string) {
+      const { data, error } = await admin
+        .from('subscriptions')
+        .select('stripe_subscription_id, status')
+        .eq('user_id', ambassadorUserId)
+        .maybeSingle()
+
+      if (error) {
+        console.error('[stripe-webhook] échec de la lecture de l’abonnement de l’ambassadeur', error)
+        return null
+      }
+      // Un abonnement 'canceled' est terminal côté Stripe (Stripe refuse toute
+      // mise à jour) : seuls 'active'/'past_due' peuvent recevoir le nouveau
+      // rabais immédiatement, les autres cas l'appliqueront à leur prochain checkout.
+      if (!data?.stripe_subscription_id || (data.status !== 'active' && data.status !== 'past_due')) {
+        return null
+      }
+      return data.stripe_subscription_id
+    },
   }
 }
 
@@ -99,6 +145,15 @@ export async function POST(req: Request) {
       async retrieveSubscription(subscriptionId) {
         const subscription = await getStripe().subscriptions.retrieve(subscriptionId)
         return toStripeSubscriptionLike(subscription)
+      },
+      async applyAmbassadorDiscount(stripeSubscriptionId, discountPercent) {
+        const couponId = getAmbassadorCouponId(discountPercent)
+        // Coupon manquant en config (déjà logué par getAmbassadorCouponId) :
+        // on n'applique pas le rabais cette fois plutôt que de faire échouer
+        // tout le traitement de l'événement — un coupon Dashboard oublié ne
+        // doit jamais bloquer indéfiniment ce webhook en retry.
+        if (!couponId) return
+        await getStripe().subscriptions.update(stripeSubscriptionId, { discounts: [{ coupon: couponId }] })
       },
     })
   } catch (error) {

@@ -66,3 +66,31 @@ test('un price_id manquant pour l’intervalle demandé lève une erreur explici
     })
   )
 })
+
+test('un ambassadorUserId fourni est propagé dans les metadata de l’abonnement, pour que le webhook puisse enregistrer la recommandation', () => {
+  const params = buildCheckoutSessionParams({
+    ...BASE_INPUT,
+    interval: 'month',
+    ambassadorUserId: 'ambassador-user-id',
+  })
+  assert.equal(params.subscription_data?.metadata?.ambassador_user_id, 'ambassador-user-id')
+})
+
+test('sans ambassadorUserId, aucune clé ambassador_user_id n’est ajoutée aux metadata', () => {
+  const params = buildCheckoutSessionParams({ ...BASE_INPUT, interval: 'month' })
+  assert.equal(params.subscription_data?.metadata?.ambassador_user_id, undefined)
+})
+
+test('un discountCouponId fourni (palier de réduction de l’ambassadeur qui s’abonne) applique le coupon à sa propre session', () => {
+  const params = buildCheckoutSessionParams({
+    ...BASE_INPUT,
+    interval: 'month',
+    discountCouponId: 'coupon_20',
+  })
+  assert.deepEqual(params.discounts, [{ coupon: 'coupon_20' }])
+})
+
+test('sans discountCouponId (aucun filleul recommandé), aucun rabais n’est appliqué', () => {
+  const params = buildCheckoutSessionParams({ ...BASE_INPUT, interval: 'month' })
+  assert.equal(params.discounts, undefined)
+})

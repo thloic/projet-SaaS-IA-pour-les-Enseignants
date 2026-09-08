@@ -12,14 +12,15 @@ export function useBilling() {
     window.location.href = url
   }
 
-  async function startCheckout(interval: 'month' | 'year') {
+  async function startCheckout(interval: 'month' | 'year', promoCode?: string) {
     setError(null)
     setPendingAction(interval === 'month' ? 'checkout-month' : 'checkout-year')
     try {
+      const trimmedCode = promoCode?.trim()
       const response = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ interval }),
+        body: JSON.stringify({ interval, ...(trimmedCode ? { promoCode: trimmedCode } : {}) }),
       })
       const data = await response.json()
       if (!response.ok || !data.url) {

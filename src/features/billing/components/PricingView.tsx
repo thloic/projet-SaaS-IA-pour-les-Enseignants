@@ -1,8 +1,11 @@
 'use client'
 
+import { useState } from 'react'
 import { Check, Crown, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { useBilling } from '@/features/billing/hooks/useBilling'
 import { useAppLocale } from '@/features/i18n/AppLocaleProvider'
 
@@ -64,6 +67,12 @@ const COPY = {
     alreadyPro: 'Vous êtes déjà abonné au plan Pro.',
     manageLink: 'Gérer mon abonnement →',
     included: 'Tout inclus dans les deux offres',
+    promoCodeLabel: 'Code d’un collègue (optionnel)',
+    promoCodePlaceholder: 'ex. MARIE01',
+    promoCodeHint: 'Ne change pas votre prix — ça réduit l’abonnement de la personne qui vous l’a partagé.',
+    promoCodeInvalid: 'Ce code n’existe pas.',
+    promoCodeOwn: 'Vous ne pouvez pas utiliser votre propre code.',
+    checkoutFailed: 'Une erreur est survenue, réessayez.',
   },
   en: {
     title: 'Choose your plan',
@@ -87,6 +96,12 @@ const COPY = {
     alreadyPro: 'You are already subscribed to the Pro plan.',
     manageLink: 'Manage my subscription →',
     included: 'Everything included in both plans',
+    promoCodeLabel: 'A colleague’s code (optional)',
+    promoCodePlaceholder: 'e.g. MARIE01',
+    promoCodeHint: 'Doesn’t change your price — it reduces the subscription of whoever shared it with you.',
+    promoCodeInvalid: 'This code doesn’t exist.',
+    promoCodeOwn: 'You can’t use your own code.',
+    checkoutFailed: 'Something went wrong, please try again.',
   },
   es: {
     title: 'Elija su oferta',
@@ -110,6 +125,12 @@ const COPY = {
     alreadyPro: 'Ya está suscrito al plan Pro.',
     manageLink: 'Gestionar mi suscripción →',
     included: 'Todo incluido en ambos planes',
+    promoCodeLabel: 'Código de un colega (opcional)',
+    promoCodePlaceholder: 'ej. MARIE01',
+    promoCodeHint: 'No cambia su precio — reduce la suscripción de quien se lo compartió.',
+    promoCodeInvalid: 'Este código no existe.',
+    promoCodeOwn: 'No puede usar su propio código.',
+    checkoutFailed: 'Ocurrió un error, inténtelo de nuevo.',
   },
 }
 
@@ -123,10 +144,20 @@ export default function PricingView({ currentPlan, currentInterval }: PricingVie
   const lang = locale === 'fr' || locale === 'en' || locale === 'es' ? locale : 'fr'
   const c = COPY[lang]
   const features = FEATURES[lang]
-  const { startCheckout, openPortal, pendingAction } = useBilling()
+  const { startCheckout, openPortal, pendingAction, error } = useBilling()
+  const [promoCode, setPromoCode] = useState('')
 
   const isMonthly = currentPlan === 'pro' && currentInterval === 'month'
   const isAnnual = currentPlan === 'pro' && currentInterval === 'year'
+
+  const promoCodeError =
+    error === 'INVALID_PROMO_CODE'
+      ? c.promoCodeInvalid
+      : error === 'OWN_PROMO_CODE_NOT_ALLOWED'
+        ? c.promoCodeOwn
+        : error
+          ? c.checkoutFailed
+          : null
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 px-4 py-8">
@@ -145,6 +176,22 @@ export default function PricingView({ currentPlan, currentInterval }: PricingVie
           >
             {c.manageLink}
           </button>
+        </div>
+      )}
+
+      {currentPlan === 'free' && (
+        <div className="space-y-1.5">
+          <Label htmlFor="promo-code">{c.promoCodeLabel}</Label>
+          <Input
+            id="promo-code"
+            value={promoCode}
+            onChange={(e) => setPromoCode(e.target.value)}
+            placeholder={c.promoCodePlaceholder}
+            disabled={pendingAction !== null}
+            className="max-w-xs uppercase"
+          />
+          <p className="text-xs text-muted-foreground">{c.promoCodeHint}</p>
+          {promoCodeError && <p className="text-xs text-destructive">{promoCodeError}</p>}
         </div>
       )}
 
@@ -171,7 +218,7 @@ export default function PricingView({ currentPlan, currentInterval }: PricingVie
             <span className="text-sm text-muted-foreground mb-1">{c.monthly.period}</span>
           </div>
           <Button
-            onClick={() => startCheckout('month')}
+            onClick={() => startCheckout('month', promoCode)}
             disabled={pendingAction !== null || currentPlan === 'pro'}
             className="w-full font-bold text-white h-10"
             style={{ backgroundColor: BRAND }}
@@ -208,7 +255,7 @@ export default function PricingView({ currentPlan, currentInterval }: PricingVie
             <span className="text-sm text-muted-foreground mb-1">{c.annual.period}</span>
           </div>
           <Button
-            onClick={() => startCheckout('year')}
+            onClick={() => startCheckout('year', promoCode)}
             disabled={pendingAction !== null || currentPlan === 'pro'}
             className="w-full font-bold text-white h-10"
             style={{ backgroundColor: BRAND }}

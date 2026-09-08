@@ -18,6 +18,8 @@ import { APP_LOCALES } from '@/features/i18n/locale'
 import { suggestedTimeZone, TIME_ZONE_OPTIONS } from '@/lib/timezone'
 import SubscriptionSection from '@/features/billing/components/SubscriptionSection'
 import type { SubscriptionSummary } from '@/features/billing/server/subscriptionCore'
+import AmbassadorSection from '@/features/billing/components/AmbassadorSection'
+import type { AmbassadorSummary } from '@/features/billing/server/ambassador'
 
 const BRAND = '#534AB7'
 
@@ -45,6 +47,7 @@ interface SettingsFormProps {
   generationsUsed: number
   generationsLimit: number
   subscription: SubscriptionSummary
+  ambassador: AmbassadorSummary
 }
 
 const initialActionState: UpdateProfileState = { error: null, info: null }
@@ -68,6 +71,7 @@ export default function SettingsForm({
   generationsUsed,
   generationsLimit,
   subscription,
+  ambassador,
 }: SettingsFormProps) {
   const { showToast } = useToast()
   const { setLocale, t } = useAppLocale()
@@ -406,6 +410,9 @@ export default function SettingsForm({
         generationsUsed={generationsUsed}
         generationsLimit={generationsLimit}
       />
+
+      {/* Section 4 — Programme ambassadeur */}
+      <AmbassadorSection ambassador={ambassador} />
     </div>
   )
 }

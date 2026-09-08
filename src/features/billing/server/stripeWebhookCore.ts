@@ -1,3 +1,5 @@
+import { ambassadorDiscountPercent } from './ambassadorCore.ts'
+
 // `current_period_end` vit sur chaque item de l'abonnement (pas sur
 // l'abonnement lui-même) dans la version du SDK Stripe installée — vérifié
 // dans node_modules/stripe, pas supposé.
@@ -41,11 +43,26 @@ export interface WebhookRepository {
   // comme "déjà traité". Marquer avant traitement casserait ce retry.
   markEventProcessed(eventId: string, type: string): Promise<void>
   upsertSubscription(upsert: SubscriptionUpsert): Promise<void>
+  // Enregistre qu'un filleul s'est abonné grâce au code d'un ambassadeur et
+  // retourne le nombre total de filleuls de cet ambassadeur APRÈS
+  // l'enregistrement — ou `null` si ce filleul avait déjà été enregistré
+  // (pour n'importe quel ambassadeur, voir contrainte unique sur
+  // `ambassador_redemptions.referred_user_id`, PRD-ambassadeurs.md US-11) :
+  // dans ce cas, rien de nouveau à répercuter sur le rabais Stripe.
+  recordAmbassadorReferral(ambassadorUserId: string, referredUserId: string): Promise<number | null>
+  // Abonnement Stripe actif de l'ambassadeur, s'il en a déjà un — pour lui
+  // répercuter son nouveau palier de réduction immédiatement (US-9). `null`
+  // s'il n'est pas encore abonné : le rabais s'appliquera à son prochain
+  // checkout (voir discountCouponId dans checkoutCore.ts).
+  getAmbassadorStripeSubscriptionId(ambassadorUserId: string): Promise<string | null>
 }
 
 export interface WebhookDeps {
   repository: WebhookRepository
   retrieveSubscription(subscriptionId: string): Promise<StripeSubscriptionLike>
+  // Applique le rabais correspondant au palier donné (10, 20… 100) sur
+  // l'abonnement Stripe indiqué — jamais appelé avec 0 (voir handleCheckoutSessionCompleted).
+  applyAmbassadorDiscount(stripeSubscriptionId: string, discountPercent: number): Promise<void>
 }
 
 function toSubscriptionUpsert(
@@ -79,7 +96,26 @@ async function handleCheckoutSessionCompleted(
 
   const subscription = await deps.retrieveSubscription(session.subscription)
   const upsert = toSubscriptionUpsert(subscription, session.client_reference_id)
-  if (upsert) await deps.repository.upsertSubscription(upsert)
+  if (!upsert) return
+
+  await deps.repository.upsertSubscription(upsert)
+
+  // Uniquement au moment du checkout initial (pas sur les renouvellements
+  // ultérieurs, qui repassent par customer.subscription.updated sans jamais
+  // appeler cette fonction) : c'est le seul événement qui représente une
+  // véritable nouvelle recommandation. `ambassadorUserId !== upsert.userId`
+  // est une défense en profondeur — l'auto-recommandation est déjà bloquée
+  // en amont, au moment de la création de la session de checkout.
+  const ambassadorUserId = subscription.metadata?.ambassador_user_id
+  if (!ambassadorUserId || ambassadorUserId === upsert.userId) return
+
+  const referralCount = await deps.repository.recordAmbassadorReferral(ambassadorUserId, upsert.userId)
+  if (referralCount === null) return // filleul déjà compté ailleurs : rien de nouveau à répercuter
+
+  const ambassadorSubscriptionId = await deps.repository.getAmbassadorStripeSubscriptionId(ambassadorUserId)
+  if (ambassadorSubscriptionId) {
+    await deps.applyAmbassadorDiscount(ambassadorSubscriptionId, ambassadorDiscountPercent(referralCount))
+  }
 }
 
 async function handleSubscriptionEvent(
