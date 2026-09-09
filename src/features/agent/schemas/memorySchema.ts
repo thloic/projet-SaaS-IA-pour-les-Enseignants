@@ -3,6 +3,7 @@ import { z } from 'zod'
 export const getStudentContextInputSchema = z
   .object({
     studentQuery: z.string().trim().min(1, 'Le nom de l’élève est requis.').max(200),
+    studentId: z.string().uuid().optional(),
   })
   .strict()
 

@@ -159,7 +159,9 @@ export async function getStudentContextCore(
     throw new StudentContextError('CONTEXT_LOOKUP_FAILED')
   }
 
-  const resolution = resolveStudent(students, parsed.data.studentQuery)
+  const resolution = parsed.data.studentId
+    ? students.find((student) => student.id === parsed.data.studentId) ?? null
+    : resolveStudent(students, parsed.data.studentQuery)
   if (!resolution || 'kind' in resolution) return resolution
 
   try {

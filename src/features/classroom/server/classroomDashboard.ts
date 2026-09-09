@@ -3,6 +3,7 @@ import 'server-only'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/features/profile/server/profile'
 import { normalizeTimeZone } from '@/lib/timezone'
+import { classroomPeriodBounds } from '@/features/classroom/utils/classroomPeriod'
 import { isSessionStale } from '@/features/classroom/utils/sessionLifecycle'
 import type {
   AttendanceRecord,
@@ -21,18 +22,6 @@ import type {
   ClassroomOverviewData,
   ClassroomPeriod,
 } from '@/features/classroom/types/classroomDashboard.types'
-
-const PERIOD_DAYS: Record<ClassroomPeriod, number> = {
-  '7d': 7,
-  '30d': 30,
-  '90d': 90,
-}
-
-function dateBefore(days: number) {
-  const date = new Date()
-  date.setDate(date.getDate() - (days - 1))
-  return date.toISOString().slice(0, 10)
-}
 
 function isAttentionObservation(observation: Pick<StudentObservation, 'category' | 'tag'>) {
   const tag = observation.tag.toLocaleLowerCase('fr')
@@ -75,7 +64,7 @@ export async function listClassroomOverview(): Promise<ClassroomOverviewData> {
   }
 
   const supabase = await createClient()
-  const since = dateBefore(30)
+  const periodRange = classroomPeriodBounds('30d')
   const [classesResult, linksResult, sessionsResult] = await Promise.all([
     supabase
       .from('classes')
@@ -90,7 +79,8 @@ export async function listClassroomOverview(): Promise<ClassroomOverviewData> {
       .from('class_sessions')
       .select('id, class_id, session_date, ended_at, created_at')
       .eq('user_id', user.id)
-      .gte('session_date', since)
+      .gte('session_date', periodRange.start)
+      .lte('session_date', periodRange.end)
       .order('session_date', { ascending: false }),
   ])
 
@@ -195,7 +185,7 @@ export async function getClassDashboardForUser(
   userId: string
 ): Promise<ClassDashboardData | null> {
   const supabase = await createClient()
-  const since = dateBefore(PERIOD_DAYS[period])
+  const periodRange = classroomPeriodBounds(period)
   const [classResult, linksResult, sessionsResult] = await Promise.all([
     supabase
       .from('classes')
@@ -215,7 +205,8 @@ export async function getClassDashboardForUser(
       .select('*')
       .eq('class_id', classId)
       .eq('user_id', userId)
-      .gte('session_date', since)
+      .gte('session_date', periodRange.start)
+      .lte('session_date', periodRange.end)
       .order('session_date', { ascending: false })
       .order('created_at', { ascending: false }),
   ])
@@ -331,6 +322,7 @@ export async function getClassDashboardForUser(
   return {
     classroom: classResult.data as ClassRoom,
     period,
+    periodRange,
     metrics: {
       studentCount: students.length,
       attendanceRate: calculateAttendanceRate(attendance),
@@ -352,6 +344,12 @@ export async function getClassDashboardForUser(
       value: observations.filter((observation) => observation.category === key).length,
     })),
     students: studentRows,
+    recentAttendance: attendance.map((record) => ({
+      studentId: record.student_id,
+      studentName: studentNames.get(record.student_id) ?? 'Élève',
+      date: sessions.find((session) => session.id === record.session_id)!.session_date,
+      status: record.status,
+    })),
     sessions: sessions.map((session) => {
       const sessionAttendance = attendance.filter((record) => record.session_id === session.id)
       return {

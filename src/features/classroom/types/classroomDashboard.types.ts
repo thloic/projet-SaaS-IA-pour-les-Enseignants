@@ -95,6 +95,7 @@ export interface RecentClassObservation {
 export interface ClassDashboardData {
   classroom: ClassRoom
   period: ClassroomPeriod
+  periodRange: { start: string; end: string }
   metrics: {
     studentCount: number
     attendanceRate: number | null
@@ -109,6 +110,7 @@ export interface ClassDashboardData {
   students: StudentDashboardRow[]
   sessions: ClassSessionSummary[]
   recentObservations: RecentClassObservation[]
+  recentAttendance: Array<{ studentId: string; studentName: string; date: string; status: AttendanceRecord['status'] }>
   activeSessionId: string | null
 }
 

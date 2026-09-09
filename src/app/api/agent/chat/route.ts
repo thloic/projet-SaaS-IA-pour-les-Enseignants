@@ -9,9 +9,8 @@ import {
 } from '@/features/agent/schemas/agentSchema'
 import { generatePAT } from '@/features/agent/server/generatePAT'
 import { getStudentContext, listOwnedStudents } from '@/features/agent/server/memory'
-import { detectMentionedStudent } from '@/features/agent/server/studentMentionDetection'
-import { buildClarificationResponse } from '@/features/agent/server/agentResponses'
-import type { StudentContext } from '@/features/agent/types/memory.types'
+import { resolveConversationContext } from '@/features/agent/server/conversationContext'
+import { getClassContext, listOwnedClasses } from '@/features/agent/server/classContext'
 import {
   orchestratePATRequest,
   PATOrchestrationError,
@@ -47,6 +46,7 @@ const ROUTE_COPY = {
     patFailed: 'Le PAT n’a pas pu être généré. Votre quota n’a pas été débité.',
     bulletinFailed: 'Le commentaire de bulletin n’a pas pu être généré. Votre quota n’a pas été débité.',
     modificationFailed: 'Le document n’a pas pu être modifié. Votre quota n’a pas été débité.',
+    contextFailed: 'Impossible de charger les données de vos classes. Votre quota n’a pas été débité.',
     quotaFailed: 'Impossible de vérifier votre quota pour le moment.',
   },
   en: {
@@ -54,6 +54,7 @@ const ROUTE_COPY = {
     patFailed: 'The support plan could not be generated. Your quota was not charged.',
     bulletinFailed: 'The report card comment could not be generated. Your quota was not charged.',
     modificationFailed: 'The document could not be modified. Your quota was not charged.',
+    contextFailed: 'Your class data could not be loaded. Your quota was not charged.',
     quotaFailed: 'Your quota could not be checked right now.',
   },
   es: {
@@ -61,6 +62,7 @@ const ROUTE_COPY = {
     patFailed: 'No se ha podido generar el PAT. No se ha descontado de tu cuota.',
     bulletinFailed: 'No se ha podido generar el comentario de boletín. No se ha descontado de tu cuota.',
     modificationFailed: 'No se ha podido modificar el documento. No se ha descontado de tu cuota.',
+    contextFailed: 'No se pudieron cargar los datos de tus clases. No se ha descontado de tu cuota.',
     quotaFailed: 'No se puede comprobar tu cuota en este momento.',
   },
 } as const
@@ -240,29 +242,19 @@ export async function POST(request: Request) {
     }
   }
 
-  // Filet de securite conversationnel : si aucune des trois demandes
-  // structurees ci-dessus n'a intercepte le message, on regarde quand meme
-  // si un eleve reel est mentionne, pour ancrer la reponse sur son vrai
-  // dossier plutot que de repondre a l'aveugle. Detection par nom, pas par
-  // mot-cle : une question libre n'a pas de verbe declencheur fixe.
-  let mentionedStudentContext: StudentContext | null = null
-
-  if (latestUserMessage) {
-    const ownedStudents = await listOwnedStudents()
-    const mention = detectMentionedStudent(latestUserMessage.content, ownedStudents)
-
-    if (mention.kind === 'ambiguous') {
-      return NextResponse.json(
-        agentStructuredResponseSchema.parse(
-          buildClarificationResponse(mention.candidates, profile.interface_language)
-        )
-      )
-    }
-
-    if (mention.kind === 'match') {
-      const resolved = await getStudentContext({ studentQuery: mention.student.fullName })
-      if (resolved && resolved.kind === 'context') mentionedStudentContext = resolved
-    }
+  let context
+  try {
+    context = await resolveConversationContext(parsed.data.messages, profile.interface_language, {
+      listOwnedClasses,
+      listOwnedStudents,
+      getStudentContext,
+      getClassContext: (id) => getClassContext(id, profile.grading_system),
+    })
+    if (context.reply) return new Response(context.reply, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
+    if (context.clarification) return NextResponse.json(agentStructuredResponseSchema.parse(context.clarification))
+  } catch (error) {
+    console.error('[agent:context] chargement impossible', error)
+    return jsonError(copy.contextFailed, 500)
   }
 
   let usage
@@ -284,7 +276,8 @@ export async function POST(request: Request) {
       country: profile.country,
       language: profile.language,
     },
-    mentionedStudentContext ?? undefined
+    context.student,
+    context.classroom
   )
 
   const encoder = new TextEncoder()
