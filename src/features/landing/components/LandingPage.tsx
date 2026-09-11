@@ -109,7 +109,7 @@ export default function LandingPage() {
 
   return (
     <div
-      className={`${dark ? 'dark text-white' : 'bg-white text-gray-900'} min-h-screen transition-colors duration-300`}
+      className={`${dark ? 'dark text-white' : 'text-gray-900'} min-h-screen transition-colors duration-300`}
     >
       {/* ── NAVBAR ── */}
       <header
