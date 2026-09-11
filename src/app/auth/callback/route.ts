@@ -23,5 +23,9 @@ export async function GET(request: Request) {
     }
   }
 
+  console.error(
+    '[auth/callback] aucun code reçu, params :',
+    Object.fromEntries(searchParams.entries())
+  )
   return NextResponse.redirect(`${origin}/login?error=auth`)
 }
