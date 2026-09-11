@@ -31,7 +31,7 @@ const FOOTER_LINKS = [
   ['#features', '#how', '#pricing'],
   ['/faq'],
   ['/about', '/contact'],
-  [null, null, null],
+  [null, '/privacy', '/terms'],
 ] as const
 const WHY_ICONS = [ShieldCheck, Zap, Bot, FileCheck2] as const
 const WHY_ICON_STYLES = [
