@@ -2,17 +2,34 @@ import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
 import { hasActiveProAccess } from '@/features/billing/server/subscription'
-import { checkAndIncrementUsageCore, getUsageCore, type UsageCoreDeps } from '@/features/billing/server/usageCore'
+import {
+  checkAndIncrementUsageCore,
+  getUsageCore,
+  type UsageCoreDeps,
+  type UsageLimits,
+} from '@/features/billing/server/usageCore'
 
 const DEFAULT_GENERATION_LIMIT = 3
+const DEFAULT_PRO_GENERATION_LIMIT = 90
+const DEFAULT_AGENT_PRO_GENERATION_LIMIT = 150
 
-function getGenerationLimit(feature: string): number {
-  if (feature !== 'agent') return DEFAULT_GENERATION_LIMIT
+function envLimit(name: string, fallback: number): number {
+  const configured = Number(process.env[name])
+  return Number.isInteger(configured) && configured > 0 ? configured : fallback
+}
 
-  const configuredLimit = Number(process.env.AGENT_GENERATION_LIMIT)
-  return Number.isInteger(configuredLimit) && configuredLimit > 0
-    ? configuredLimit
-    : DEFAULT_GENERATION_LIMIT
+function getGenerationLimits(feature: string): UsageLimits {
+  if (feature !== 'agent') {
+    return {
+      free: DEFAULT_GENERATION_LIMIT,
+      pro: envLimit('PRO_GENERATION_LIMIT', DEFAULT_PRO_GENERATION_LIMIT),
+    }
+  }
+
+  return {
+    free: envLimit('AGENT_GENERATION_LIMIT', DEFAULT_GENERATION_LIMIT),
+    pro: envLimit('AGENT_PRO_GENERATION_LIMIT', DEFAULT_AGENT_PRO_GENERATION_LIMIT),
+  }
 }
 
 function getCurrentPeriod() {
@@ -62,8 +79,8 @@ export async function checkAndIncrementUsage(
   userId: string,
   feature = 'general'
 ): Promise<{ allowed: boolean; used: number; limit: number }> {
-  const limit = getGenerationLimit(feature)
-  return checkAndIncrementUsageCore(userId, feature, limit, await createUsageDeps())
+  const limits = getGenerationLimits(feature)
+  return checkAndIncrementUsageCore(userId, feature, limits, await createUsageDeps())
 }
 
 export async function decrementUsage(userId: string, feature = 'general'): Promise<number> {
@@ -86,6 +103,6 @@ export async function getUsage(
   userId: string,
   feature = 'general'
 ): Promise<{ used: number; limit: number }> {
-  const limit = getGenerationLimit(feature)
-  return getUsageCore(userId, feature, limit, await createUsageDeps())
+  const limits = getGenerationLimits(feature)
+  return getUsageCore(userId, feature, limits, await createUsageDeps())
 }

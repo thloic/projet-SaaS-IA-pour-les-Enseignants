@@ -4,24 +4,24 @@ export interface UsageResult {
   limit: number
 }
 
+export interface UsageLimits {
+  free: number
+  pro: number
+}
+
 export interface UsageCoreDeps {
   hasActiveProAccess(userId: string): Promise<boolean>
   incrementCounter(userId: string, feature: string, limit: number): Promise<number>
   readCounter(userId: string, feature: string): Promise<number>
 }
 
-// -1 est la convention "illimité" utilisée jusque dans l'UI (GenerationCounter).
-const UNLIMITED = -1
-
 export async function checkAndIncrementUsageCore(
   userId: string,
   feature: string,
-  limit: number,
+  limits: UsageLimits,
   deps: UsageCoreDeps
 ): Promise<UsageResult> {
-  if (await deps.hasActiveProAccess(userId)) {
-    return { allowed: true, used: 0, limit: UNLIMITED }
-  }
+  const limit = (await deps.hasActiveProAccess(userId)) ? limits.pro : limits.free
 
   const used = await deps.incrementCounter(userId, feature, limit)
   if (!Number.isFinite(used) || used < 0) {
@@ -34,13 +34,10 @@ export async function checkAndIncrementUsageCore(
 export async function getUsageCore(
   userId: string,
   feature: string,
-  limit: number,
+  limits: UsageLimits,
   deps: UsageCoreDeps
 ): Promise<{ used: number; limit: number }> {
-  if (await deps.hasActiveProAccess(userId)) {
-    return { used: 0, limit: UNLIMITED }
-  }
-
+  const limit = (await deps.hasActiveProAccess(userId)) ? limits.pro : limits.free
   const used = await deps.readCounter(userId, feature)
   return { used, limit }
 }
