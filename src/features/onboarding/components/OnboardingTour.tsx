@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Bot, Check, ChevronLeft, ChevronRight, FileText, School, Sparkles, UsersRound, X } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, FileText, LayoutDashboard, MessageCircle, School, UsersRound, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { markOnboardingTourSeenAction } from '@/features/profile/server/profile.actions'
 import type { AppLocale } from '@/features/i18n/locale'
@@ -62,7 +62,7 @@ const COPY = {
   },
 } as const
 
-const STEP_ICONS = [Sparkles, UsersRound, FileText, Bot, School] as const
+const STEP_ICONS = [LayoutDashboard, UsersRound, FileText, MessageCircle, School] as const
 
 export default function OnboardingTour({ locale }: OnboardingTourProps) {
   const router = useRouter()

@@ -6,12 +6,12 @@ import {
   AlertCircle,
   ArrowLeft,
   Check,
+  ChevronsUp,
   Clock,
   MessageSquarePlus,
   Minus,
   Play,
   Plus,
-  Sparkles,
   UserCheck,
   UserMinus,
 } from 'lucide-react'
@@ -463,7 +463,7 @@ export default function ClassSessionPage({ classId, initialData }: ClassSessionP
                     onClick={() => addParticipation(student.id, 2, 'Participation forte')}
                     className="flex min-h-11 items-center justify-center gap-1 rounded-xl border border-violet-500/30 bg-violet-500/10 text-sm font-semibold text-violet-700 dark:text-violet-300"
                   >
-                    <Sparkles size={15} /> Forte
+                    <ChevronsUp size={15} /> Forte
                   </button>
                 </div>
               </article>

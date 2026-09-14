@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, Check, Loader2, RefreshCw, Sparkles } from 'lucide-react'
+import { AlertCircle, Check, FileCheck2, Loader2, RefreshCw } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/shared/ToastProvider'
@@ -157,7 +157,7 @@ export default function CorrectionBatchDetail({ detail }: CorrectionBatchDetailP
             onClick={() => void handleLaunch()}
             disabled={isLaunching}
           >
-            {isLaunching ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+            {isLaunching ? <Loader2 size={16} className="animate-spin" /> : <FileCheck2 size={16} />}
             Lancer la correction ({total})
           </Button>
         </div>

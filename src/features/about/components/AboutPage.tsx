@@ -1,6 +1,6 @@
 'use client'
 
-import { BookOpenCheck, HeartHandshake, ShieldCheck, Sparkles, Users } from 'lucide-react'
+import { BookOpenCheck, HeartHandshake, ShieldCheck, Target, Users } from 'lucide-react'
 import PublicPageShell from '@/features/marketing/components/PublicPageShell'
 import { usePublicLocale } from '@/features/marketing/hooks/usePublicLocale'
 
@@ -61,7 +61,7 @@ const copy = {
   },
 } as const
 
-const principleIcons = [Sparkles, BookOpenCheck, ShieldCheck, Users]
+const principleIcons = [Target, BookOpenCheck, ShieldCheck, Users]
 
 export default function AboutPage() {
   const { locale, setLocale } = usePublicLocale()

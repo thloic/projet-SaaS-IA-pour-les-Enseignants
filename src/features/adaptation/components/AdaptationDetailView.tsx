@@ -8,6 +8,7 @@ import {
   ArrowLeft,
   Check,
   Copy,
+  Layers,
   Link2,
   Loader2,
   Pencil,
@@ -15,7 +16,6 @@ import {
   Save,
   Share2,
   ShieldOff,
-  Sparkles,
   UsersRound,
   X,
 } from 'lucide-react'
@@ -131,7 +131,7 @@ export default function AdaptationDetailView({ adaptation }: AdaptationDetailVie
           <Link href="/adaptations"><ArrowLeft /> Banque</Link>
         </Button>
         <Button asChild>
-          <Link href="/adaptations/new"><Sparkles /> Nouvelle adaptation</Link>
+          <Link href="/adaptations/new"><Layers /> Nouvelle adaptation</Link>
         </Button>
       </div>
 

@@ -8,8 +8,8 @@ import {
   Check,
   CheckCircle2,
   FileText,
+  Layers,
   Loader2,
-  Sparkles,
   Type,
   UploadCloud,
   UsersRound,
@@ -265,7 +265,7 @@ export default function AdaptationBuilder({
         <div className="space-y-1">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/12 text-emerald-700 dark:text-emerald-300">
-              <Sparkles size={22} />
+              <Layers size={22} />
             </div>
             <div>
               <h1 className="text-2xl font-black">Adapter une leçon</h1>
@@ -535,7 +535,7 @@ export default function AdaptationBuilder({
               </Button>
             ) : (
               <Button type="submit" className="min-h-11 w-full">
-                <Sparkles /> Générer les 5 variantes
+                <Layers /> Générer les 5 variantes
               </Button>
             )}
             <p className="text-center text-xs text-muted-foreground">

@@ -13,7 +13,7 @@ import {
   ArrowUpRight,
   ShieldCheck,
   Zap,
-  Bot,
+  MessageCircle,
   FileCheck2,
 } from 'lucide-react'
 import Link from 'next/link'
@@ -33,7 +33,7 @@ const FOOTER_LINKS = [
   ['/about', '/contact'],
   [null, '/privacy', '/terms'],
 ] as const
-const WHY_ICONS = [ShieldCheck, Zap, Bot, FileCheck2] as const
+const WHY_ICONS = [ShieldCheck, Zap, MessageCircle, FileCheck2] as const
 const WHY_ICON_STYLES = [
   'bg-emerald-500/10 text-emerald-500',
   'bg-amber-500/10 text-amber-500',

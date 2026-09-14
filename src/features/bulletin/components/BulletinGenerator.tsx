@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { AlertCircle, Check, Copy, History, MessageSquare, RefreshCw, Sparkles } from 'lucide-react'
+import { AlertCircle, Check, Copy, FileCheck2, History, Loader2, MessageSquare, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -260,9 +260,9 @@ export default function BulletinGenerator({ classes }: BulletinGeneratorProps) {
             disabled={isSubmitDisabled}
           >
             {isGeneratePending ? (
-              <><Sparkles size={18} className="animate-spin" /> Génération…</>
+              <><Loader2 size={18} className="animate-spin" /> Génération…</>
             ) : (
-              <><Sparkles size={18} /> Générer le commentaire</>
+              <><FileCheck2 size={18} /> Générer le commentaire</>
             )}
           </Button>
         </div>

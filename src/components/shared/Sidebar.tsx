@@ -13,9 +13,9 @@ import {
   ChevronRight,
   Settings,
   Crown,
-  WandSparkles,
+  Layers,
   CheckCheck,
-  Bot,
+  MessageCircle,
   X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -42,9 +42,9 @@ export default function Sidebar({ collapsed, mobileOpen, onMobileClose, onToggle
   const generationsLimit = teacher?.generationsLimit ?? 3
   const navItems = [
     { label: t.nav.dashboard, href: '/dashboard', icon: Home },
-    { label: t.nav.agent, href: '/agent', icon: Bot, isNew: true },
+    { label: t.nav.agent, href: '/agent', icon: MessageCircle, isNew: true },
     { label: t.nav.documents, href: '/documents', icon: FileText },
-    { label: t.nav.adaptations, href: '/adaptations', icon: WandSparkles, isNew: true },
+    { label: t.nav.adaptations, href: '/adaptations', icon: Layers, isNew: true },
     // { label: t.nav.generate, href: '/generate', icon: BookOpen, isNew: true },
     { label: t.nav.classroom, href: '/classroom', icon: UsersRound },
     { label: t.nav.correction, href: '/correction', icon: CheckCheck, isNew: true },

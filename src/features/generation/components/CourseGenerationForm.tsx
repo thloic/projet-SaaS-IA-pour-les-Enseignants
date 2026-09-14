@@ -9,9 +9,9 @@ import {
   CheckCircle2,
   ChevronRight,
   Clock,
+  FileCheck2,
   Loader2,
   Plus,
-  Sparkles,
   X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -339,7 +339,7 @@ export default function CourseGenerationForm({ subjects, levels, courses }: Cour
                 className="min-h-11 flex-1 text-white"
                 style={{ backgroundColor: BRAND }}
               >
-                <Sparkles size={16} /> Générer le cours <ChevronRight size={16} />
+                <FileCheck2 size={16} /> Générer le cours <ChevronRight size={16} />
               </Button>
             )}
           </div>

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
-import { FileText, Sparkles, Target, BarChart2, CheckCircle2 } from 'lucide-react'
+import { FileText, Clock, Target, BarChart2, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -80,7 +80,7 @@ const AUTH_COPY = {
 
 const bubblePositions = [
   { Icon: FileText, top: '18%', left: '6%' },
-  { Icon: Sparkles, top: '38%', left: '52%' },
+  { Icon: Clock, top: '38%', left: '52%' },
   { Icon: Target, top: '58%', left: '8%' },
   { Icon: BarChart2, top: '74%', left: '48%' },
 ]

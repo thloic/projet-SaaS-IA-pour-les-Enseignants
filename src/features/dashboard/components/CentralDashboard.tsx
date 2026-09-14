@@ -12,11 +12,11 @@ import {
   CheckCheck,
   ClipboardList,
   Gauge,
+  Layers,
   MessageSquare,
   TrendingDown,
   TrendingUp,
   UsersRound,
-  WandSparkles,
   X,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -62,7 +62,7 @@ const METRIC_COLORS = {
 
 const QUICK_ACTIONS = [
   { type: 'course', href: '/generate', icon: BookOpen },
-  { type: 'adaptation', href: '/adaptations/new', icon: WandSparkles },
+  { type: 'adaptation', href: '/adaptations/new', icon: Layers },
   { type: 'quiz', href: '/quiz', icon: ClipboardList },
   { type: 'correction', href: '/correction/new', icon: CheckCheck },
   { type: 'bulletin', href: '/bulletin', icon: MessageSquare },

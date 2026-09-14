@@ -8,9 +8,9 @@ import {
   BookOpenCheck,
   ChevronRight,
   FileText,
+  Layers,
   Plus,
   Search,
-  Sparkles,
   Trash2,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -106,7 +106,7 @@ export default function AdaptationLibrary({ adaptations }: AdaptationLibraryProp
 
       {adaptations.length === 0 ? (
         <section className="flex min-h-72 flex-col items-center justify-center rounded-xl border border-dashed border-border p-6 text-center">
-          <Sparkles size={32} className="mb-4 text-primary" />
+          <Layers size={32} className="mb-4 text-primary" />
           <h2 className="text-lg font-bold">Votre banque est vide</h2>
           <p className="mt-1 max-w-md text-sm text-muted-foreground">
             Choisissez un cours ou importez une leçon pour créer vos premières variantes.

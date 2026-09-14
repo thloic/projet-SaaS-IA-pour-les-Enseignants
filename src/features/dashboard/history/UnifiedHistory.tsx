@@ -11,10 +11,10 @@ import {
   ClipboardList,
   FileText,
   History,
+  Layers,
   MessageSquare,
   Search,
   UsersRound,
-  WandSparkles,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -29,7 +29,7 @@ import { intlLocale, type AppLocale } from '@/features/i18n/locale'
 const TYPE_ICONS = {
   course: BookOpen,
   quiz: ClipboardList,
-  adaptation: WandSparkles,
+  adaptation: Layers,
   bulletin: MessageSquare,
   pat: ClipboardCheck,
   correction: CheckCheck,

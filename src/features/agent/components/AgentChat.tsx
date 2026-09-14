@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
-import { Bot, Loader2, Send, Sparkles } from 'lucide-react'
+import { Loader2, MessageCircle, MessageSquareText, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/shared/ToastProvider'
 import {
@@ -190,7 +190,7 @@ export default function AgentChat() {
     <div className="mx-auto flex h-[calc(100vh-8rem)] max-w-3xl flex-col gap-4">
       <div className="flex items-center gap-3">
         <div className="h-11 w-11 rounded-2xl flex items-center justify-center bg-primary/10">
-          <Bot size={22} style={{ color: BRAND }} />
+          <MessageCircle size={22} style={{ color: BRAND }} />
         </div>
         <div>
           <h1 className="text-2xl font-black">{copy.title}</h1>
@@ -214,7 +214,7 @@ export default function AgentChat() {
       <div className="flex-1 space-y-4 overflow-y-auto rounded-2xl border border-border bg-card/40 p-4">
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-sm text-muted-foreground">
-            <Sparkles size={20} style={{ color: BRAND }} />
+            <MessageSquareText size={20} style={{ color: BRAND }} />
             <p>{copy.empty}</p>
           </div>
         ) : (

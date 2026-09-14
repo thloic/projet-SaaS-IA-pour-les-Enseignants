@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, CheckCircle2, ClipboardList, FileText, Sparkles, UploadCloud } from 'lucide-react'
+import { AlertCircle, CheckCircle2, ClipboardList, FileText, Loader2, UploadCloud } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
@@ -327,7 +327,7 @@ export default function QuizGeneratorForm({ documents, defaultSourceDocumentId, 
       >
         {isPending ? (
           <>
-            <Sparkles size={16} className="animate-spin" /> Génération…
+            <Loader2 size={16} className="animate-spin" /> Génération…
           </>
         ) : (
           <>
