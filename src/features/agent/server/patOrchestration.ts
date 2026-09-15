@@ -94,7 +94,8 @@ export async function orchestratePATRequest(
       pat,
     })
     return { kind: 'pat', studentId: context.student.id, language, pat }
-  } catch {
+  } catch (error) {
+    console.error('[agent:pat] echec de la generation ou sauvegarde', error)
     try {
       await dependencies.refundUsage(input.trustedUserId)
     } catch {

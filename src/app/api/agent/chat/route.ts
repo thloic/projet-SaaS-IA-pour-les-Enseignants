@@ -164,7 +164,7 @@ export async function POST(request: Request) {
       ) {
         return jsonError(copy.limit, 403)
       }
-      console.error('[agent:document-modification] echec de la modification structuree')
+      console.error('[agent:document-modification] echec de la modification structuree', error)
       return jsonError(copy.modificationFailed, 500)
     }
   }
@@ -192,7 +192,7 @@ export async function POST(request: Request) {
       if (error instanceof PATOrchestrationError && error.code === 'PAT_QUOTA_EXCEEDED') {
         return jsonError(copy.limit, 403)
       }
-      console.error('[agent:pat] echec de la demande structuree')
+      console.error('[agent:pat] echec de la demande structuree', error)
       return jsonError(copy.patFailed, 500)
     }
   }
@@ -237,7 +237,7 @@ export async function POST(request: Request) {
       if (error instanceof BulletinOrchestrationError && error.code === 'BULLETIN_QUOTA_EXCEEDED') {
         return jsonError(copy.limit, 403)
       }
-      console.error('[agent:bulletin] echec de la demande structuree')
+      console.error('[agent:bulletin] echec de la demande structuree', error)
       return jsonError(copy.bulletinFailed, 500)
     }
   }

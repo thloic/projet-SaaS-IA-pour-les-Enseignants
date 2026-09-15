@@ -149,7 +149,8 @@ export async function orchestrateBulletinRequest(
       grade: resolved.grade,
       comment: generated.comment,
     }
-  } catch {
+  } catch (error) {
+    console.error('[agent:bulletin] echec de la generation ou sauvegarde', error)
     try {
       await dependencies.refundUsage(input.trustedUserId)
     } catch {

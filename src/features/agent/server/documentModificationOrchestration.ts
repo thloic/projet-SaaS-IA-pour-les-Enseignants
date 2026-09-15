@@ -192,7 +192,8 @@ export async function orchestrateDocumentModification(
       grade: previous.grade,
       comment: generated.comment,
     }
-  } catch {
+  } catch (error) {
+    console.error('[agent:document-modification] echec de la generation ou sauvegarde', error)
     try {
       await dependencies.refundUsage(input.trustedUserId)
     } catch {
