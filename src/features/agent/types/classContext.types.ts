@@ -1,4 +1,5 @@
 import type { ClassDashboardData } from '../../classroom/types/classroomDashboard.types.ts'
+import type { CorrectionFindingCategory } from '../../correction/types/correction.types.ts'
 
 export interface OwnedClassRecord {
   id: string
@@ -15,6 +16,17 @@ export interface ClassEvaluationAverage {
   scale: number | null
 }
 
+export interface ClassErrorAnalysisCategory {
+  category: CorrectionFindingCategory
+  count: number
+}
+
+export interface ClassErrorAnalysis {
+  status: 'available' | 'no_data'
+  copyCount: number
+  categories: ClassErrorAnalysisCategory[]
+}
+
 export interface ClassContext {
   kind: 'class_context'
   classroom: OwnedClassRecord
@@ -28,4 +40,5 @@ export interface ClassContext {
   attendance: ClassDashboardData['recentAttendance']
   recentObservations: ClassDashboardData['recentObservations']
   evaluations: ClassEvaluationAverage[]
+  errorAnalysis: ClassErrorAnalysis
 }
