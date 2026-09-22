@@ -122,3 +122,47 @@ test('buildCorrectionPrompt embeds the fixed error taxonomy and the chosen tone'
   assert.match(prompt.userPrompt, /Ton direct/)
   assert.match(prompt.userPrompt, /Il ont regardé le film hier soir\./)
 })
+
+test('buildCorrectionPrompt injecte la grille de correction fournie par l’enseignant', () => {
+  const prompt = buildCorrectionPrompt({
+    contentText: 'Texte de la copie.',
+    tone: 'factuel',
+    teacherProfile: { level: 'Secondaire 2', language: 'fr' },
+    rubric: 'Critère 1 : respect du plan en trois parties.\nCritère 2 : au moins 3 connecteurs logiques.',
+  })
+
+  assert.match(prompt.userPrompt, /Critère 1 : respect du plan en trois parties\./)
+  assert.match(prompt.userPrompt, /Critère 2 : au moins 3 connecteurs logiques\./)
+  // Le format de sortie (taxonomie fixe) reste imposé même quand une grille est fournie.
+  assert.match(prompt.systemPrompt, /syntaxe/)
+  assert.match(prompt.systemPrompt, /comprehension/)
+  assert.match(prompt.systemPrompt, /methode/)
+})
+
+test('buildCorrectionPrompt sans grille conserve le comportement actuel', () => {
+  const withoutRubric = buildCorrectionPrompt({
+    contentText: 'Texte de la copie.',
+    tone: 'factuel',
+    teacherProfile: { level: 'Secondaire 2', language: 'fr' },
+  })
+  const explicitlyNoRubric = buildCorrectionPrompt({
+    contentText: 'Texte de la copie.',
+    tone: 'factuel',
+    teacherProfile: { level: 'Secondaire 2', language: 'fr' },
+    rubric: null,
+  })
+
+  assert.doesNotMatch(withoutRubric.userPrompt, /GRILLE DE CORRECTION/)
+  assert.equal(withoutRubric.userPrompt, explicitlyNoRubric.userPrompt)
+})
+
+test('buildCorrectionPrompt traite une grille vide ou blanche comme absente', () => {
+  const prompt = buildCorrectionPrompt({
+    contentText: 'Texte de la copie.',
+    tone: 'factuel',
+    teacherProfile: { level: 'Secondaire 2', language: 'fr' },
+    rubric: '   \n  ',
+  })
+
+  assert.doesNotMatch(prompt.userPrompt, /GRILLE DE CORRECTION/)
+})

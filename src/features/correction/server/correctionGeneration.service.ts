@@ -17,6 +17,7 @@ interface GenerateCorrectionInput {
     level?: string | null
     language: ContentLanguage
   }
+  rubric?: string | null
 }
 
 class CorrectionValidationError extends Error {
@@ -77,12 +78,14 @@ async function callAnthropic({
   tone,
   teacherProfile,
   validationError,
+  rubric,
 }: GenerateCorrectionInput & { validationError?: string }) {
   const { systemPrompt, userPrompt } = buildCorrectionPrompt({
     contentText,
     tone,
     teacherProfile,
     validationError,
+    rubric,
   })
 
   const result = await generateText({

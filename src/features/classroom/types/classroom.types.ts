@@ -16,6 +16,7 @@ export interface ClassRoom {
   subject: string
   document_template: string | null
   document_template_path: string | null
+  correction_rubric: string | null
   created_at: string
   updated_at: string
 }

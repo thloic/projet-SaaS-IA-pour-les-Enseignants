@@ -68,7 +68,7 @@ export async function listClassroomOverview(): Promise<ClassroomOverviewData> {
   const [classesResult, linksResult, sessionsResult] = await Promise.all([
     supabase
       .from('classes')
-      .select('id, name, level, subject, document_template, document_template_path')
+      .select('id, name, level, subject, document_template, document_template_path, correction_rubric')
       .eq('user_id', user.id)
       .order('name'),
     supabase
@@ -136,6 +136,7 @@ export async function listClassroomOverview(): Promise<ClassroomOverviewData> {
       subject: classroom.subject,
       documentTemplate: classroom.document_template ?? null,
       documentTemplatePath: classroom.document_template_path ?? null,
+      correctionRubric: classroom.correction_rubric ?? null,
       studentCount: (linksResult.data ?? []).filter((link) => link.class_id === classroom.id)
         .length,
       attendanceRate: calculateAttendanceRate(classAttendance),

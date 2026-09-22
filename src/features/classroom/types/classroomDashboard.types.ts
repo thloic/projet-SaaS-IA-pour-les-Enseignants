@@ -16,6 +16,7 @@ export interface ClassOverviewItem {
   subject: string
   documentTemplate: string | null
   documentTemplatePath: string | null
+  correctionRubric: string | null
   studentCount: number
   attendanceRate: number | null
   absenceCount: number

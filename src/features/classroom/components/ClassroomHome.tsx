@@ -50,9 +50,16 @@ interface ClassForm {
   level: string
   subject: string
   documentTemplate: string
+  correctionRubric: string
 }
 
-const EMPTY_FORM: ClassForm = { name: '', level: '', subject: '', documentTemplate: '' }
+const EMPTY_FORM: ClassForm = {
+  name: '',
+  level: '',
+  subject: '',
+  documentTemplate: '',
+  correctionRubric: '',
+}
 const EMPTY_OVERVIEW: ClassroomOverviewData = {
   classes: [],
   metrics: {
@@ -135,6 +142,7 @@ export default function ClassroomHome({
       level: item.level,
       subject: item.subject,
       documentTemplate: item.documentTemplate ?? '',
+      correctionRubric: item.correctionRubric ?? '',
     })
     setEditingClass(item)
     setTemplatePath(item.documentTemplatePath)
@@ -164,6 +172,7 @@ export default function ClassroomHome({
         subject: created.data.subject,
         documentTemplate: created.data.document_template,
         documentTemplatePath: created.data.document_template_path,
+        correctionRubric: created.data.correction_rubric,
         studentCount: 0,
         attendanceRate: null,
         absenceCount: 0,
@@ -243,6 +252,7 @@ export default function ClassroomHome({
                 subject: result.data!.subject,
                 documentTemplate: result.data!.document_template,
                 documentTemplatePath: result.data!.document_template_path,
+                correctionRubric: result.data!.correction_rubric,
               }
             : item
         )
@@ -258,6 +268,7 @@ export default function ClassroomHome({
           subject: result.data!.subject,
           documentTemplate: result.data!.document_template,
           documentTemplatePath: result.data!.document_template_path,
+          correctionRubric: result.data!.correction_rubric,
           studentCount: 0,
           attendanceRate: null,
           absenceCount: 0,
@@ -638,6 +649,22 @@ export default function ClassroomHome({
                     />
                   </label>
                 )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="class-correction-rubric">
+                  Grille de correction (pour la Correction IA)
+                </Label>
+                <textarea
+                  id="class-correction-rubric"
+                  value={form.correctionRubric}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, correctionRubric: event.target.value }))
+                  }
+                  placeholder="Collez ou décrivez ici vos critères de correction pour cette classe. L’agent les utilisera en priorité — sans grille, la correction garde son comportement actuel."
+                  rows={5}
+                  className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                />
               </div>
               {error && (
                 <div className="flex gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-700 dark:text-rose-300">
