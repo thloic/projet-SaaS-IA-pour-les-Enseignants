@@ -188,6 +188,61 @@ export async function getCorrectionBatch(batchId: string): Promise<CorrectionBat
   }
 }
 
+export async function validateCorrectionCopyAction(
+  copyId: string,
+  batchId: string,
+  editedComment?: string
+): Promise<CorrectionActionState> {
+  const user = await getCurrentUser()
+  if (!user) return { error: 'Vous devez être connecté.', success: false }
+
+  const supabase = await createClient()
+  const update: { status: 'validated'; validated_at: string; comment?: string } = {
+    status: 'validated',
+    validated_at: new Date().toISOString(),
+  }
+  if (editedComment !== undefined) update.comment = editedComment
+
+  const { error } = await supabase
+    .from('correction_copies')
+    .update(update)
+    .eq('id', copyId)
+    .eq('user_id', user.id)
+
+  if (error) {
+    console.error('[correction] validation de copie refusée', error)
+    return { error: 'Impossible de valider cette copie pour le moment.', success: false }
+  }
+
+  revalidatePath(`/correction/${batchId}`)
+  return { error: null, success: true }
+}
+
+// Validation groupée : ne touche que les copies deja generees (complete), pour
+// permettre a l'enseignant d'approuver tout un lot en un clic (fiche 15).
+export async function validateAllCompleteCorrectionCopiesAction(
+  batchId: string
+): Promise<CorrectionActionState> {
+  const user = await getCurrentUser()
+  if (!user) return { error: 'Vous devez être connecté.', success: false }
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('correction_copies')
+    .update({ status: 'validated', validated_at: new Date().toISOString() })
+    .eq('batch_id', batchId)
+    .eq('user_id', user.id)
+    .eq('status', 'complete')
+
+  if (error) {
+    console.error('[correction] validation groupée refusée', error)
+    return { error: 'Impossible de valider les copies pour le moment.', success: false }
+  }
+
+  revalidatePath(`/correction/${batchId}`)
+  return { error: null, success: true }
+}
+
 // Relance uniquement la copie en echec (US-14) : pas de nouvelle consommation
 // de quota, il s'agit de terminer une generation deja payee au lancement du lot.
 export async function retryCorrectionCopyAction(copyId: string): Promise<CorrectionActionState> {
