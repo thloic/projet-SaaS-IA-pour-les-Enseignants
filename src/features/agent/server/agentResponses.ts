@@ -64,14 +64,15 @@ export function buildTemplateMissingResponse(
 
 export function buildStudentDataMissingResponse(
   studentFullName: string,
+  documentLabel: DocumentLabel,
   interfaceLanguage?: AppLocale
 ): Extract<AgentStructuredResponse, { kind: 'student_data_missing' }> {
   const message =
     interfaceLanguage === 'es'
-      ? `Aún no hay resultados ni observaciones registrados para ${studentFullName}. Añade al menos un dato al expediente antes de generar el comentario de boletín.`
+      ? `Aún no hay datos registrados para ${studentFullName}. Añade al menos un dato al expediente antes de generar ${documentLabel.es}.`
       : interfaceLanguage === 'en'
-        ? `There are no saved results or observations for ${studentFullName} yet. Add at least one item to the student record before generating a report card comment.`
-        : `Aucun résultat ni aucune observation n’est encore enregistré pour ${studentFullName}. Ajoutez au moins un élément au dossier avant de générer le commentaire de bulletin.`
+        ? `There is no saved data for ${studentFullName} yet. Add at least one item to the student record before generating ${documentLabel.en}.`
+        : `Aucune donnée n’est encore enregistrée pour ${studentFullName}. Ajoutez au moins un élément au dossier avant de générer ${documentLabel.fr}.`
   return { kind: 'student_data_missing', message }
 }
 
