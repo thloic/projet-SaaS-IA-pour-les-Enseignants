@@ -119,7 +119,7 @@ export const landingTranslations = {
         {
           name: 'Teacher Monthly',
           audience: 'For one teacher — cancel anytime',
-          price: '$25',
+          price: '$30',
           period: '/month',
           features: [
             'Create and manage classes and student records',
@@ -136,7 +136,7 @@ export const landingTranslations = {
         {
           name: 'Teacher Annual',
           audience: 'For one teacher — 12 months of access',
-          price: '$250',
+          price: '$300',
           period: 'one payment / year',
           features: [
             'Create and manage classes and student records',
@@ -145,7 +145,7 @@ export const landingTranslations = {
             'Lessons, quizzes, grading, and adaptations',
             'PATs and report card comments',
             'DOCX/PDF exports and document history',
-            'Save $50 compared with monthly billing',
+            'Save $60 compared with monthly billing',
           ],
           cta: 'Subscribe',
           ctaHref: '/register',
@@ -319,7 +319,7 @@ export const landingTranslations = {
         {
           name: 'Enseignant mensuel',
           audience: 'Pour un enseignant — résiliable à tout moment',
-          price: '25 $',
+          price: '30 $',
           period: '/mois',
           features: [
             'Création et gestion des classes et des dossiers élèves',
@@ -336,7 +336,7 @@ export const landingTranslations = {
         {
           name: 'Enseignant annuel',
           audience: 'Pour un enseignant — accès pendant 12 mois',
-          price: '250 $',
+          price: '300 $',
           period: 'un paiement / an',
           features: [
             'Création et gestion des classes et des dossiers élèves',
@@ -345,7 +345,7 @@ export const landingTranslations = {
             'Cours, quiz, corrections et adaptations',
             'PAT et commentaires de bulletin',
             'Exports DOCX/PDF et historique des documents',
-            '50 $ économisés par rapport au paiement mensuel',
+            '60 $ économisés par rapport au paiement mensuel',
           ],
           cta: 'S’abonner',
           ctaHref: '/register',
@@ -503,7 +503,7 @@ export const landingTranslations = {
         {
           name: 'Docente mensual',
           audience: 'Para un docente — cancela cuando quieras',
-          price: '25 $',
+          price: '30 $',
           period: '/mes',
           features: [
             'Creación y gestión de clases y expedientes del alumnado',
@@ -520,7 +520,7 @@ export const landingTranslations = {
         {
           name: 'Docente anual',
           audience: 'Para un docente — acceso durante 12 meses',
-          price: '250 $',
+          price: '300 $',
           period: 'un pago / año',
           features: [
             'Creación y gestión de clases y expedientes del alumnado',
@@ -529,7 +529,7 @@ export const landingTranslations = {
             'Lecciones, quizzes, correcciones y adaptaciones',
             'PAT y comentarios de evaluación',
             'Exportaciones DOCX/PDF e historial de documentos',
-            'Ahorra 50 $ frente al pago mensual',
+            'Ahorra 60 $ frente al pago mensual',
           ],
           cta: 'Suscribirme',
           ctaHref: '/register',
