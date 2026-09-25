@@ -17,6 +17,7 @@ import { useAppLocale } from '@/features/i18n/AppLocaleProvider'
 import { agentTranslations } from '@/features/agent/i18n/agentTranslations'
 import { AGENT_LIMIT_REACHED_MESSAGES } from '@/features/billing/upgradeMessages'
 import { useBilling } from '@/features/billing/hooks/useBilling'
+import { toAgentPlainText } from '@/features/agent/utils/plainText'
 
 const BRAND = '#534AB7'
 
@@ -137,7 +138,7 @@ export default function AgentChat() {
             {
               kind: 'text',
               role: 'assistant',
-              content: structured.data.message,
+              content: toAgentPlainText(structured.data.message),
               candidates:
                 structured.data.kind === 'clarification'
                   ? structured.data.candidates
@@ -161,7 +162,10 @@ export default function AgentChat() {
           const updated = [...current]
           const last = updated[updated.length - 1]
           if (last?.kind === 'text' && last.role === 'assistant') {
-            updated[updated.length - 1] = { ...last, content: last.content + chunk }
+            updated[updated.length - 1] = {
+              ...last,
+              content: toAgentPlainText(last.content + chunk),
+            }
           }
           return updated
         })

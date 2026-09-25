@@ -37,8 +37,8 @@ export function buildCorrectionPrompt({
     'Règle absolue : aucune formulation négative directe dans le commentaire. Les difficultés doivent toujours être reformulées en axes de progrès.',
     'Exemple obligatoire à suivre : PAS "trop d’erreurs de conjugaison" MAIS "la conjugaison est le prochain axe de progression à consolider".',
     'Ne mentionne jamais le nom de l’élève ni aucune information personnelle : tu ne reçois que le texte de la copie.',
-    'Si une grille de correction fournie par l’enseignant t’est donnée plus bas, utilise-la en priorité pour juger ce qui constitue une erreur et pour orienter tes suggestions — elle ne change jamais le format de sortie ci-dessous.',
-    'La sortie doit être uniquement un objet JSON strict au format { "findings": [{ "category": "...", "excerpt": "...", "suggestion": "..." }], "comment": "..." }, sans markdown, sans backticks, sans texte autour.',
+    'Si une grille de correction fournie par l’enseignant t’est donnée plus bas, analyse séparément chacun de ses critères. Pour chaque critère, cite une preuve réelle de la copie. Propose un score uniquement si la grille donne clairement un maximum chiffré ; sinon score et maxScore valent null.',
+    'La sortie doit être uniquement un objet JSON strict au format { "findings": [{ "category": "...", "excerpt": "...", "suggestion": "..." }], "rubricAssessments": [{ "criterion": "...", "evidence": "...", "score": null, "maxScore": null }], "comment": "..." }, sans markdown, sans backticks, sans texte autour.',
   ].join('\n')
 
   const rubricSection = rubric?.trim()
@@ -57,11 +57,14 @@ export function buildCorrectionPrompt({
     'Contraintes :',
     '- Chaque erreur détectée doit citer un extrait réel du texte (excerpt) et une suggestion concrète.',
     '- Ne pas inventer d’erreur qui ne figure pas dans le texte fourni.',
+    rubric?.trim()
+      ? '- rubricAssessments doit contenir un élément par critère de la grille, dans le même ordre.'
+      : '- Aucune grille n’est fournie : rubricAssessments doit être un tableau vide.',
     '- Le commentaire fait 3 à 6 lignes, un seul paragraphe.',
     `- ${toneInstructions[tone]}`,
     '',
     'Sortie attendue :',
-    '{ "findings": [...], "comment": "..." }',
+    '{ "findings": [...], "rubricAssessments": [...], "comment": "..." }',
     '',
     'TEXTE DE LA COPIE',
     contentText,

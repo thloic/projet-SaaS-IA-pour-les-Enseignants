@@ -17,10 +17,18 @@ export const examVariantSetSchema = z.object({
   variants: z.array(examVariantSchema).length(3),
 })
 
+export const examVariantGenerationInputSchema = z.object({
+  sourceContent: z.string().trim().min(20, 'Ajoutez le contenu de l’examen original.').max(30000),
+  sourceTitle: z.string().trim().min(3, 'Ajoutez le titre de l’examen.').max(160),
+  subject: z.string().trim().min(1, 'Indiquez la matière.').max(100),
+  level: z.string().trim().min(1, 'Indiquez le niveau.').max(100),
+})
+
 export type ExamVariantLabel = z.infer<typeof examVariantLabelSchema>
 export type ExamVariantQuestion = z.infer<typeof examVariantQuestionSchema>
 export type ExamVariant = z.infer<typeof examVariantSchema>
 export type ExamVariantSet = z.infer<typeof examVariantSetSchema>
+export type ExamVariantGenerationInput = z.infer<typeof examVariantGenerationInputSchema>
 
 export type ExamVariantConsistencyCode =
   | 'DUPLICATE_LABEL'

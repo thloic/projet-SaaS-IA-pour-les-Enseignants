@@ -7,6 +7,8 @@ export const followUpPlanItemSchema = z.object({
   sourceId: z.string().trim().min(1),
   constat: z.string().trim().min(1).max(300),
   objectif: z.string().trim().min(1).max(300),
+  indicateur: z.string().trim().min(1).max(300),
+  echeance: z.string().trim().min(1).max(120),
   prochaineEtape: z.string().trim().min(1).max(300),
 })
 
@@ -21,6 +23,7 @@ export const followUpPlanFinalItemSchema = followUpPlanItemSchema.extend({
 
 export const followUpPlanSchema = z.object({
   eleve: z.object({ nom: z.string().trim().min(1) }),
+  statut: z.enum(['brouillon', 'actif', 'termine']),
   items: z.array(followUpPlanFinalItemSchema).min(1).max(10),
 })
 

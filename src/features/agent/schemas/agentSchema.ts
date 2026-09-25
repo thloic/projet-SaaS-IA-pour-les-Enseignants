@@ -46,6 +46,13 @@ export const agentStructuredResponseSchema = z.discriminatedUnion('kind', [
     .strict(),
   z
     .object({
+      kind: z.literal('observation_saved'),
+      studentId: z.string().uuid(),
+      message: z.string().min(1),
+    })
+    .strict(),
+  z
+    .object({
       kind: z.literal('document_not_found_for_modification'),
       message: z.string().min(1),
     })
@@ -80,6 +87,8 @@ export const agentStructuredResponseSchema = z.discriminatedUnion('kind', [
               source: z.string().min(1),
               constat: z.string().min(1),
               objectif: z.string().min(1),
+              indicateur: z.string().min(1),
+              echeance: z.string().min(1),
               prochaineEtape: z.string().min(1),
             })
             .strict()

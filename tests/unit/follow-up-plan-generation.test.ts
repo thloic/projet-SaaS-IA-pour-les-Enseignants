@@ -75,8 +75,8 @@ test('groundFollowUpPlan ne conserve que les éléments dont le sourceId corresp
   const plan = groundFollowUpPlan(
     {
       items: [
-        { sourceId: OBSERVATION_ID, constat: 'Constat réel', objectif: 'Objectif réel', prochaineEtape: 'Étape réelle' },
-        { sourceId: 'source-inventee', constat: 'Constat halluciné', objectif: 'x', prochaineEtape: 'y' },
+        { sourceId: OBSERVATION_ID, constat: 'Constat réel', objectif: 'Objectif réel', indicateur: 'Indicateur réel', echeance: 'dans 6 semaines', prochaineEtape: 'Étape réelle' },
+        { sourceId: 'source-inventee', constat: 'Constat halluciné', objectif: 'x', indicateur: 'i', echeance: 'e', prochaineEtape: 'y' },
       ],
     },
     evidence,
@@ -94,8 +94,8 @@ test('groundFollowUpPlan rejette un sourceId réutilisé plusieurs fois', () => 
   const plan = groundFollowUpPlan(
     {
       items: [
-        { sourceId: OBSERVATION_ID, constat: 'Premier', objectif: 'x', prochaineEtape: 'y' },
-        { sourceId: OBSERVATION_ID, constat: 'Doublon', objectif: 'x', prochaineEtape: 'y' },
+        { sourceId: OBSERVATION_ID, constat: 'Premier', objectif: 'x', indicateur: 'i', echeance: 'e', prochaineEtape: 'y' },
+        { sourceId: OBSERVATION_ID, constat: 'Doublon', objectif: 'x', indicateur: 'i', echeance: 'e', prochaineEtape: 'y' },
       ],
     },
     evidence,
@@ -108,7 +108,7 @@ test('groundFollowUpPlan rejette un sourceId réutilisé plusieurs fois', () => 
 test('generateRealFollowUpPlan rejette une sortie sans aucun sourceId valide', async () => {
   await assert.rejects(() =>
     generateRealFollowUpPlan({ studentContext: fictitiousContext() }, async () => ({
-      items: [{ sourceId: 'invente', constat: 'x', objectif: 'y', prochaineEtape: 'z' }],
+      items: [{ sourceId: 'invente', constat: 'x', objectif: 'y', indicateur: 'i', echeance: 'e', prochaineEtape: 'z' }],
     }))
   )
 })

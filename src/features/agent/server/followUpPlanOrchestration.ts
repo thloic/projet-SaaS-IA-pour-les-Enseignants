@@ -48,7 +48,7 @@ function hasFollowUpPlanEvidence(context: Extract<StudentContextResult, { kind: 
 function buildFollowUpPlanMessage(plan: FollowUpPlan): string {
   const lines = plan.items.map(
     (item, index) =>
-      `${index + 1}. ${item.source}\n   Constat : ${item.constat}\n   Objectif : ${item.objectif}\n   Prochaine étape : ${item.prochaineEtape}`
+      `${index + 1}. ${item.source}\n   Constat : ${item.constat}\n   Objectif : ${item.objectif}\n   Indicateur : ${item.indicateur}\n   Révision : ${item.echeance}\n   Prochaine étape : ${item.prochaineEtape}`
   )
   return [`Brouillon de plan de suivi pour ${plan.eleve.nom}, à relire et ajuster avant de le conserver :`, '', ...lines].join('\n')
 }

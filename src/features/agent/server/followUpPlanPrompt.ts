@@ -13,6 +13,8 @@ export function buildFollowUpPlanPrompt(
     'Un même sourceId ne peut être utilisé que dans un seul élément du plan.',
     'N’invente aucune information qui ne figure pas dans les éléments fournis.',
     'Formule chaque constat et chaque objectif de façon bienveillante : jamais de formulation négative directe sur l’élève, reformule toujours une difficulté en besoin ou en axe de progrès.',
+    'Chaque objectif doit être précis et mesurable. Ajoute un indicateur observable permettant à l’enseignant de vérifier la progression.',
+    'Ajoute une échéance réaliste sous forme de durée de révision, par exemple « dans 6 semaines ». N’invente jamais une date institutionnelle.',
     '',
     'ÉLÉMENTS DISPONIBLES (sourceId — description) :',
     ...evidence.map((item) => `- ${item.sourceId} — ${item.label}`),

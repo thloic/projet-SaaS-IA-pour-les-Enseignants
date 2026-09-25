@@ -8,7 +8,7 @@ import {
   agentStructuredResponseSchema,
 } from '@/features/agent/schemas/agentSchema'
 import { generatePAT } from '@/features/agent/server/generatePAT'
-import { getStudentContext, listOwnedStudents } from '@/features/agent/server/memory'
+import { getStudentContext, listOwnedStudents, saveStudentObservation } from '@/features/agent/server/memory'
 import { resolveConversationContext } from '@/features/agent/server/conversationContext'
 import { getClassContext, listOwnedClasses } from '@/features/agent/server/classContext'
 import {
@@ -43,6 +43,7 @@ import {
   DocumentModificationError,
   orchestrateDocumentModification,
 } from '@/features/agent/server/documentModificationOrchestration'
+import { orchestrateStudentObservation } from '@/features/agent/server/observationOrchestration'
 
 const USAGE_FEATURE = 'agent'
 
@@ -109,9 +110,34 @@ export async function POST(request: Request) {
     .find((message) => message.role === 'user')
   const patIntent = latestUserMessage ? detectPATIntent(latestUserMessage.content) : null
   const followUpPlanIntent = latestUserMessage ? detectFollowUpPlanIntent(latestUserMessage.content) : null
+  const bulletinIntent = latestUserMessage
+    ? looksLikeBulletinRequest(latestUserMessage.content)
+    : false
   const modificationIntent = latestUserMessage
     ? looksLikeDocumentModificationRequest(latestUserMessage.content)
     : false
+
+  if (
+    !modificationIntent &&
+    !patIntent &&
+    !followUpPlanIntent &&
+    !bulletinIntent &&
+    latestUserMessage
+  ) {
+    try {
+      const result = await orchestrateStudentObservation(
+        {
+          message: latestUserMessage.content,
+          interfaceLanguage: profile.interface_language,
+        },
+        { listOwnedStudents, saveStudentObservation }
+      )
+      if (result) return NextResponse.json(agentStructuredResponseSchema.parse(result))
+    } catch (error) {
+      console.error('[agent:observation] enregistrement impossible', error)
+      return jsonError(copy.contextFailed, 500)
+    }
+  }
 
   if (modificationIntent && latestUserMessage) {
     try {
@@ -241,7 +267,7 @@ export async function POST(request: Request) {
     !patIntent &&
     !followUpPlanIntent &&
     latestUserMessage &&
-    looksLikeBulletinRequest(latestUserMessage.content)
+    bulletinIntent
   ) {
     try {
       const result = await orchestrateBulletinRequest(

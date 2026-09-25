@@ -63,7 +63,7 @@ export function groundFollowUpPlan(
     items.push({ ...item, source })
   }
 
-  return followUpPlanSchema.parse({ eleve: { nom: studentFullName }, items })
+  return followUpPlanSchema.parse({ eleve: { nom: studentFullName }, statut: 'brouillon', items })
 }
 
 export async function generateRealFollowUpPlan(

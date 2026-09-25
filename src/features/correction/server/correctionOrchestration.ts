@@ -3,6 +3,7 @@ import 'server-only'
 import { checkAndIncrementUsage, decrementUsage } from '@/features/billing/server/usage'
 import { launchCorrectionBatchSchema } from '@/features/correction/schemas/correctionSchema'
 import { generateCorrectionForCopy } from '@/features/correction/server/correctionGeneration.service'
+import { formatCorrectionComment } from '@/features/correction/utils/correctionFormatting'
 import { getCurrentTeacherProfile, getCurrentUser } from '@/features/profile/server/profile'
 import { createClient } from '@/lib/supabase/server'
 
@@ -139,7 +140,7 @@ export async function createCorrectionBatchGeneration(
                 .from('correction_copies')
                 .update({
                   findings: generated.findings,
-                  comment: generated.comment,
+                  comment: formatCorrectionComment(generated),
                   status: 'complete',
                 })
                 .eq('id', current.id)
