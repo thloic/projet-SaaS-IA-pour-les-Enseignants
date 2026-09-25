@@ -1,6 +1,6 @@
 # Proposition produit — Une conversation continue avec l’agent
 
-Statut : proposition prête à implémenter, interface non modifiée.
+Statut au 2026-09-25 : la continuité de base (historique affiché ≠ historique envoyé, cartes PAT/bulletin/plan de suivi conservées après un nouveau message, retouches locales préservées, réponse déjà reçue non effacée par une erreur/un arrêt, texte saisi restauré après un échec d'envoi) est implémentée et testée (`src/features/agent/utils/conversationState.ts`, `tests/unit/agent-conversation-state.test.ts`, cartes PAT/bulletin/plan de suivi dans `AgentChat.tsx`). Le reste de cette proposition (redesign visuel, indicateurs de contexte par réponse, défilement, accessibilité mobile détaillée) reste à l'état de proposition.
 
 Sources : inspection de `AgentChat.tsx`, des cartes PAT/bulletin, des schémas et orchestrations de l’agent ; `DESIGN.md` ; PRD et plan du contexte de classe. Aucune séance d’observation utilisateur ni vérification visuelle dans le navigateur n’a été effectuée pour cette proposition. Les choix visuels restent à valider sur les parcours ci-dessous.
 
