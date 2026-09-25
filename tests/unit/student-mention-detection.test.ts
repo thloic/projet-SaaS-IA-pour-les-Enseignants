@@ -60,6 +60,12 @@ test('signale une ambiguïté quand plusieurs élèves partagent le même préno
   }
 })
 
+test('un nom complet sélectionné lève l’ambiguïté entre deux prénoms identiques', () => {
+  const result = detectMentionedStudent('Élève sélectionné : Emma Bouchard.', [EMMA_A, EMMA_B])
+  assert.equal(result.kind, 'match')
+  if (result.kind === 'match') assert.equal(result.student.id, EMMA_B.id)
+})
+
 test('un prénom ambigu mentionné après un élève sans ambiguïté ne perturbe pas la détection', () => {
   const result = detectMentionedStudent('Loïc a bien participé, comme Emma d’ailleurs.', [
     LOIC,

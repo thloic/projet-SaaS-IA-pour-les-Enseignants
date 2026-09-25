@@ -24,6 +24,8 @@ export async function getClassContext(classId: string, system: GradingSystem) {
   const dashboard = await getClassDashboardForUser(classId, '30d', userId)
   if (!dashboard) throw new Error('CLASS_NOT_FOUND')
   const supabase = await createClient()
-  const rows = await createClassContextRepository(supabase).listEvaluationGrades(userId, classId)
-  return buildClassContext(dashboard, rows, system)
+  const repository = createClassContextRepository(supabase)
+  const rows = await repository.listEvaluationGrades(userId, classId)
+  const correctionRows = await repository.listCorrectionFindings(userId, classId)
+  return buildClassContext(dashboard, rows, system, correctionRows)
 }

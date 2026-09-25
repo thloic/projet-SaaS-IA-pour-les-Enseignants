@@ -134,7 +134,11 @@ export async function orchestrateDocumentModification(
     evaluationResults.length === 0 &&
     context.observations.length === 0
   ) {
-    return buildStudentDataMissingResponse(context.student.fullName, input.interfaceLanguage)
+    return buildStudentDataMissingResponse(
+      context.student.fullName,
+      DOCUMENT_LABELS.bulletin,
+      input.interfaceLanguage
+    )
   }
 
   const usage = await dependencies.checkUsage(input.trustedUserId)

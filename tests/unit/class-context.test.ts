@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { detectMentionedClass } from '../../src/features/agent/server/classMentionDetection.ts'
-import { buildClassContext, calculateClassAverages, numericGrade } from '../../src/features/agent/server/classContextCore.ts'
+import { buildClassContext, buildClassErrorAnalysis, calculateClassAverages, numericGrade } from '../../src/features/agent/server/classContextCore.ts'
 import { classroom, otherClass, dashboard } from '../fixtures/classContext.ts'
 
 for (const message of ['Effectif de la 8A ?', 'Présences de la classe 8a', 'Classe 8A', 'Quels élèves de 8A ont un plan d’intervention ?']) {
@@ -51,6 +51,16 @@ test('projection fidèle au tableau de bord, sans recalcul des signaux', () => {
   assert.deepEqual(context.recentObservations, source.recentObservations)
   assert.deepEqual(context.participation, { events: 2, score: 3 })
   assert.equal(context.period, '30d')
+  assert.deepEqual(context.errorAnalysis, { status: 'no_data', copyCount: 0, categories: [] })
+})
+test('errorAnalysis du contexte de classe reprend fidèlement les copies de correction fournies', () => {
+  const source = dashboard()
+  const correctionRows = [
+    { status: 'validated' as const, validated_at: `${source.periodRange.start}T00:00:00.000Z`, findings: [{ category: 'syntaxe' as const }] },
+  ]
+  const context = buildClassContext(source, [], '20', correctionRows)
+  assert.deepEqual(context.errorAnalysis, buildClassErrorAnalysis(correctionRows, source.periodRange))
+  assert.equal(context.errorAnalysis.status, 'available')
 })
 test('classe sans activité : conserve les besoins, distingue absence de données et zéro', () => {
   const source = dashboard()

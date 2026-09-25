@@ -9,6 +9,9 @@ export const agentTranslations = {
     responseFailed: 'La réponse de l’agent a échoué.',
     invalidStructured: 'La réponse structurée de l’agent est invalide.',
     emptyResponse: 'La réponse de l’agent est vide.',
+    stop: 'Arrêter',
+    interrupted: 'Réponse interrompue',
+    failedTurn: 'La réponse n’a pas pu être terminée.',
     patPrompt: (name: string) => `Génère le PAT de ${name}`,
     quick: [
       ['Générer un plan d’appui', 'Génère le PAT de [prénom ou nom de l’élève]'],
@@ -24,6 +27,9 @@ export const agentTranslations = {
     responseFailed: 'The agent response failed.',
     invalidStructured: 'The structured agent response is invalid.',
     emptyResponse: 'The agent response is empty.',
+    stop: 'Stop',
+    interrupted: 'Response stopped',
+    failedTurn: 'The response could not be completed.',
     patPrompt: (name: string) => `Generate the support plan for ${name}`,
     quick: [
       ['Generate a support plan', 'Generate the support plan for [student first or last name]'],
@@ -39,6 +45,9 @@ export const agentTranslations = {
     responseFailed: 'La respuesta del agente ha fallado.',
     invalidStructured: 'La respuesta estructurada del agente no es válida.',
     emptyResponse: 'La respuesta del agente está vacía.',
+    stop: 'Detener',
+    interrupted: 'Respuesta interrumpida',
+    failedTurn: 'No se pudo completar la respuesta.',
     patPrompt: (name: string) => `Genera el PAT de ${name}`,
     quick: [
       ['Generar un plan de apoyo', 'Genera el PAT de [nombre o apellido del alumno]'],

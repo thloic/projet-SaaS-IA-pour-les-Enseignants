@@ -218,6 +218,7 @@ export async function createClassAction(input: {
   level: string
   subject: string
   documentTemplate?: string
+  correctionRubric?: string
 }): Promise<ClassroomMutationResult<ClassRoom>> {
   const parsed = classSchema.safeParse(input)
   if (!parsed.success) {
@@ -227,7 +228,7 @@ export async function createClassAction(input: {
   const user = await getCurrentUser()
   if (!user) return { data: null, error: 'Vous devez être connecté pour créer une classe.' }
 
-  const { documentTemplate, ...classFields } = parsed.data
+  const { documentTemplate, correctionRubric, ...classFields } = parsed.data
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('classes')
@@ -235,6 +236,7 @@ export async function createClassAction(input: {
       user_id: user.id,
       ...classFields,
       document_template: documentTemplate || null,
+      correction_rubric: correctionRubric || null,
     })
     .select('*')
     .single()
@@ -250,7 +252,13 @@ export async function createClassAction(input: {
 
 export async function updateClassAction(
   classId: string,
-  input: { name: string; level: string; subject: string; documentTemplate?: string }
+  input: {
+    name: string
+    level: string
+    subject: string
+    documentTemplate?: string
+    correctionRubric?: string
+  }
 ): Promise<ClassroomMutationResult<ClassRoom>> {
   const parsed = classSchema.safeParse(input)
   if (!parsed.success) {
@@ -260,11 +268,15 @@ export async function updateClassAction(
   const user = await getCurrentUser()
   if (!user) return { data: null, error: 'Vous devez être connecté.' }
 
-  const { documentTemplate, ...classFields } = parsed.data
+  const { documentTemplate, correctionRubric, ...classFields } = parsed.data
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('classes')
-    .update({ ...classFields, document_template: documentTemplate || null })
+    .update({
+      ...classFields,
+      document_template: documentTemplate || null,
+      correction_rubric: correctionRubric || null,
+    })
     .eq('id', classId)
     .eq('user_id', user.id)
     .select('*')

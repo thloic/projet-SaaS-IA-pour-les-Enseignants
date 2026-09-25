@@ -48,7 +48,6 @@ Enseignant de français/langues (rédaction, dissertation) au primaire ou au sec
 - Matières hors langues/rédaction (maths, sciences... après validation du calibrage).
 - Remplissage automatique des grilles de compétences officielles (contenu référentiel non fourni par le client à ce stade).
 - Alignement sur le programme ministériel officiel (dépend du Module 4, non construit).
-- Validation groupée / « tout approuver d'un coup ».
 - Envoi ou diffusion automatique du commentaire à un parent ou à l'administration.
 - Détection de plagiat.
 - Attribution automatique d'une note chiffrée finale — l'enseignant reste seul décideur de la note.
@@ -59,8 +58,9 @@ Enseignant de français/langues (rédaction, dissertation) au primaire ou au sec
 - Élèves sans copie renseignée sont simplement ignorés au lancement, pas bloquants.
 - Ton du commentaire choisi une fois pour tout le lot, pas par copie individuelle.
 - Sortie par copie : erreurs classées par type + commentaire de synthèse, tous deux modifiables avant validation.
-- Validation strictement copie par copie.
+- Validation copie par copie, ou en un clic pour tout le lot (« Tout valider ») une fois les copies générées — l'enseignant garde la possibilité de relire et modifier un commentaire avant de le valider individuellement s'il préfère.
 - Catégories du tableau récapitulatif = mêmes catégories fixes que la détection d'erreurs, pas de définition libre par évaluation.
+- Le tableau récapitulatif porte sur le lot affiché (une classe, une évaluation), pas sur l'historique de la classe ; il ne compte que les copies validées et se met à jour immédiatement à chaque validation, individuelle ou groupée.
 - Mémoire de calibrage alimentée automatiquement à la validation ; la version modifiée prime sur la proposition initiale.
 - Fichier scanné/image détecté à l'import → message explicite, import refusé.
 - Limite freemium du plan gratuit s'applique comme aux autres générations IA.

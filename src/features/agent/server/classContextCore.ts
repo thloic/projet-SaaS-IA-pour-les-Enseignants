@@ -1,11 +1,18 @@
 import type { ClassDashboardData } from '../../classroom/types/classroomDashboard.types.ts'
 import type { GradingSystem } from '../../profile/types/profile.types.ts'
-import type { ClassContext, ClassEvaluationAverage } from '../types/classContext.types.ts'
+import type { CorrectionCopyStatus, CorrectionFindingCategory } from '../../correction/types/correction.types.ts'
+import type { ClassContext, ClassErrorAnalysis, ClassEvaluationAverage } from '../types/classContext.types.ts'
 
 export interface ClassGradeRecord {
   student_id: string
   title: string | null
   grade: string
+}
+
+export interface CorrectionFindingRow {
+  status: CorrectionCopyStatus
+  validated_at: string | null
+  findings: { category: CorrectionFindingCategory }[]
 }
 
 export function numericGrade(grade: string, system: GradingSystem): { value: number; scale: number } | null {
@@ -38,7 +45,34 @@ export function calculateClassAverages(rows: ClassGradeRecord[], system: Grading
   })
 }
 
-export function buildClassContext(dashboard: ClassDashboardData, grades: ClassGradeRecord[], system: GradingSystem): ClassContext {
+// Une copie ne compte que validée (jamais un brouillon non relu par l'enseignant) et dans la
+// même fenêtre de 30 jours que le reste du contexte de classe, pour rester cohérent avec elle.
+export function buildClassErrorAnalysis(
+  rows: CorrectionFindingRow[],
+  periodRange: { start: string; end: string }
+): ClassErrorAnalysis {
+  const validatedInWindow = rows.filter((row) => {
+    if (row.status !== 'validated' || !row.validated_at) return false
+    const validatedDate = row.validated_at.slice(0, 10)
+    return validatedDate >= periodRange.start && validatedDate <= periodRange.end
+  })
+  if (validatedInWindow.length === 0) return { status: 'no_data', copyCount: 0, categories: [] }
+  const counts = new Map<CorrectionFindingCategory, number>()
+  for (const row of validatedInWindow) {
+    for (const finding of row.findings) counts.set(finding.category, (counts.get(finding.category) ?? 0) + 1)
+  }
+  const categories = [...counts.entries()]
+    .map(([category, count]) => ({ category, count }))
+    .sort((a, b) => b.count - a.count)
+  return { status: 'available', copyCount: validatedInWindow.length, categories }
+}
+
+export function buildClassContext(
+  dashboard: ClassDashboardData,
+  grades: ClassGradeRecord[],
+  system: GradingSystem,
+  correctionRows: CorrectionFindingRow[] = []
+): ClassContext {
   const { id, name, level, subject } = dashboard.classroom
   return {
     kind: 'class_context', classroom: { id, name, level, subject }, period: '30d',
@@ -53,5 +87,6 @@ export function buildClassContext(dashboard: ClassDashboardData, grades: ClassGr
     attendance: dashboard.recentAttendance,
     recentObservations: dashboard.recentObservations,
     evaluations: calculateClassAverages(grades, system),
+    errorAnalysis: buildClassErrorAnalysis(correctionRows, dashboard.periodRange),
   }
 }

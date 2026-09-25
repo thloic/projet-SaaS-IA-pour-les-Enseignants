@@ -117,7 +117,7 @@ const PATSchema = z.object({
 
 ## 6. Contraintes techniques (non négociables — héritées du projet)
 
-- **Stack** : Next.js 14 (App Router), TypeScript strict, Tailwind + shadcn/ui, Supabase (auth + DB + RLS), Vercel AI SDK, déploiement Vercel.
+- **Stack** : Next.js, TypeScript strict, Tailwind + shadcn/ui, Supabase (auth + DB + RLS), Vercel AI SDK, déploiement Vercel.
 - **Point de branchement IA unique** : tous les appels IA passent par un seul point d'isolation (facilite le switch mock/réel et les tests). L'agent ne crée pas un 2e chemin d'appel parallèle.
 - **Clé API Anthropic** : côté serveur strict, jamais de préfixe `NEXT_PUBLIC_`. La clé est sur le compte du client, pas le tien.
 - **Zod obligatoire** : toute sortie IA validée avant insertion DB ou rendu. Parsing JSON défensif toujours.

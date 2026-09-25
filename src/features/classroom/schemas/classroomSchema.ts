@@ -9,6 +9,11 @@ export const classSchema = z.object({
     .trim()
     .max(5000, 'Le modele de document est trop long')
     .optional(),
+  correctionRubric: z
+    .string()
+    .trim()
+    .max(5000, 'La grille de correction est trop longue')
+    .optional(),
 })
 
 export const studentSchema = z.object({

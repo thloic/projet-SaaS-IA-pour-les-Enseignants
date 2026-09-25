@@ -9,6 +9,7 @@ import {
 } from '../../src/features/correction/schemas/correctionSchema.ts'
 import { filterNonEmptyCopies } from '../../src/features/correction/utils/prepareBatchCopies.ts'
 import { buildCorrectionPrompt } from '../../src/lib/prompts/correction.ts'
+import { formatCorrectionComment } from '../../src/features/correction/utils/correctionFormatting.ts'
 
 const VALID_UUID = '11111111-1111-4111-8111-111111111111'
 const VALID_UUID_2 = '22222222-2222-4222-8222-222222222222'
@@ -121,4 +122,65 @@ test('buildCorrectionPrompt embeds the fixed error taxonomy and the chosen tone'
   assert.match(prompt.systemPrompt, /aucune formulation négative/i)
   assert.match(prompt.userPrompt, /Ton direct/)
   assert.match(prompt.userPrompt, /Il ont regardé le film hier soir\./)
+})
+
+test('buildCorrectionPrompt injecte la grille de correction fournie par l’enseignant', () => {
+  const prompt = buildCorrectionPrompt({
+    contentText: 'Texte de la copie.',
+    tone: 'factuel',
+    teacherProfile: { level: 'Secondaire 2', language: 'fr' },
+    rubric: 'Critère 1 : respect du plan en trois parties.\nCritère 2 : au moins 3 connecteurs logiques.',
+  })
+
+  assert.match(prompt.userPrompt, /Critère 1 : respect du plan en trois parties\./)
+  assert.match(prompt.userPrompt, /Critère 2 : au moins 3 connecteurs logiques\./)
+  assert.match(prompt.systemPrompt, /analyse séparément chacun de ses critères/i)
+  // Le format de sortie (taxonomie fixe) reste imposé même quand une grille est fournie.
+  assert.match(prompt.systemPrompt, /syntaxe/)
+  assert.match(prompt.systemPrompt, /comprehension/)
+  assert.match(prompt.systemPrompt, /methode/)
+})
+
+test('présente les critères, les preuves et les scores proposés dans un commentaire toujours modifiable', () => {
+  const comment = formatCorrectionComment({
+    findings: [],
+    rubricAssessments: [{
+      criterion: 'Organisation du texte',
+      evidence: 'Le texte comporte une introduction et deux paragraphes.',
+      score: 3,
+      maxScore: 4,
+    }],
+    comment: 'La structure constitue une base solide pour poursuivre la progression.',
+  })
+  assert.match(comment, /Organisation du texte/)
+  assert.match(comment, /3\/4/)
+  assert.match(comment, /Preuve : Le texte comporte/)
+})
+
+test('buildCorrectionPrompt sans grille conserve le comportement actuel', () => {
+  const withoutRubric = buildCorrectionPrompt({
+    contentText: 'Texte de la copie.',
+    tone: 'factuel',
+    teacherProfile: { level: 'Secondaire 2', language: 'fr' },
+  })
+  const explicitlyNoRubric = buildCorrectionPrompt({
+    contentText: 'Texte de la copie.',
+    tone: 'factuel',
+    teacherProfile: { level: 'Secondaire 2', language: 'fr' },
+    rubric: null,
+  })
+
+  assert.doesNotMatch(withoutRubric.userPrompt, /GRILLE DE CORRECTION/)
+  assert.equal(withoutRubric.userPrompt, explicitlyNoRubric.userPrompt)
+})
+
+test('buildCorrectionPrompt traite une grille vide ou blanche comme absente', () => {
+  const prompt = buildCorrectionPrompt({
+    contentText: 'Texte de la copie.',
+    tone: 'factuel',
+    teacherProfile: { level: 'Secondaire 2', language: 'fr' },
+    rubric: '   \n  ',
+  })
+
+  assert.doesNotMatch(prompt.userPrompt, /GRILLE DE CORRECTION/)
 })

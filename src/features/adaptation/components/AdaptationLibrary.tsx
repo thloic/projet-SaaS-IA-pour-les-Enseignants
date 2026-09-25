@@ -89,9 +89,14 @@ export default function AdaptationLibrary({ adaptations }: AdaptationLibraryProp
             </p>
           </div>
         </div>
-        <Button asChild className="min-h-10">
-          <Link href="/adaptations/new"><Plus /> Adapter une leçon</Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline" className="min-h-10">
+            <Link href="/adaptations/exam-variants"><FileText /> Examen A/B/C</Link>
+          </Button>
+          <Button asChild className="min-h-10">
+            <Link href="/adaptations/new"><Plus /> Adapter une leçon</Link>
+          </Button>
+        </div>
       </header>
 
       <div className="relative max-w-lg">

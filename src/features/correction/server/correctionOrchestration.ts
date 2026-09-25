@@ -3,6 +3,7 @@ import 'server-only'
 import { checkAndIncrementUsage, decrementUsage } from '@/features/billing/server/usage'
 import { launchCorrectionBatchSchema } from '@/features/correction/schemas/correctionSchema'
 import { generateCorrectionForCopy } from '@/features/correction/server/correctionGeneration.service'
+import { formatCorrectionComment } from '@/features/correction/utils/correctionFormatting'
 import { getCurrentTeacherProfile, getCurrentUser } from '@/features/profile/server/profile'
 import { createClient } from '@/lib/supabase/server'
 
@@ -45,7 +46,7 @@ export async function createCorrectionBatchGeneration(
   const supabase = await createClient()
   const { data: batch, error: batchError } = await supabase
     .from('correction_batches')
-    .select('id, status')
+    .select('id, status, classes(correction_rubric)')
     .eq('id', parsed.data.batchId)
     .eq('user_id', userId)
     .maybeSingle()
@@ -53,6 +54,8 @@ export async function createCorrectionBatchGeneration(
   if (batchError || !batch) {
     throw new CorrectionRequestError(404, 'Ce lot de correction est introuvable.')
   }
+  const batchClass = Array.isArray(batch.classes) ? batch.classes[0] : batch.classes
+  const rubric = batchClass?.correction_rubric ?? null
   if (batch.status === 'generating') {
     throw new CorrectionRequestError(409, 'Ce lot est déjà en cours de correction.')
   }
@@ -130,13 +133,14 @@ export async function createCorrectionBatchGeneration(
                 contentText: current.content_text,
                 tone,
                 teacherProfile,
+                rubric,
               })
 
               const { error: updateError } = await supabase
                 .from('correction_copies')
                 .update({
                   findings: generated.findings,
-                  comment: generated.comment,
+                  comment: formatCorrectionComment(generated),
                   status: 'complete',
                 })
                 .eq('id', current.id)

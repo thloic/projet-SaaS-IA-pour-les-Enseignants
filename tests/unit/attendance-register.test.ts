@@ -28,6 +28,7 @@ function fixture(sessionCount = 2): AttendanceRegisterData {
       subject: 'Mathématiques',
       document_template: null,
       document_template_path: null,
+      correction_rubric: null,
       created_at: '2026-08-01T00:00:00.000Z',
       updated_at: '2026-08-01T00:00:00.000Z',
     },

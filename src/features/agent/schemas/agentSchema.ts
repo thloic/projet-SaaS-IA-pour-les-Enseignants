@@ -46,6 +46,13 @@ export const agentStructuredResponseSchema = z.discriminatedUnion('kind', [
     .strict(),
   z
     .object({
+      kind: z.literal('observation_saved'),
+      studentId: z.string().uuid(),
+      message: z.string().min(1),
+    })
+    .strict(),
+  z
+    .object({
       kind: z.literal('document_not_found_for_modification'),
       message: z.string().min(1),
     })
@@ -65,6 +72,42 @@ export const agentStructuredResponseSchema = z.discriminatedUnion('kind', [
       subject: z.string().min(1),
       grade: z.string().min(1),
       comment: z.string().min(1),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('follow_up_plan'),
+      studentId: z.string().uuid(),
+      message: z.string().min(1),
+      items: z
+        .array(
+          z
+            .object({
+              sourceId: z.string().min(1),
+              source: z.string().min(1),
+              constat: z.string().min(1),
+              objectif: z.string().min(1),
+              indicateur: z.string().min(1),
+              echeance: z.string().min(1),
+              prochaineEtape: z.string().min(1),
+            })
+            .strict()
+        )
+        .min(1),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('follow_up_plan_review_not_ready'),
+      message: z.string().min(1),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('follow_up_plan_review'),
+      studentId: z.string().uuid(),
+      message: z.string().min(1),
+      bilan: z.string().min(1),
     })
     .strict(),
 ])

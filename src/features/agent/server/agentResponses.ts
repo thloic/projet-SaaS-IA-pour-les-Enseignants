@@ -64,15 +64,29 @@ export function buildTemplateMissingResponse(
 
 export function buildStudentDataMissingResponse(
   studentFullName: string,
+  documentLabel: DocumentLabel,
   interfaceLanguage?: AppLocale
 ): Extract<AgentStructuredResponse, { kind: 'student_data_missing' }> {
   const message =
     interfaceLanguage === 'es'
-      ? `Aún no hay resultados ni observaciones registrados para ${studentFullName}. Añade al menos un dato al expediente antes de generar el comentario de boletín.`
+      ? `Aún no hay datos registrados para ${studentFullName}. Añade al menos un dato al expediente antes de generar ${documentLabel.es}.`
       : interfaceLanguage === 'en'
-        ? `There are no saved results or observations for ${studentFullName} yet. Add at least one item to the student record before generating a report card comment.`
-        : `Aucun résultat ni aucune observation n’est encore enregistré pour ${studentFullName}. Ajoutez au moins un élément au dossier avant de générer le commentaire de bulletin.`
+        ? `There is no saved data for ${studentFullName} yet. Add at least one item to the student record before generating ${documentLabel.en}.`
+        : `Aucune donnée n’est encore enregistrée pour ${studentFullName}. Ajoutez au moins un élément au dossier avant de générer ${documentLabel.fr}.`
   return { kind: 'student_data_missing', message }
+}
+
+export function buildFollowUpPlanReviewNotReadyResponse(
+  studentFullName: string,
+  interfaceLanguage?: AppLocale
+): Extract<AgentStructuredResponse, { kind: 'follow_up_plan_review_not_ready' }> {
+  const message =
+    interfaceLanguage === 'es'
+      ? `Todavía quedan objetivos sin evaluar en el plan de seguimiento de ${studentFullName}. Marca el estado de cada objetivo (logrado / no logrado) antes de pedir el balance de revisión.`
+      : interfaceLanguage === 'en'
+        ? `Some objectives in ${studentFullName}’s follow-up plan don’t have a status yet. Mark each objective as achieved or not achieved before requesting the review summary.`
+        : `Il reste des objectifs sans statut dans le plan de suivi de ${studentFullName}. Marquez chaque objectif (atteint / non atteint) avant de demander le bilan de révision.`
+  return { kind: 'follow_up_plan_review_not_ready', message }
 }
 
 export function buildDocumentNotFoundForModificationResponse(

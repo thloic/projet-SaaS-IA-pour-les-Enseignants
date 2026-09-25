@@ -275,9 +275,14 @@ export default function AdaptationBuilder({
             </div>
           </div>
         </div>
-        <Button variant="outline" onClick={() => router.push('/adaptations')}>
-          Voir ma banque
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => router.push('/adaptations/exam-variants')}>
+            Examen A/B/C
+          </Button>
+          <Button variant="outline" onClick={() => router.push('/adaptations')}>
+            Voir ma banque
+          </Button>
+        </div>
       </header>
 
       <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">

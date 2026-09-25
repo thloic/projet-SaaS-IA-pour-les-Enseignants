@@ -17,11 +17,15 @@ interface GenerateCorrectionInput {
     level?: string | null
     language: ContentLanguage
   }
+  rubric?: string | null
 }
 
 class CorrectionValidationError extends Error {
-  constructor(readonly details: string) {
+  readonly details: string
+
+  constructor(details: string) {
     super('INVALID_CORRECTION_STRUCTURE')
+    this.details = details
   }
 }
 
@@ -69,7 +73,16 @@ function buildMockCorrection(input: GenerateCorrectionInput) {
         ? 'Structure claire, bon point de départ. À corriger en priorité : l’accord sujet-verbe et la transition entre les paragraphes. Retravaille ces deux points pour la prochaine copie.'
         : 'Bon travail sur la structure en trois parties ! Le prochain axe de progression consiste à consolider l’accord sujet-verbe et à mieux relier les paragraphes entre eux. Continue sur cette lancée.'
 
-  return JSON.stringify({ findings, comment })
+  const rubricAssessments = input.rubric?.trim()
+    ? input.rubric.split('\n').map((criterion) => criterion.trim()).filter(Boolean).map((criterion) => ({
+        criterion,
+        evidence: 'La copie fournit un élément observable à confirmer par l’enseignant.',
+        score: null,
+        maxScore: null,
+      }))
+    : []
+
+  return JSON.stringify({ findings, rubricAssessments, comment })
 }
 
 async function callAnthropic({
@@ -77,12 +90,14 @@ async function callAnthropic({
   tone,
   teacherProfile,
   validationError,
+  rubric,
 }: GenerateCorrectionInput & { validationError?: string }) {
   const { systemPrompt, userPrompt } = buildCorrectionPrompt({
     contentText,
     tone,
     teacherProfile,
     validationError,
+    rubric,
   })
 
   const result = await generateText({

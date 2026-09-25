@@ -33,6 +33,17 @@ export const generatedCorrectionSchema = z.object({
       })
     )
     .max(20),
+  rubricAssessments: z
+    .array(
+      z.object({
+        criterion: z.string().trim().min(1).max(200),
+        evidence: z.string().trim().min(1).max(500),
+        score: z.number().nonnegative().nullable(),
+        maxScore: z.number().positive().nullable(),
+      })
+    )
+    .max(20)
+    .default([]),
   comment: z.string().trim().min(30, 'Le commentaire généré est trop court.'),
 })
 

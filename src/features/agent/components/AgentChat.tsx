@@ -7,16 +7,24 @@ import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/shared/ToastProvider'
 import {
   agentStructuredResponseSchema,
-  type AgentStructuredResponse,
 } from '@/features/agent/schemas/agentSchema'
-import type { PAT } from '@/features/agent/schemas/patSchema'
-import type { ContentLanguage } from '@/features/i18n/locale'
 import PATReviewCard from '@/features/agent/components/PATReviewCard'
 import BulletinReviewCard from '@/features/agent/components/BulletinReviewCard'
+import FollowUpPlanCard from '@/features/agent/components/FollowUpPlanCard'
 import { useAppLocale } from '@/features/i18n/AppLocaleProvider'
 import { agentTranslations } from '@/features/agent/i18n/agentTranslations'
 import { AGENT_LIMIT_REACHED_MESSAGES } from '@/features/billing/upgradeMessages'
 import { useBilling } from '@/features/billing/hooks/useBilling'
+import { toAgentPlainText } from '@/features/agent/utils/plainText'
+import type { ChatMessage } from '@/features/agent/types/conversation.types'
+import {
+  appendPendingTurn,
+  buildAgentRequestMessages,
+  buildClarificationContinuation,
+  findTextMessage,
+  replaceConversationMessage,
+  updateAssistantText,
+} from '@/features/agent/utils/conversationState'
 
 const BRAND = '#534AB7'
 
@@ -25,31 +33,6 @@ const UPGRADE_CTA_LABEL: Record<'fr' | 'en' | 'es', string> = {
   en: 'Upgrade to Pro →',
   es: 'Pasar al plan Pro →',
 }
-
-interface TextChatMessage {
-  kind: 'text'
-  role: 'user' | 'assistant'
-  content: string
-  candidates?: Extract<AgentStructuredResponse, { kind: 'clarification' }>['candidates']
-}
-
-interface PATChatMessage {
-  kind: 'pat'
-  role: 'assistant'
-  studentId: string
-  language: ContentLanguage
-  pat: PAT
-}
-
-interface BulletinChatMessage {
-  kind: 'bulletin'
-  role: 'assistant'
-  subject: string
-  grade: string
-  comment: string
-}
-
-type ChatMessage = TextChatMessage | PATChatMessage | BulletinChatMessage
 
 export default function AgentChat() {
   const { showToast } = useToast()
@@ -70,16 +53,10 @@ export default function AgentChat() {
     const trimmed = input.trim()
     if (!trimmed || isStreaming) return
 
-    const requestMessages = messages.flatMap((message) =>
-      message.kind === 'text' && message.content
-        ? [{ role: message.role, content: message.content }]
-        : []
-    )
-    const nextMessages: TextChatMessage[] = [
-      ...requestMessages.map((message) => ({ ...message, kind: 'text' as const })),
-      { kind: 'text', role: 'user', content: trimmed },
-    ]
-    setMessages([...nextMessages, { kind: 'text', role: 'assistant', content: '' }])
+    const requestMessages = buildAgentRequestMessages(messages, trimmed)
+    const userMessageId = crypto.randomUUID()
+    const assistantMessageId = crypto.randomUUID()
+    setMessages((current) => appendPendingTurn(current, trimmed, userMessageId, assistantMessageId))
     setInput('')
     setError(null)
     setIsStreaming(true)
@@ -92,7 +69,7 @@ export default function AgentChat() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: nextMessages.map(({ role, content }) => ({ role, content })),
+          messages: requestMessages,
         }),
         signal: controller.signal,
       })
@@ -107,43 +84,48 @@ export default function AgentChat() {
         if (!structured.success) throw new Error(copy.invalidStructured)
 
         setMessages((current) => {
-          const withoutPending = current.slice(0, -1)
           if (structured.data.kind === 'pat') {
-            return [
-              ...withoutPending,
-              {
+            return replaceConversationMessage(current, assistantMessageId, {
+                id: assistantMessageId,
                 kind: 'pat',
                 role: 'assistant',
                 studentId: structured.data.studentId,
                 language: structured.data.language,
                 pat: structured.data.pat,
-              },
-            ]
+              })
           }
           if (structured.data.kind === 'bulletin') {
-            return [
-              ...withoutPending,
-              {
+            return replaceConversationMessage(current, assistantMessageId, {
+                id: assistantMessageId,
                 kind: 'bulletin',
                 role: 'assistant',
                 subject: structured.data.subject,
                 grade: structured.data.grade,
                 comment: structured.data.comment,
-              },
-            ]
+              })
           }
-          return [
-            ...withoutPending,
-            {
+          if (structured.data.kind === 'follow_up_plan') {
+            return replaceConversationMessage(current, assistantMessageId, {
+                id: assistantMessageId,
+                kind: 'follow_up_plan',
+                role: 'assistant',
+                studentId: structured.data.studentId,
+                items: structured.data.items,
+              })
+          }
+          return replaceConversationMessage(current, assistantMessageId, {
+              id: assistantMessageId,
               kind: 'text',
               role: 'assistant',
-              content: structured.data.message,
+              content: toAgentPlainText(structured.data.message),
+              status: 'complete',
               candidates:
                 structured.data.kind === 'clarification'
                   ? structured.data.candidates
                   : undefined,
-            },
-          ]
+              originalRequest:
+                structured.data.kind === 'clarification' ? trimmed : undefined,
+            })
         })
         return
       }
@@ -158,21 +140,46 @@ export default function AgentChat() {
         if (done) break
         const chunk = decoder.decode(value, { stream: true })
         setMessages((current) => {
-          const updated = [...current]
-          const last = updated[updated.length - 1]
-          if (last?.kind === 'text' && last.role === 'assistant') {
-            updated[updated.length - 1] = { ...last, content: last.content + chunk }
-          }
-          return updated
+          const pending = findTextMessage(current, assistantMessageId)
+          if (!pending) return current
+          return updateAssistantText(
+            current,
+            assistantMessageId,
+            toAgentPlainText(pending.content + chunk)
+          )
         })
       }
+      setMessages((current) => {
+        const completed = findTextMessage(current, assistantMessageId)
+        return completed
+          ? updateAssistantText(current, assistantMessageId, completed.content, 'complete')
+          : current
+      })
     } catch (err) {
-      if (err instanceof DOMException && err.name === 'AbortError') return
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        setMessages((current) => {
+          const interrupted = findTextMessage(current, assistantMessageId)
+          return interrupted
+            ? updateAssistantText(current, assistantMessageId, interrupted.content, 'interrupted')
+            : current
+        })
+        return
+      }
       const message = err instanceof Error ? err.message : copy.responseFailed
       console.error('[agent] échec du chat', err)
       setError(message)
       showToast(message, 'error')
-      setMessages((current) => current.slice(0, -1))
+      setInput((current) => current || trimmed)
+      setMessages((current) => {
+        const failed = findTextMessage(current, assistantMessageId)
+        if (!failed) return current
+        return updateAssistantText(
+          current,
+          assistantMessageId,
+          failed.content || copy.failedTurn,
+          'error'
+        )
+      })
     } finally {
       setIsStreaming(false)
       abortControllerRef.current = null
@@ -218,19 +225,21 @@ export default function AgentChat() {
             <p>{copy.empty}</p>
           </div>
         ) : (
-          messages.map((message, index) =>
+          messages.map((message) =>
             message.kind === 'pat' ? (
-              <PATReviewCard key={index} initialPAT={message.pat} documentLanguage={message.language} />
+              <PATReviewCard key={message.id} initialPAT={message.pat} documentLanguage={message.language} />
             ) : message.kind === 'bulletin' ? (
               <BulletinReviewCard
-                key={index}
+                key={message.id}
                 subject={message.subject}
                 grade={message.grade}
                 initialComment={message.comment}
               />
+            ) : message.kind === 'follow_up_plan' ? (
+              <FollowUpPlanCard key={message.id} items={message.items} />
             ) : (
               <div
-                key={index}
+                key={message.id}
                 className={`max-w-[85%] whitespace-pre-line rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                   message.role === 'user'
                     ? 'ml-auto text-white'
@@ -238,7 +247,10 @@ export default function AgentChat() {
                 }`}
                 style={message.role === 'user' ? { backgroundColor: BRAND } : {}}
               >
-                {message.content || (isStreaming && index === messages.length - 1 ? '…' : '')}
+                {message.content || (message.status === 'pending' ? '…' : '')}
+                {message.role === 'assistant' && message.status === 'interrupted' && (
+                  <p className="mt-2 text-xs text-muted-foreground">{copy.interrupted}</p>
+                )}
                 {message.role === 'assistant' &&
                   Object.values(AGENT_LIMIT_REACHED_MESSAGES).includes(message.content) && (
                     <div className="mt-3">
@@ -259,7 +271,11 @@ export default function AgentChat() {
                       <button
                         key={candidate.id}
                         type="button"
-                        onClick={() => setInput(copy.patPrompt(candidate.fullName))}
+                        onClick={() => setInput(buildClarificationContinuation(
+                          message.originalRequest ?? '',
+                          candidate.fullName,
+                          locale
+                        ))}
                         className="rounded-full border border-border bg-background px-3 py-1 text-xs hover:bg-muted"
                       >
                         {candidate.fullName}
@@ -285,6 +301,16 @@ export default function AgentChat() {
           rows={2}
           className="flex-1 resize-none rounded-xl bg-muted/40 border border-border px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20"
         />
+        {isStreaming && (
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11"
+            onClick={() => abortControllerRef.current?.abort()}
+          >
+            {copy.stop}
+          </Button>
+        )}
         <Button
           type="button"
           className="h-11 gap-2 text-white"

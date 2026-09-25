@@ -10,7 +10,7 @@ export const student: OwnedStudentRecord = {
 }
 export function dashboard(): ClassDashboardData {
   return {
-    classroom: { ...classroom, user_id: 'teacher', document_template: null, document_template_path: null, created_at: '2026-09-01', updated_at: '2026-09-01' },
+    classroom: { ...classroom, user_id: 'teacher', document_template: null, document_template_path: null, correction_rubric: null, created_at: '2026-09-01', updated_at: '2026-09-01' },
     period: '30d', periodRange: { start: '2026-08-11', end: '2026-09-09' }, metrics: { studentCount: 1, attendanceRate: 50, absenceCount: 2, lateCount: 1, attentionCount: 1, sessionCount: 4 },
     attendanceTrend: [], attendanceDistribution: [], observationDistribution: [],
     students: [{ id: student.id, firstName: 'Marie', lastName: 'Martin', needs: ['Lecture'], interventionPlan: true,
