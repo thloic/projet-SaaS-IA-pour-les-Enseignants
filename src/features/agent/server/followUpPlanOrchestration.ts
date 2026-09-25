@@ -1,12 +1,14 @@
 import type { AgentStructuredResponse } from '../schemas/agentSchema.ts'
 import type { StudentContextResult } from '../types/memory.types.ts'
 import type { FollowUpPlan } from '../schemas/followUpPlanSchema.ts'
+import type { FollowUpPlanRecord } from '../schemas/followUpPlanTrackingSchema.ts'
 import type { AppLocale, ContentLanguage } from '@/features/i18n/locale'
 import {
   buildClarificationResponse,
   buildStudentDataMissingResponse,
   buildStudentNotFoundResponse,
 } from './agentResponses.ts'
+import { adoptFollowUpPlan } from './followUpPlanTracking.ts'
 
 const FOLLOW_UP_PLAN_DOCUMENT_LABEL = {
   fr: 'un brouillon de plan de suivi',
@@ -36,6 +38,7 @@ export interface FollowUpPlanOrchestrationDependencies {
   }): Promise<FollowUpPlan>
   checkUsage(userId: string): Promise<{ allowed: boolean }>
   refundUsage(userId: string): Promise<unknown>
+  savePlan(record: FollowUpPlanRecord, identity: { studentId: string }): Promise<{ id: string }>
 }
 
 // Un brouillon de plan de suivi n'a de sens que s'il peut s'ancrer sur au moins
@@ -86,6 +89,7 @@ export async function orchestrateFollowUpPlanRequest(
   try {
     const language = input.contentLanguage ?? 'fr'
     const plan = await dependencies.generateFollowUpPlan({ studentContext: context, language })
+    await dependencies.savePlan(adoptFollowUpPlan(plan), { studentId: context.student.id })
     return {
       kind: 'follow_up_plan',
       studentId: context.student.id,

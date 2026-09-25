@@ -125,6 +125,7 @@ test('la chaîne mock traverse génération et réponse structurée sans réseau
         generateFollowUpPlan,
         checkUsage: async () => ({ allowed: true }),
         refundUsage: async () => 0,
+        savePlan: async () => ({ id: 'plan-mock' }),
       }
     )
     const structured = agentStructuredResponseSchema.parse(response)
@@ -156,6 +157,7 @@ test('élève sans observation ni adaptation : absence de données explicite, au
         return { allowed: true }
       },
       refundUsage: async () => 0,
+      savePlan: async () => ({ id: 'plan-mock' }),
     }
   )
 
@@ -177,6 +179,7 @@ test('ambiguïté et élève inconnu ne déclenchent ni génération ni quota', 
       return { allowed: true }
     },
     refundUsage: async () => 0,
+    savePlan: async () => ({ id: 'plan-mock' }),
   }
 
   const ambiguity = await orchestrateFollowUpPlanRequest(
@@ -218,6 +221,7 @@ test('un échec de génération rembourse exactement une fois', async () => {
           refundUsage: async () => {
             refundCalls += 1
           },
+          savePlan: async () => ({ id: 'plan-mock' }),
         }
       ),
     (error: unknown) =>
@@ -246,6 +250,7 @@ test('une génération réussie débite le quota une seule fois sans rembourseme
       refundUsage: async () => {
         refundCalls += 1
       },
+      savePlan: async () => ({ id: 'plan-mock' }),
     }
   )
 
@@ -253,4 +258,51 @@ test('une génération réussie débite le quota une seule fois sans rembourseme
   assert.equal(usageCalls, 1)
   assert.equal(generationCalls, 1)
   assert.equal(refundCalls, 0)
+})
+
+test('une génération réussie persiste le plan adopté : statut actif, chaque item à_suivre', async () => {
+  const savedPlans: Array<{ statut: string; items: Array<{ status: string }> }> = []
+
+  const response = await orchestrateFollowUpPlanRequest(
+    { studentQuery: 'Maélis Roy', trustedUserId: USER_ID },
+    {
+      getStudentContext: async () => fictitiousContext(),
+      generateFollowUpPlan: async () => followUpPlanMock,
+      checkUsage: async () => ({ allowed: true }),
+      refundUsage: async () => 0,
+      savePlan: async (record) => {
+        savedPlans.push(record)
+        return { id: 'plan-1' }
+      },
+    }
+  )
+
+  assert.equal(response.kind, 'follow_up_plan')
+  assert.equal(savedPlans.length, 1)
+  assert.equal(savedPlans[0]?.statut, 'actif')
+  assert.ok(savedPlans[0]?.items.every((item) => item.status === 'a_suivre'))
+})
+
+test('un échec de génération ne persiste jamais de plan', async () => {
+  let saveCalls = 0
+
+  await assert.rejects(() =>
+    orchestrateFollowUpPlanRequest(
+      { studentQuery: 'Maélis Roy', trustedUserId: USER_ID },
+      {
+        getStudentContext: async () => fictitiousContext(),
+        generateFollowUpPlan: async () => {
+          throw new Error('Sortie invalide')
+        },
+        checkUsage: async () => ({ allowed: true }),
+        refundUsage: async () => 0,
+        savePlan: async () => {
+          saveCalls += 1
+          return { id: 'ne-devrait-pas-arriver' }
+        },
+      }
+    )
+  )
+
+  assert.equal(saveCalls, 0)
 })

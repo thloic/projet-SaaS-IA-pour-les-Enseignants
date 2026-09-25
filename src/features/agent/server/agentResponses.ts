@@ -76,6 +76,19 @@ export function buildStudentDataMissingResponse(
   return { kind: 'student_data_missing', message }
 }
 
+export function buildFollowUpPlanReviewNotReadyResponse(
+  studentFullName: string,
+  interfaceLanguage?: AppLocale
+): Extract<AgentStructuredResponse, { kind: 'follow_up_plan_review_not_ready' }> {
+  const message =
+    interfaceLanguage === 'es'
+      ? `Todavía quedan objetivos sin evaluar en el plan de seguimiento de ${studentFullName}. Marca el estado de cada objetivo (logrado / no logrado) antes de pedir el balance de revisión.`
+      : interfaceLanguage === 'en'
+        ? `Some objectives in ${studentFullName}’s follow-up plan don’t have a status yet. Mark each objective as achieved or not achieved before requesting the review summary.`
+        : `Il reste des objectifs sans statut dans le plan de suivi de ${studentFullName}. Marquez chaque objectif (atteint / non atteint) avant de demander le bilan de révision.`
+  return { kind: 'follow_up_plan_review_not_ready', message }
+}
+
 export function buildDocumentNotFoundForModificationResponse(
   studentFullName: string,
   documentType: 'pat' | 'bulletin',

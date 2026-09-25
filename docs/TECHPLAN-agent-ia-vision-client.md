@@ -115,7 +115,9 @@
 
 ---
 
-## Phase 4 — Commentaire de bulletin basé sur les traces réelles de l'année
+## Phase 4 — Commentaire de bulletin basé sur les traces réelles de l'année [TERMINÉ, déjà en place avant ce plan]
+
+> Vérifié le 2026-09-25 : `bulletinOrchestration.ts` bloque déjà la génération sans résultat ni observation réels (introduit au commit `9e14b79`, avant ce PRD), et `src/lib/prompts/bulletin.ts` injecte déjà les traces réelles avec instruction anti-hallucination explicite. Les 19 tests de `bulletin-agent.test.ts` / `evaluation-bulletin-flow.test.ts` / `bulletin-validation.test.ts` couvrent les critères d'acceptation ci-dessous. Aucun code à écrire pour cette phase.
 
 **Objectif** (US-3 du PRD) : le commentaire de bulletin généré par l'agent s'appuie sur les résultats et observations réels de l'élève durant l'année en cours, pas uniquement sur ce que l'enseignant retape dans le tour de conversation. Dépend de la Phase 3 (même mécanisme de lecture des observations, appliqué au flux bulletin existant).
 

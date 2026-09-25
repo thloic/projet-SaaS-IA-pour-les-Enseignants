@@ -22,6 +22,17 @@ import {
   orchestrateFollowUpPlanRequest,
   FollowUpPlanOrchestrationError,
 } from '@/features/agent/server/followUpPlanOrchestration'
+import { detectFollowUpPlanReviewIntent } from '@/features/agent/server/followUpPlanReviewIntent'
+import { generateFollowUpPlanReview } from '@/features/agent/server/generateFollowUpPlanReview'
+import {
+  orchestrateFollowUpPlanReviewRequest,
+  FollowUpPlanReviewOrchestrationError,
+} from '@/features/agent/server/followUpPlanReviewOrchestration'
+import {
+  saveNewFollowUpPlan,
+  getActiveFollowUpPlanForStudent,
+  updateActiveFollowUpPlanForStudent,
+} from '@/features/agent/server/followUpPlanRepository'
 import { looksLikeBulletinRequest } from '@/features/agent/server/bulletinIntent'
 import { extractBulletinFieldsWithAnthropic } from '@/features/agent/server/bulletinExtractionModel'
 import {
@@ -52,6 +63,7 @@ const ROUTE_COPY = {
     limit: AGENT_LIMIT_REACHED_MESSAGES.fr,
     patFailed: 'Le PAT n’a pas pu être généré. Votre quota n’a pas été débité.',
     followUpPlanFailed: 'Le plan de suivi n’a pas pu être généré. Votre quota n’a pas été débité.',
+    followUpPlanReviewFailed: 'Le bilan de révision n’a pas pu être généré. Votre quota n’a pas été débité.',
     bulletinFailed: 'Le commentaire de bulletin n’a pas pu être généré. Votre quota n’a pas été débité.',
     modificationFailed: 'Le document n’a pas pu être modifié. Votre quota n’a pas été débité.',
     contextFailed: 'Impossible de charger les données de vos classes. Votre quota n’a pas été débité.',
@@ -61,6 +73,7 @@ const ROUTE_COPY = {
     limit: AGENT_LIMIT_REACHED_MESSAGES.en,
     patFailed: 'The support plan could not be generated. Your quota was not charged.',
     followUpPlanFailed: 'The follow-up plan could not be generated. Your quota was not charged.',
+    followUpPlanReviewFailed: 'The review summary could not be generated. Your quota was not charged.',
     bulletinFailed: 'The report card comment could not be generated. Your quota was not charged.',
     modificationFailed: 'The document could not be modified. Your quota was not charged.',
     contextFailed: 'Your class data could not be loaded. Your quota was not charged.',
@@ -70,6 +83,7 @@ const ROUTE_COPY = {
     limit: AGENT_LIMIT_REACHED_MESSAGES.es,
     patFailed: 'No se ha podido generar el PAT. No se ha descontado de tu cuota.',
     followUpPlanFailed: 'No se ha podido generar el plan de seguimiento. No se ha descontado de tu cuota.',
+    followUpPlanReviewFailed: 'No se ha podido generar el balance de revisión. No se ha descontado de tu cuota.',
     bulletinFailed: 'No se ha podido generar el comentario de boletín. No se ha descontado de tu cuota.',
     modificationFailed: 'No se ha podido modificar el documento. No se ha descontado de tu cuota.',
     contextFailed: 'No se pudieron cargar los datos de tus clases. No se ha descontado de tu cuota.',
@@ -109,7 +123,13 @@ export async function POST(request: Request) {
     .reverse()
     .find((message) => message.role === 'user')
   const patIntent = latestUserMessage ? detectPATIntent(latestUserMessage.content) : null
-  const followUpPlanIntent = latestUserMessage ? detectFollowUpPlanIntent(latestUserMessage.content) : null
+  const followUpPlanReviewIntent = latestUserMessage
+    ? detectFollowUpPlanReviewIntent(latestUserMessage.content)
+    : null
+  const followUpPlanIntent =
+    latestUserMessage && !followUpPlanReviewIntent
+      ? detectFollowUpPlanIntent(latestUserMessage.content)
+      : null
   const bulletinIntent = latestUserMessage
     ? looksLikeBulletinRequest(latestUserMessage.content)
     : false
@@ -120,6 +140,7 @@ export async function POST(request: Request) {
   if (
     !modificationIntent &&
     !patIntent &&
+    !followUpPlanReviewIntent &&
     !followUpPlanIntent &&
     !bulletinIntent &&
     latestUserMessage
@@ -233,6 +254,40 @@ export async function POST(request: Request) {
     }
   }
 
+  if (!modificationIntent && !patIntent && followUpPlanReviewIntent) {
+    try {
+      const result = await orchestrateFollowUpPlanReviewRequest(
+        {
+          studentQuery: followUpPlanReviewIntent.studentQuery,
+          trustedUserId: user.id,
+          contentLanguage: profile.language,
+          interfaceLanguage: profile.interface_language,
+        },
+        {
+          getStudentContext,
+          getActiveFollowUpPlan: async ({ studentId }) => {
+            const active = await getActiveFollowUpPlanForStudent(studentId)
+            return active?.record ?? null
+          },
+          generateFollowUpPlanReview,
+          savePlan: (record, identity) => updateActiveFollowUpPlanForStudent(user.id, identity.studentId, record),
+          checkUsage: async (userId) => checkAndIncrementUsage(userId, USAGE_FEATURE),
+          refundUsage: async (userId) => decrementUsage(userId, USAGE_FEATURE),
+        }
+      )
+      return NextResponse.json(agentStructuredResponseSchema.parse(result))
+    } catch (error) {
+      if (
+        error instanceof FollowUpPlanReviewOrchestrationError &&
+        error.code === 'FOLLOW_UP_PLAN_REVIEW_QUOTA_EXCEEDED'
+      ) {
+        return jsonError(copy.limit, 403)
+      }
+      console.error('[agent:follow-up-plan-review] echec de la demande structuree', error)
+      return jsonError(copy.followUpPlanReviewFailed, 500)
+    }
+  }
+
   if (!modificationIntent && !patIntent && followUpPlanIntent) {
     try {
       const result = await orchestrateFollowUpPlanRequest(
@@ -245,6 +300,8 @@ export async function POST(request: Request) {
         {
           getStudentContext,
           generateFollowUpPlan,
+          savePlan: (record, identity) =>
+            saveNewFollowUpPlan({ studentId: identity.studentId, classId: null, record }),
           checkUsage: async (userId) => checkAndIncrementUsage(userId, USAGE_FEATURE),
           refundUsage: async (userId) => decrementUsage(userId, USAGE_FEATURE),
         }
@@ -265,6 +322,7 @@ export async function POST(request: Request) {
   if (
     !modificationIntent &&
     !patIntent &&
+    !followUpPlanReviewIntent &&
     !followUpPlanIntent &&
     latestUserMessage &&
     bulletinIntent

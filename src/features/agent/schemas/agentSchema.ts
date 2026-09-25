@@ -96,6 +96,20 @@ export const agentStructuredResponseSchema = z.discriminatedUnion('kind', [
         .min(1),
     })
     .strict(),
+  z
+    .object({
+      kind: z.literal('follow_up_plan_review_not_ready'),
+      message: z.string().min(1),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('follow_up_plan_review'),
+      studentId: z.string().uuid(),
+      message: z.string().min(1),
+      bilan: z.string().min(1),
+    })
+    .strict(),
 ])
 
 export type AgentMessage = z.infer<typeof agentMessageSchema>
