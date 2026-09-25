@@ -40,6 +40,7 @@ test('une carte de plan de suivi survit à plusieurs tours suivants', () => {
       kind: 'follow_up_plan',
       role: 'assistant',
       studentId: '11111111-1111-4111-8111-111111111111',
+      planId: '33333333-3333-4333-8333-333333333333',
       items: planItems,
     },
   ]

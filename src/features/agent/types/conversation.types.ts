@@ -37,6 +37,7 @@ export interface FollowUpPlanChatMessage {
   kind: 'follow_up_plan'
   role: 'assistant'
   studentId: string
+  planId: string
   items: Extract<AgentStructuredResponse, { kind: 'follow_up_plan' }>['items']
 }
 

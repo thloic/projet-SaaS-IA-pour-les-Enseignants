@@ -89,10 +89,11 @@ export async function orchestrateFollowUpPlanRequest(
   try {
     const language = input.contentLanguage ?? 'fr'
     const plan = await dependencies.generateFollowUpPlan({ studentContext: context, language })
-    await dependencies.savePlan(adoptFollowUpPlan(plan), { studentId: context.student.id })
+    const saved = await dependencies.savePlan(adoptFollowUpPlan(plan), { studentId: context.student.id })
     return {
       kind: 'follow_up_plan',
       studentId: context.student.id,
+      planId: saved.id,
       message: buildFollowUpPlanMessage(plan),
       items: plan.items,
     }

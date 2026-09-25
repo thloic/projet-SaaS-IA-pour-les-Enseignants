@@ -78,6 +78,7 @@ export const agentStructuredResponseSchema = z.discriminatedUnion('kind', [
     .object({
       kind: z.literal('follow_up_plan'),
       studentId: z.string().uuid(),
+      planId: z.string().uuid(),
       message: z.string().min(1),
       items: z
         .array(

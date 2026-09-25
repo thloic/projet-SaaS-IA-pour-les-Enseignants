@@ -110,6 +110,7 @@ export default function AgentChat() {
                 kind: 'follow_up_plan',
                 role: 'assistant',
                 studentId: structured.data.studentId,
+                planId: structured.data.planId,
                 items: structured.data.items,
               })
           }
@@ -236,7 +237,7 @@ export default function AgentChat() {
                 initialComment={message.comment}
               />
             ) : message.kind === 'follow_up_plan' ? (
-              <FollowUpPlanCard key={message.id} items={message.items} />
+              <FollowUpPlanCard key={message.id} planId={message.planId} items={message.items} />
             ) : (
               <div
                 key={message.id}

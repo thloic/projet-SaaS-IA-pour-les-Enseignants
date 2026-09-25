@@ -125,7 +125,7 @@ test('la chaîne mock traverse génération et réponse structurée sans réseau
         generateFollowUpPlan,
         checkUsage: async () => ({ allowed: true }),
         refundUsage: async () => 0,
-        savePlan: async () => ({ id: 'plan-mock' }),
+        savePlan: async () => ({ id: '99999999-9999-4999-8999-999999999999' }),
       }
     )
     const structured = agentStructuredResponseSchema.parse(response)
@@ -133,6 +133,7 @@ test('la chaîne mock traverse génération et réponse structurée sans réseau
     if (structured.kind !== 'follow_up_plan') return
     assert.deepEqual(structured.items, followUpPlanMock.items)
     assert.match(structured.message, /Maélis Roy/)
+    assert.equal(structured.planId, '99999999-9999-4999-8999-999999999999')
   } finally {
     if (previousMode === undefined) delete process.env.FOLLOW_UP_PLAN_GENERATION_MODE
     else process.env.FOLLOW_UP_PLAN_GENERATION_MODE = previousMode
@@ -157,7 +158,7 @@ test('élève sans observation ni adaptation : absence de données explicite, au
         return { allowed: true }
       },
       refundUsage: async () => 0,
-      savePlan: async () => ({ id: 'plan-mock' }),
+      savePlan: async () => ({ id: '99999999-9999-4999-8999-999999999999' }),
     }
   )
 
@@ -179,7 +180,7 @@ test('ambiguïté et élève inconnu ne déclenchent ni génération ni quota', 
       return { allowed: true }
     },
     refundUsage: async () => 0,
-    savePlan: async () => ({ id: 'plan-mock' }),
+    savePlan: async () => ({ id: '99999999-9999-4999-8999-999999999999' }),
   }
 
   const ambiguity = await orchestrateFollowUpPlanRequest(
@@ -221,7 +222,7 @@ test('un échec de génération rembourse exactement une fois', async () => {
           refundUsage: async () => {
             refundCalls += 1
           },
-          savePlan: async () => ({ id: 'plan-mock' }),
+          savePlan: async () => ({ id: '99999999-9999-4999-8999-999999999999' }),
         }
       ),
     (error: unknown) =>
@@ -250,7 +251,7 @@ test('une génération réussie débite le quota une seule fois sans rembourseme
       refundUsage: async () => {
         refundCalls += 1
       },
-      savePlan: async () => ({ id: 'plan-mock' }),
+      savePlan: async () => ({ id: '99999999-9999-4999-8999-999999999999' }),
     }
   )
 
