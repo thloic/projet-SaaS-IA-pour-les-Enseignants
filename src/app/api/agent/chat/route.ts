@@ -55,6 +55,22 @@ import {
   orchestrateDocumentModification,
 } from '@/features/agent/server/documentModificationOrchestration'
 import { orchestrateStudentObservation } from '@/features/agent/server/observationOrchestration'
+import { looksLikeParentEmailRequest } from '@/features/agent/server/parentEmailIntent'
+import { extractParentEmailFieldsWithAnthropic } from '@/features/agent/server/parentEmailExtractionModel'
+import { generateParentEmailDraft } from '@/features/agent/server/generateParentEmailDraft'
+import {
+  orchestrateParentEmailRequest,
+  ParentEmailOrchestrationError,
+} from '@/features/agent/server/parentEmailOrchestration'
+import { saveAgentParentEmailDraft } from '@/features/agent/server/parentEmailRepository'
+import { looksLikeMeetingSummaryRequest } from '@/features/agent/server/meetingSummaryIntent'
+import { extractMeetingSummaryFieldsWithAnthropic } from '@/features/agent/server/meetingSummaryExtractionModel'
+import { generateMeetingSummary } from '@/features/agent/server/generateMeetingSummary'
+import {
+  orchestrateMeetingSummaryRequest,
+  MeetingSummaryOrchestrationError,
+} from '@/features/agent/server/meetingSummaryOrchestration'
+import { saveAgentMeetingSummary } from '@/features/agent/server/meetingSummaryRepository'
 
 const USAGE_FEATURE = 'agent'
 
@@ -63,6 +79,8 @@ const ROUTE_COPY = {
     limit: AGENT_LIMIT_REACHED_MESSAGES.fr,
     patFailed: 'Le PAT n’a pas pu être généré. Votre quota n’a pas été débité.',
     followUpPlanFailed: 'Le plan de suivi n’a pas pu être généré. Votre quota n’a pas été débité.',
+    parentEmailFailed: 'Le courriel aux parents n’a pas pu être généré. Votre quota n’a pas été débité.',
+    meetingSummaryFailed: 'Le compte rendu de rencontre n’a pas pu être généré. Votre quota n’a pas été débité.',
     followUpPlanReviewFailed: 'Le bilan de révision n’a pas pu être généré. Votre quota n’a pas été débité.',
     bulletinFailed: 'Le commentaire de bulletin n’a pas pu être généré. Votre quota n’a pas été débité.',
     modificationFailed: 'Le document n’a pas pu être modifié. Votre quota n’a pas été débité.',
@@ -73,6 +91,8 @@ const ROUTE_COPY = {
     limit: AGENT_LIMIT_REACHED_MESSAGES.en,
     patFailed: 'The support plan could not be generated. Your quota was not charged.',
     followUpPlanFailed: 'The follow-up plan could not be generated. Your quota was not charged.',
+    parentEmailFailed: 'The parent email could not be generated. Your quota was not charged.',
+    meetingSummaryFailed: 'The meeting summary could not be generated. Your quota was not charged.',
     followUpPlanReviewFailed: 'The review summary could not be generated. Your quota was not charged.',
     bulletinFailed: 'The report card comment could not be generated. Your quota was not charged.',
     modificationFailed: 'The document could not be modified. Your quota was not charged.',
@@ -83,6 +103,8 @@ const ROUTE_COPY = {
     limit: AGENT_LIMIT_REACHED_MESSAGES.es,
     patFailed: 'No se ha podido generar el PAT. No se ha descontado de tu cuota.',
     followUpPlanFailed: 'No se ha podido generar el plan de seguimiento. No se ha descontado de tu cuota.',
+    parentEmailFailed: 'No se ha podido generar el correo a los padres. No se ha descontado de tu cuota.',
+    meetingSummaryFailed: 'No se ha podido generar el resumen de la reunión. No se ha descontado de tu cuota.',
     followUpPlanReviewFailed: 'No se ha podido generar el balance de revisión. No se ha descontado de tu cuota.',
     bulletinFailed: 'No se ha podido generar el comentario de boletín. No se ha descontado de tu cuota.',
     modificationFailed: 'No se ha podido modificar el documento. No se ha descontado de tu cuota.',
@@ -133,6 +155,12 @@ export async function POST(request: Request) {
   const bulletinIntent = latestUserMessage
     ? looksLikeBulletinRequest(latestUserMessage.content)
     : false
+  const parentEmailIntent = latestUserMessage
+    ? looksLikeParentEmailRequest(latestUserMessage.content)
+    : false
+  const meetingSummaryIntent = latestUserMessage
+    ? looksLikeMeetingSummaryRequest(latestUserMessage.content)
+    : false
   const modificationIntent = latestUserMessage
     ? looksLikeDocumentModificationRequest(latestUserMessage.content)
     : false
@@ -143,6 +171,8 @@ export async function POST(request: Request) {
     !followUpPlanReviewIntent &&
     !followUpPlanIntent &&
     !bulletinIntent &&
+    !parentEmailIntent &&
+    !meetingSummaryIntent &&
     latestUserMessage
   ) {
     try {
@@ -324,6 +354,8 @@ export async function POST(request: Request) {
     !patIntent &&
     !followUpPlanReviewIntent &&
     !followUpPlanIntent &&
+    !parentEmailIntent &&
+    !meetingSummaryIntent &&
     latestUserMessage &&
     bulletinIntent
   ) {
@@ -368,6 +400,103 @@ export async function POST(request: Request) {
       }
       console.error('[agent:bulletin] echec de la demande structuree', error)
       return jsonError(copy.bulletinFailed, 500)
+    }
+  }
+
+  if (
+    !modificationIntent &&
+    !patIntent &&
+    !followUpPlanReviewIntent &&
+    !followUpPlanIntent &&
+    !meetingSummaryIntent &&
+    latestUserMessage &&
+    parentEmailIntent
+  ) {
+    console.log('[route:agent-chat] branche courriel parent declenchee', {
+      message: latestUserMessage.content,
+    })
+    try {
+      const result = await orchestrateParentEmailRequest(
+        {
+          message: latestUserMessage.content,
+          trustedUserId: user.id,
+          contentLanguage: profile.language,
+          interfaceLanguage: profile.interface_language,
+        },
+        {
+          extractParentEmailFields: extractParentEmailFieldsWithAnthropic,
+          getStudentContext,
+          generateParentEmailDraft,
+          saveParentEmailDraft: saveAgentParentEmailDraft,
+          checkUsage: async (userId) => checkAndIncrementUsage(userId, USAGE_FEATURE),
+          refundUsage: async (userId) => decrementUsage(userId, USAGE_FEATURE),
+        }
+      )
+      // result === null : le message ressemblait a une demande de courriel aux
+      // parents mais il manquait l'eleve ou le motif — on laisse la
+      // conversation normale continuer pour que l'agent redemande l'info.
+      console.log('[route:agent-chat] resultat orchestration courriel parent', result ? result.kind : null)
+      if (result) {
+        const parsed = agentStructuredResponseSchema.safeParse(result)
+        if (!parsed.success) {
+          console.error('[route:agent-chat] reponse courriel parent invalide contre le schema', parsed.error.issues, result)
+          return jsonError(copy.parentEmailFailed, 500)
+        }
+        return NextResponse.json(parsed.data)
+      }
+    } catch (error) {
+      console.error('[route:agent-chat] exception dans la branche courriel parent', error)
+      if (
+        error instanceof ParentEmailOrchestrationError &&
+        error.code === 'PARENT_EMAIL_QUOTA_EXCEEDED'
+      ) {
+        return jsonError(copy.limit, 403)
+      }
+      console.error('[agent:parent-email] echec de la demande structuree', error)
+      return jsonError(copy.parentEmailFailed, 500)
+    }
+  }
+
+  if (
+    !modificationIntent &&
+    !patIntent &&
+    !followUpPlanReviewIntent &&
+    !followUpPlanIntent &&
+    latestUserMessage &&
+    meetingSummaryIntent
+  ) {
+    try {
+      const result = await orchestrateMeetingSummaryRequest(
+        {
+          message: latestUserMessage.content,
+          trustedUserId: user.id,
+          contentLanguage: profile.language,
+          interfaceLanguage: profile.interface_language,
+        },
+        {
+          extractMeetingSummaryFields: extractMeetingSummaryFieldsWithAnthropic,
+          getStudentContext,
+          generateMeetingSummary,
+          saveMeetingSummary: saveAgentMeetingSummary,
+          checkUsage: async (userId) => checkAndIncrementUsage(userId, USAGE_FEATURE),
+          refundUsage: async (userId) => decrementUsage(userId, USAGE_FEATURE),
+        }
+      )
+      // result === null : le message ressemblait a une demande de compte rendu
+      // de rencontre mais il manquait l'eleve ou des notes suffisantes — on
+      // laisse la conversation normale continuer pour que l'agent redemande.
+      if (result) {
+        return NextResponse.json(agentStructuredResponseSchema.parse(result))
+      }
+    } catch (error) {
+      if (
+        error instanceof MeetingSummaryOrchestrationError &&
+        error.code === 'MEETING_SUMMARY_QUOTA_EXCEEDED'
+      ) {
+        return jsonError(copy.limit, 403)
+      }
+      console.error('[agent:meeting-summary] echec de la demande structuree', error)
+      return jsonError(copy.meetingSummaryFailed, 500)
     }
   }
 

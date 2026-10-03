@@ -41,8 +41,34 @@ export interface FollowUpPlanChatMessage {
   items: Extract<AgentStructuredResponse, { kind: 'follow_up_plan' }>['items']
 }
 
+export interface ParentEmailDraftChatMessage {
+  id: string
+  kind: 'parent_email_draft'
+  role: 'assistant'
+  studentId: string
+  draftId: string
+  register: Extract<AgentStructuredResponse, { kind: 'parent_email_draft' }>['register']
+  subject: string
+  body: string
+  familyLanguage: string
+  suggestedRecipientEmail?: string
+}
+
+export interface MeetingSummaryChatMessage {
+  id: string
+  kind: 'meeting_summary'
+  role: 'assistant'
+  studentId: string
+  summaryId: string
+  subjectsDiscussed: string[]
+  agreementsReached: string[]
+  nextSteps: string[]
+}
+
 export type ChatMessage =
   | TextChatMessage
   | PATChatMessage
   | BulletinChatMessage
   | FollowUpPlanChatMessage
+  | ParentEmailDraftChatMessage
+  | MeetingSummaryChatMessage

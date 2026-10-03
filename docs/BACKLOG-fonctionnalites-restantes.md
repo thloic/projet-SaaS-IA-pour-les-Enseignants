@@ -44,17 +44,10 @@ Aucune pour A/B/C ci-dessus — tout est déjà dans la stack (Vercel AI SDK `to
 
 ---
 
-## Tier 1 — trivial (réutilise le pipeline existant tel quel)
-
-- [ ] **Suivi d'atteinte des objectifs du plan de suivi** (SMART + bilan de révision) — extension de `followUpPlan*.ts` déjà en place, ajoute un statut d'atteinte dans le temps.
-- [ ] **Traduction des messages parents** — mode traduction sur un texte déjà généré ; langue déjà disponible dans `teacher_profiles`/`student_profiles`. *(Dépend d'abord de la ligne « brouillons de courriels parents » ci-dessous pour avoir un texte à traduire.)*
-
 ## Tier 2 — moyen (nouveau triplet intent/orchestration/schema, patron déjà connu)
 
-- [ ] **Brouillons de courriels parents** (registres de ton, situations délicates : comportement, échec, plagiat) — module 3 pas encore commencé.
-- [ ] **Compte rendu de rencontre parent** à partir de notes tapées — spécifié Phase 7 de `TECHPLAN-agent-ia-vision-client.md`. Dictée vocale explicitement hors périmètre.
-- [ ] **Document → questionnaire / guide d'étude** — spécifié Phase 6 de `TECHPLAN-agent-ia-vision-client.md`, réutilise l'upload existant.
-- [ ] **Portail de communication centralisé (historique)** — dépend de « brouillons de courriels parents ».
+- [ ] **Document → questionnaire / guide d'étude** — pas un flux d'agent : même module que les variantes A/B/C d'examen (`src/features/adaptation/`), nouveau mode de sortie non persisté, réutilise l'upload existant.
+- [ ] **Portail de communication centralisé (historique)** — étendre `src/features/generated-documents/` (aujourd'hui PAT + bulletin) pour inclure `parent_email_drafts` et `parent_meeting_summaries`, suivant l'interface `StoredXxxDocument` déjà documentée.
 - [ ] **Documentation orthopédagogie / psychoéducation** — même patron que le PAT. **Bloqué en partie** : besoin d'un gabarit institutionnel type, apport client comme pour le PAT.
 
 ## Tier 3 — nécessite la brique agentique (architecture §0.B/C)
@@ -76,6 +69,4 @@ Aucune pour A/B/C ci-dessus — tout est déjà dans la stack (Vercel AI SDK `to
 
 ## Prochaine étape recommandée
 
-~~Finaliser le bulletin « traces réelles »~~ — **vérifié le 2026-09-25 : déjà entièrement construit et testé** (voir `TECHPLAN-agent-ia-vision-client.md` Phase 4), rien codé, ligne retirée. Les 3 items que le client identifie comme passant son « test des 3h/mois » sont maintenant tous livrés : analyse de groupe ✅, plans de suivi ✅, bulletin ✅.
-
-Prochaine ligne : **suivi d'atteinte des objectifs du plan de suivi** (Tier 1) — extension directe de `followUpPlan*.ts` déjà en place.
+Prochaine ligne suggérée : **compte rendu de rencontre parent** (Tier 2) ou **document → questionnaire/guide d'étude** (Tier 2).

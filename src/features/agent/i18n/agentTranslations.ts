@@ -12,11 +12,15 @@ export const agentTranslations = {
     stop: 'Arrêter',
     interrupted: 'Réponse interrompue',
     failedTurn: 'La réponse n’a pas pu être terminée.',
+    googleConnected: 'Gmail connecté avec succès.',
+    googleConnectFailed: 'La connexion à Google a échoué, réessayez.',
     patPrompt: (name: string) => `Génère le PAT de ${name}`,
     quick: [
       ['Générer un plan d’appui', 'Génère le PAT de [prénom ou nom de l’élève]'],
       ['Rédiger un commentaire de bulletin', 'Je veux rédiger un commentaire de bulletin. Élève : [prénom], matière : [matière], note ou appréciation : [note], observations : [observations]'],
       ['Préparer un suivi d’élève', 'Je veux préparer un suivi d’élève. Adaptations en place : [adaptations], observations récentes : [observations], prochaines étapes envisagées : [étapes]'],
+      ['Écrire un courriel aux parents', 'Je veux écrire un courriel aux parents de [prénom ou nom de l’élève] au sujet de [comportement / échec / plagiat]. Situation : [détails]'],
+      ['Compte rendu de rencontre parent', 'Je veux un compte rendu de ma rencontre avec les parents de [prénom ou nom de l’élève]. Notes : [tes notes tapées pendant ou après la rencontre]'],
     ],
   },
   en: {
@@ -30,11 +34,15 @@ export const agentTranslations = {
     stop: 'Stop',
     interrupted: 'Response stopped',
     failedTurn: 'The response could not be completed.',
+    googleConnected: 'Gmail connected successfully.',
+    googleConnectFailed: 'The connection to Google failed, try again.',
     patPrompt: (name: string) => `Generate the support plan for ${name}`,
     quick: [
       ['Generate a support plan', 'Generate the support plan for [student first or last name]'],
       ['Write a report comment', 'I want to write a report comment. Student: [name], subject: [subject], grade: [grade], observations: [observations]'],
       ['Prepare a student follow-up', 'I want to prepare a student follow-up. Existing accommodations: [accommodations], recent observations: [observations], next steps: [steps]'],
+      ['Write a parent email', 'I want to write a parent email for [student first or last name] about [behavior / academic difficulty / plagiarism]. Situation: [details]'],
+      ['Parent meeting summary', 'I want a summary of my meeting with the parents of [student first or last name]. Notes: [your notes typed during or after the meeting]'],
     ],
   },
   es: {
@@ -48,11 +56,15 @@ export const agentTranslations = {
     stop: 'Detener',
     interrupted: 'Respuesta interrumpida',
     failedTurn: 'No se pudo completar la respuesta.',
+    googleConnected: 'Gmail conectado correctamente.',
+    googleConnectFailed: 'La conexión con Google ha fallado, inténtalo de nuevo.',
     patPrompt: (name: string) => `Genera el PAT de ${name}`,
     quick: [
       ['Generar un plan de apoyo', 'Genera el PAT de [nombre o apellido del alumno]'],
       ['Redactar un comentario de evaluación', 'Quiero redactar un comentario de evaluación. Alumno: [nombre], materia: [materia], nota: [nota], observaciones: [observaciones]'],
       ['Preparar un seguimiento', 'Quiero preparar el seguimiento de un alumno. Adaptaciones existentes: [adaptaciones], observaciones recientes: [observaciones], próximos pasos: [pasos]'],
+      ['Escribir un correo a los padres', 'Quiero escribir un correo a los padres de [nombre o apellido del alumno] sobre [comportamiento / dificultad académica / plagio]. Situación: [detalles]'],
+      ['Resumen de reunión con los padres', 'Quiero un resumen de mi reunión con los padres de [nombre o apellido del alumno]. Notas: [tus notas escritas durante o después de la reunión]'],
     ],
   },
 } as const satisfies Record<AppLocale, object>

@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { PATSchema } from './patSchema.ts'
+import { parentEmailRegisterSchema } from './parentEmailSchema.ts'
 
 export const agentMessageSchema = z.object({
   role: z.enum(['user', 'assistant']),
@@ -105,10 +106,32 @@ export const agentStructuredResponseSchema = z.discriminatedUnion('kind', [
     .strict(),
   z
     .object({
+      kind: z.literal('parent_email_draft'),
+      studentId: z.string().uuid(),
+      draftId: z.string().uuid(),
+      register: parentEmailRegisterSchema,
+      subject: z.string().min(1),
+      body: z.string().min(1),
+      familyLanguage: z.string().min(1),
+      suggestedRecipientEmail: z.string().min(1).optional(),
+    })
+    .strict(),
+  z
+    .object({
       kind: z.literal('follow_up_plan_review'),
       studentId: z.string().uuid(),
       message: z.string().min(1),
       bilan: z.string().min(1),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('meeting_summary'),
+      studentId: z.string().uuid(),
+      summaryId: z.string().uuid(),
+      subjectsDiscussed: z.array(z.string().min(1)).min(1),
+      agreementsReached: z.array(z.string().min(1)),
+      nextSteps: z.array(z.string().min(1)),
     })
     .strict(),
 ])

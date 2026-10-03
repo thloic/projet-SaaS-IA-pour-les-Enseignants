@@ -12,6 +12,10 @@ import {
 const DEFAULT_GENERATION_LIMIT = 3
 const DEFAULT_PRO_GENERATION_LIMIT = 90
 const DEFAULT_AGENT_PRO_GENERATION_LIMIT = 150
+const DEFAULT_AUDIO_TRANSCRIPTION_LIMIT = 30
+const DEFAULT_PRO_AUDIO_TRANSCRIPTION_LIMIT = 300
+const DEFAULT_EMAIL_SEND_LIMIT = 10
+const DEFAULT_PRO_EMAIL_SEND_LIMIT = 200
 
 function envLimit(name: string, fallback: number): number {
   const configured = Number(process.env[name])
@@ -19,6 +23,20 @@ function envLimit(name: string, fallback: number): number {
 }
 
 function getGenerationLimits(feature: string): UsageLimits {
+  if (feature === 'agent_audio') {
+    return {
+      free: envLimit('AUDIO_TRANSCRIPTION_LIMIT', DEFAULT_AUDIO_TRANSCRIPTION_LIMIT),
+      pro: envLimit('PRO_AUDIO_TRANSCRIPTION_LIMIT', DEFAULT_PRO_AUDIO_TRANSCRIPTION_LIMIT),
+    }
+  }
+
+  if (feature === 'agent_email_send') {
+    return {
+      free: envLimit('EMAIL_SEND_LIMIT', DEFAULT_EMAIL_SEND_LIMIT),
+      pro: envLimit('PRO_EMAIL_SEND_LIMIT', DEFAULT_PRO_EMAIL_SEND_LIMIT),
+    }
+  }
+
   if (feature !== 'agent') {
     return {
       free: DEFAULT_GENERATION_LIMIT,
