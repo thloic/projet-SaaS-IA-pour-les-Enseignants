@@ -10,7 +10,7 @@ let stripeInstance: Stripe | null = null
 // local/CI). En paresseux, l'erreur ne survient qu'au premier vrai appel.
 export function getStripe(): Stripe {
   if (!stripeInstance) {
-    stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY!)
+    stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY!.trim())
   }
   return stripeInstance
 }
