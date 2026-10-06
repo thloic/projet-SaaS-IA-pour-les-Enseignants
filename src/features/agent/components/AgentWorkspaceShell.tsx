@@ -13,6 +13,7 @@ import {
   FileHeart,
   History,
   Languages,
+  KeyRound,
   Menu,
   MessageSquareText,
   NotebookPen,
@@ -37,6 +38,7 @@ const ACTION_ICONS: Record<AgentWorkspaceAction, LucideIcon> = {
 
 interface AgentWorkspaceShellProps {
   locale: AppLocale
+  aiSource: 'included' | 'personal'
   hasMessages: boolean
   busy: boolean
   error: string | null
@@ -50,6 +52,7 @@ type MobilePanel = 'navigation' | 'context' | null
 
 export default function AgentWorkspaceShell({
   locale,
+  aiSource,
   hasMessages,
   busy,
   error,
@@ -59,6 +62,9 @@ export default function AgentWorkspaceShell({
   composer,
 }: AgentWorkspaceShellProps) {
   const copy = agentWorkspaceTranslations[locale]
+  const aiSourceLabel = aiSource === 'personal'
+    ? locale === 'fr' ? 'Clé API personnelle' : locale === 'es' ? 'Clave API personal' : 'Personal API key'
+    : locale === 'fr' ? 'IA EducAssist' : locale === 'es' ? 'IA EducAssist' : 'EducAssist AI'
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>(null)
 
   const navigation = (
@@ -175,6 +181,14 @@ export default function AgentWorkspaceShell({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Link
+              href="/settings"
+              className={`hidden items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition hover:bg-muted lg:flex ${aiSource === 'personal' ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300' : 'border-border/70 text-muted-foreground'}`}
+              title={aiSourceLabel}
+            >
+              {aiSource === 'personal' ? <KeyRound size={14} /> : <Bot size={14} />}
+              {aiSourceLabel}
+            </Link>
             <div className="hidden items-center gap-2 rounded-full border border-border/70 bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground sm:flex">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
               {copy.ready}

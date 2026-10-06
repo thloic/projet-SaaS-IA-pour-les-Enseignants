@@ -4,10 +4,11 @@ import { getAmbassadorSummary } from '@/features/billing/server/ambassador'
 import { getCurrentUser, getCurrentTeacherProfile } from '@/features/profile/server/profile'
 import SettingsForm from '@/features/profile/components/SettingsForm'
 import { normalizeGradingSystem } from '@/features/profile/types/profile.types'
+import { getAICredentialPublicStatus } from '@/features/ai-credentials/server/aiCredentialRepository'
 
 export default async function SettingsPage() {
   const [user, profile] = await Promise.all([getCurrentUser(), getCurrentTeacherProfile()])
-  const [usage, subscription, ambassador] = await Promise.all([
+  const [usage, subscription, ambassador, aiCredentialStatus] = await Promise.all([
     user ? getUsage(user.id) : Promise.resolve({ used: 0, limit: 3 }),
     user
       ? getSubscriptionSummary(user.id)
@@ -15,6 +16,9 @@ export default async function SettingsPage() {
     user
       ? getAmbassadorSummary(user.id, profile?.first_name ?? '')
       : Promise.resolve({ code: '', referralCount: 0, discountPercent: 0 }),
+    user
+      ? getAICredentialPublicStatus(user.id)
+      : Promise.resolve({ connected: false, active: false, source: 'included' as const, provider: 'anthropic' as const, keySuffix: null, status: null, validatedAt: null, lastUsedAt: null }),
   ])
 
   return (
@@ -38,6 +42,7 @@ export default async function SettingsPage() {
       generationsLimit={usage.limit}
       subscription={subscription}
       ambassador={ambassador}
+      aiCredentialStatus={aiCredentialStatus}
     />
   )
 }

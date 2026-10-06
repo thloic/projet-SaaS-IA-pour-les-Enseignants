@@ -1,5 +1,6 @@
-import { anthropic } from '@ai-sdk/anthropic'
 import { streamText } from 'ai'
+import { getCurrentUserAnthropicModel } from '@/features/ai/server/aiProviderResolver'
+import { recordCurrentUserAIUsage } from '@/features/ai/server/aiUsageRecorder'
 import { NextResponse } from 'next/server'
 import { checkAndIncrementUsage, decrementUsage } from '@/features/billing/server/usage'
 import { AGENT_LIMIT_REACHED_MESSAGES } from '@/features/billing/upgradeMessages'
@@ -550,12 +551,8 @@ export async function POST(request: Request) {
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       try {
-        if (!process.env.ANTHROPIC_API_KEY) {
-          throw new Error('MISSING_ANTHROPIC_API_KEY')
-        }
-
         const result = streamText({
-          model: anthropic(process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-5'),
+          model: await getCurrentUserAnthropicModel('agent_chat'),
           system: systemPrompt,
           messages: parsed.data.messages,
           temperature: 0.4,
@@ -573,6 +570,8 @@ export async function POST(request: Request) {
           receivedAnyChunk = true
           controller.enqueue(encoder.encode(chunk))
         }
+
+        await recordCurrentUserAIUsage('agent_chat', 'agent', await result.usage)
 
         if (!receivedAnyChunk) {
           await refundOnce()

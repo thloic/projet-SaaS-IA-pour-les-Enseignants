@@ -1,7 +1,8 @@
 import 'server-only'
 
-import { anthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
+import { getCurrentUserAnthropicModel } from '@/features/ai/server/aiProviderResolver'
+import { recordCurrentUserAIUsage } from '@/features/ai/server/aiUsageRecorder'
 
 export async function generateExamVariantTextWithAnthropic(
   systemPrompt: string,
@@ -9,7 +10,7 @@ export async function generateExamVariantTextWithAnthropic(
   signal?: AbortSignal
 ): Promise<string> {
   const result = await generateText({
-    model: anthropic(process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-5'),
+    model: await getCurrentUserAnthropicModel('exam_variant'),
     system: systemPrompt,
     prompt: userPrompt,
     temperature: 0.3,
@@ -18,6 +19,8 @@ export async function generateExamVariantTextWithAnthropic(
     timeout: 60000,
     abortSignal: signal,
   })
+
+  await recordCurrentUserAIUsage('exam_variant', 'general', result.usage)
 
   return result.text
 }

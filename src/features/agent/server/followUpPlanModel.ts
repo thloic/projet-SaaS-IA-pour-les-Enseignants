@@ -1,15 +1,14 @@
 import 'server-only'
 
-import { anthropic } from '@ai-sdk/anthropic'
 import { generateText, Output } from 'ai'
+import { getCurrentUserAnthropicModel } from '@/features/ai/server/aiProviderResolver'
+import { recordCurrentUserAIUsage } from '@/features/ai/server/aiUsageRecorder'
 
 import { followUpPlanGeneratedSchema } from '../schemas/followUpPlanSchema'
 
 export async function generateStructuredFollowUpPlanWithAnthropic(prompt: string): Promise<unknown> {
-  if (!process.env.ANTHROPIC_API_KEY) throw new Error('MISSING_ANTHROPIC_API_KEY')
-
   const result = await generateText({
-    model: anthropic(process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-5'),
+    model: await getCurrentUserAnthropicModel('follow_up_plan'),
     output: Output.object({
       schema: followUpPlanGeneratedSchema,
       name: 'brouillon_plan_de_suivi',
@@ -23,6 +22,8 @@ export async function generateStructuredFollowUpPlanWithAnthropic(prompt: string
     maxRetries: 1,
     timeout: 60000,
   })
+
+  await recordCurrentUserAIUsage('follow_up_plan', 'agent', result.usage)
 
   return result.output
 }

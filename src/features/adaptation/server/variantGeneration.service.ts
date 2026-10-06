@@ -1,7 +1,8 @@
 import 'server-only'
 
-import { anthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
+import { getCurrentUserAnthropicModel } from '@/features/ai/server/aiProviderResolver'
+import { recordCurrentUserAIUsage } from '@/features/ai/server/aiUsageRecorder'
 import {
   generatedVariantSchema,
   type GeneratedVariant,
@@ -116,7 +117,7 @@ async function requestVariant(
   })
 
   const result = await generateText({
-    model: anthropic(process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-5'),
+    model: await getCurrentUserAnthropicModel('adaptation'),
     system: systemPrompt,
     prompt: userPrompt,
     temperature: 0.2,
@@ -125,6 +126,8 @@ async function requestVariant(
     timeout: 60000,
     abortSignal: input.signal,
   })
+
+  await recordCurrentUserAIUsage('adaptation', 'general', result.usage)
 
   return parseVariant(result.text)
 }
@@ -141,11 +144,6 @@ export async function generateAdaptationVariant(
 
   if (mode === 'mock') {
     return buildMockVariant(input)
-  }
-
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.error('[adaptation:generation] ANTHROPIC_API_KEY manquante')
-    throw new Error('MISSING_ANTHROPIC_API_KEY')
   }
 
   try {

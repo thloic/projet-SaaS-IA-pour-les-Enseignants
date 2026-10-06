@@ -87,11 +87,6 @@ export async function generateExamVariantSet(
     return buildMockExamVariantSet(input)
   }
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.error('[adaptation:exam-variant] ANTHROPIC_API_KEY manquante')
-    throw new Error('MISSING_ANTHROPIC_API_KEY')
-  }
-
   try {
     return await requestExamVariantSet(input)
   } catch (firstError) {

@@ -43,7 +43,7 @@ const UPGRADE_CTA_LABEL: Record<'fr' | 'en' | 'es', string> = {
   es: 'Pasar al plan Pro →',
 }
 
-export default function AgentChat() {
+export default function AgentChat({ initialAISource = 'included' }: { initialAISource?: 'included' | 'personal' }) {
   const { showToast } = useToast()
   const { locale } = useAppLocale()
   const { startCheckout, pendingAction } = useBilling()
@@ -345,6 +345,7 @@ export default function AgentChat() {
   return (
     <AgentWorkspaceShell
       locale={locale}
+      aiSource={initialAISource}
       hasMessages={messages.length > 0}
       busy={isStreaming || isVoiceBusy}
       error={error}

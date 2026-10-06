@@ -1,15 +1,14 @@
 import 'server-only'
 
-import { anthropic } from '@ai-sdk/anthropic'
 import { generateText, Output } from 'ai'
+import { getCurrentUserAnthropicModel } from '@/features/ai/server/aiProviderResolver'
+import { recordCurrentUserAIUsage } from '@/features/ai/server/aiUsageRecorder'
 
 import { parentEmailExtractionSchema } from '../schemas/parentEmailIntentSchema'
 
 export async function extractParentEmailFieldsWithAnthropic(message: string): Promise<unknown> {
-  if (!process.env.ANTHROPIC_API_KEY) throw new Error('MISSING_ANTHROPIC_API_KEY')
-
   const result = await generateText({
-    model: anthropic(process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-5'),
+    model: await getCurrentUserAnthropicModel('field_extraction'),
     output: Output.object({
       schema: parentEmailExtractionSchema,
       name: 'demande_courriel_parents',
@@ -29,6 +28,8 @@ export async function extractParentEmailFieldsWithAnthropic(message: string): Pr
     maxRetries: 1,
     timeout: 20000,
   })
+
+  await recordCurrentUserAIUsage('field_extraction', 'agent', result.usage)
 
   return result.output
 }

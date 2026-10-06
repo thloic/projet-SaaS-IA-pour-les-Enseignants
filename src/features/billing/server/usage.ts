@@ -8,6 +8,8 @@ import {
   type UsageCoreDeps,
   type UsageLimits,
 } from '@/features/billing/server/usageCore'
+import { getActiveAICredential } from '@/features/ai-credentials/server/aiCredentialRepository'
+import { shouldBypassIncludedAIQuota } from '@/features/ai/server/aiQuotaPolicy'
 
 const DEFAULT_GENERATION_LIMIT = 3
 const DEFAULT_PRO_GENERATION_LIMIT = 90
@@ -16,6 +18,12 @@ const DEFAULT_AUDIO_TRANSCRIPTION_LIMIT = 30
 const DEFAULT_PRO_AUDIO_TRANSCRIPTION_LIMIT = 300
 const DEFAULT_EMAIL_SEND_LIMIT = 10
 const DEFAULT_PRO_EMAIL_SEND_LIMIT = 200
+const PERSONAL_AI_VIRTUAL_LIMIT = 1_000_000
+
+async function usesPersonalAI(userId: string, feature: string): Promise<boolean> {
+  if (!shouldBypassIncludedAIQuota(feature, true)) return false
+  return shouldBypassIncludedAIQuota(feature, (await getActiveAICredential(userId)) !== null)
+}
 
 function envLimit(name: string, fallback: number): number {
   const configured = Number(process.env[name])
@@ -97,11 +105,15 @@ export async function checkAndIncrementUsage(
   userId: string,
   feature = 'general'
 ): Promise<{ allowed: boolean; used: number; limit: number }> {
+  if (await usesPersonalAI(userId, feature)) {
+    return { allowed: true, used: 0, limit: PERSONAL_AI_VIRTUAL_LIMIT }
+  }
   const limits = getGenerationLimits(feature)
   return checkAndIncrementUsageCore(userId, feature, limits, await createUsageDeps())
 }
 
 export async function decrementUsage(userId: string, feature = 'general'): Promise<number> {
+  if (await usesPersonalAI(userId, feature)) return 0
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('decrement_usage', {
     p_user_id: userId,

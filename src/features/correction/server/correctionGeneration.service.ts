@@ -1,7 +1,8 @@
 import 'server-only'
 
-import { anthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
+import { getCurrentUserAnthropicModel } from '@/features/ai/server/aiProviderResolver'
+import { recordCurrentUserAIUsage } from '@/features/ai/server/aiUsageRecorder'
 import { buildCorrectionPrompt } from '@/lib/prompts/correction'
 import {
   generatedCorrectionSchema,
@@ -101,7 +102,7 @@ async function callAnthropic({
   })
 
   const result = await generateText({
-    model: anthropic(process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-5'),
+    model: await getCurrentUserAnthropicModel('correction'),
     system: systemPrompt,
     prompt: userPrompt,
     temperature: 0.3,
@@ -109,6 +110,8 @@ async function callAnthropic({
     maxRetries: 1,
     timeout: 45000,
   })
+
+  await recordCurrentUserAIUsage('correction', 'correction', result.usage)
 
   return result.text
 }
@@ -123,11 +126,6 @@ export async function generateCorrectionForCopy(
 
   if (process.env.CORRECTION_GENERATION_MODE === 'mock') {
     return parseGeneratedCorrectionJson(buildMockCorrection(input))
-  }
-
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.error('[correction:generation] ANTHROPIC_API_KEY manquante')
-    throw new Error('MISSING_ANTHROPIC_API_KEY')
   }
 
   try {

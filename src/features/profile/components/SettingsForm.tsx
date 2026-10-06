@@ -20,6 +20,8 @@ import SubscriptionSection from '@/features/billing/components/SubscriptionSecti
 import type { SubscriptionSummary } from '@/features/billing/server/subscriptionCore'
 import AmbassadorSection from '@/features/billing/components/AmbassadorSection'
 import type { AmbassadorSummary } from '@/features/billing/server/ambassador'
+import AICredentialSettings from '@/features/ai-credentials/components/AICredentialSettings'
+import type { AICredentialPublicStatus } from '@/features/ai-credentials/schemas/aiCredentialSchema'
 
 const BRAND = '#534AB7'
 
@@ -48,6 +50,7 @@ interface SettingsFormProps {
   generationsLimit: number
   subscription: SubscriptionSummary
   ambassador: AmbassadorSummary
+  aiCredentialStatus: AICredentialPublicStatus
 }
 
 const initialActionState: UpdateProfileState = { error: null, info: null }
@@ -72,6 +75,7 @@ export default function SettingsForm({
   generationsLimit,
   subscription,
   ambassador,
+  aiCredentialStatus,
 }: SettingsFormProps) {
   const { showToast } = useToast()
   const { setLocale, t } = useAppLocale()
@@ -403,6 +407,8 @@ export default function SettingsForm({
           )}
         </Button>
       </form>
+
+      <AICredentialSettings initialStatus={aiCredentialStatus} />
 
       {/* Section 3 — Plan & Billing */}
       <SubscriptionSection

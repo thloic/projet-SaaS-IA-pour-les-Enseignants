@@ -1,7 +1,8 @@
 import 'server-only'
 
-import { anthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
+import { getCurrentUserAnthropicModel } from '@/features/ai/server/aiProviderResolver'
+import { recordCurrentUserAIUsage } from '@/features/ai/server/aiUsageRecorder'
 import { buildQuizPrompt } from '@/lib/prompts/quiz'
 import { generatedQuizSchema } from '@/features/quiz/schemas/quizSchema'
 import type { ContentLanguage, GradingSystem } from '@/features/profile/types/profile.types'
@@ -233,17 +234,12 @@ export async function generateQuizFromContent(input: GenerateQuizFromContentInpu
     return result.data
   }
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.error('[quiz:generation] ANTHROPIC_API_KEY manquante')
-    throw new Error('MISSING_ANTHROPIC_API_KEY')
-  }
-
   const prompt = buildQuizPrompt(input)
 
   let text: string
   try {
     const result = await generateText({
-      model: anthropic(process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-5'),
+      model: await getCurrentUserAnthropicModel('quiz'),
       prompt,
       temperature: 0.2,
       maxOutputTokens: 3500,
@@ -251,6 +247,7 @@ export async function generateQuizFromContent(input: GenerateQuizFromContentInpu
       timeout: 45000,
     })
 
+    await recordCurrentUserAIUsage('quiz', 'general', result.usage)
     text = result.text
   } catch (error) {
     console.error('[quiz:generation] appel Anthropic echoue', error)

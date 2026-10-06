@@ -1,15 +1,14 @@
 import 'server-only'
 
-import { anthropic } from '@ai-sdk/anthropic'
 import { generateText, Output } from 'ai'
+import { getCurrentUserAnthropicModel } from '@/features/ai/server/aiProviderResolver'
+import { recordCurrentUserAIUsage } from '@/features/ai/server/aiUsageRecorder'
 
 import { bulletinExtractionSchema } from '../schemas/bulletinIntentSchema'
 
 export async function extractBulletinFieldsWithAnthropic(message: string): Promise<unknown> {
-  if (!process.env.ANTHROPIC_API_KEY) throw new Error('MISSING_ANTHROPIC_API_KEY')
-
   const result = await generateText({
-    model: anthropic(process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-5'),
+    model: await getCurrentUserAnthropicModel('field_extraction'),
     output: Output.object({
       schema: bulletinExtractionSchema,
       name: 'demande_bulletin',
@@ -26,6 +25,8 @@ export async function extractBulletinFieldsWithAnthropic(message: string): Promi
     maxRetries: 1,
     timeout: 20000,
   })
+
+  await recordCurrentUserAIUsage('field_extraction', 'agent', result.usage)
 
   return result.output
 }

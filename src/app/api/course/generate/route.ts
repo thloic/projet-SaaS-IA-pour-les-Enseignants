@@ -1,5 +1,6 @@
-import { anthropic } from '@ai-sdk/anthropic'
 import { streamText } from 'ai'
+import { getCurrentUserAnthropicModel } from '@/features/ai/server/aiProviderResolver'
+import { recordCurrentUserAIUsage } from '@/features/ai/server/aiUsageRecorder'
 import { NextResponse } from 'next/server'
 import { checkAndIncrementUsage, decrementUsage } from '@/features/billing/server/usage'
 import { courseInputSchema } from '@/features/generation/schemas/generationSchema'
@@ -181,10 +182,6 @@ export async function POST(request: Request) {
             }
           }
         } else {
-          if (!process.env.ANTHROPIC_API_KEY) {
-            throw new Error('MISSING_ANTHROPIC_API_KEY')
-          }
-
           const { systemPrompt, userPrompt } = buildCoursePrompt(parsed.data, {
             country: profile.country,
             gradingSystem: profile.grading_system,
@@ -192,7 +189,7 @@ export async function POST(request: Request) {
           })
 
           const result = streamText({
-            model: anthropic(process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-5'),
+            model: await getCurrentUserAnthropicModel('course'),
             system: systemPrompt,
             prompt: userPrompt,
             temperature: 0.25,
@@ -209,6 +206,7 @@ export async function POST(request: Request) {
             content += chunk
             controller.enqueue(encoder.encode(chunk))
           }
+          await recordCurrentUserAIUsage('course', 'general', await result.usage)
         }
 
         if (cancelled || request.signal.aborted) {

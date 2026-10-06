@@ -1,15 +1,14 @@
 import 'server-only'
 
-import { anthropic } from '@ai-sdk/anthropic'
 import { generateText, Output } from 'ai'
+import { getCurrentUserAnthropicModel } from '@/features/ai/server/aiProviderResolver'
+import { recordCurrentUserAIUsage } from '@/features/ai/server/aiUsageRecorder'
 
 import { parentEmailDraftSchema } from '../schemas/parentEmailSchema'
 
 export async function translateStructuredParentEmailWithAnthropic(prompt: string): Promise<unknown> {
-  if (!process.env.ANTHROPIC_API_KEY) throw new Error('MISSING_ANTHROPIC_API_KEY')
-
   const result = await generateText({
-    model: anthropic(process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-5'),
+    model: await getCurrentUserAnthropicModel('translation'),
     output: Output.object({
       schema: parentEmailDraftSchema,
       name: 'traduction_courriel_parents',
@@ -23,6 +22,8 @@ export async function translateStructuredParentEmailWithAnthropic(prompt: string
     maxRetries: 1,
     timeout: 60000,
   })
+
+  await recordCurrentUserAIUsage('translation', 'agent', result.usage)
 
   return result.output
 }

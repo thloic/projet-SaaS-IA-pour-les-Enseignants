@@ -1,14 +1,13 @@
 import 'server-only'
 
-import { anthropic } from '@ai-sdk/anthropic'
 import { generateText, Output } from 'ai'
+import { getCurrentUserAnthropicModel } from '@/features/ai/server/aiProviderResolver'
+import { recordCurrentUserAIUsage } from '@/features/ai/server/aiUsageRecorder'
 import { documentModificationExtractionSchema } from '@/features/agent/schemas/documentModificationSchema'
 
 export async function extractDocumentModificationFieldsWithAnthropic(message: string): Promise<unknown> {
-  if (!process.env.ANTHROPIC_API_KEY) throw new Error('MISSING_ANTHROPIC_API_KEY')
-
   const result = await generateText({
-    model: anthropic(process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-5'),
+    model: await getCurrentUserAnthropicModel('field_extraction'),
     output: Output.object({
       schema: documentModificationExtractionSchema,
       name: 'modification_document_scolaire',
@@ -27,5 +26,6 @@ export async function extractDocumentModificationFieldsWithAnthropic(message: st
     maxRetries: 1,
     timeout: 20000,
   })
+  await recordCurrentUserAIUsage('field_extraction', 'agent', result.usage)
   return result.output
 }

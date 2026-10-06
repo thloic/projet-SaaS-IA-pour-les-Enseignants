@@ -1,7 +1,8 @@
 import 'server-only'
 
-import { anthropic } from '@ai-sdk/anthropic'
 import { generateText, Output } from 'ai'
+import { getCurrentUserAnthropicModel } from '@/features/ai/server/aiProviderResolver'
+import { recordCurrentUserAIUsage } from '@/features/ai/server/aiUsageRecorder'
 
 import { PATSchema } from '../schemas/patSchema'
 
@@ -9,10 +10,8 @@ export async function generateStructuredPATWithAnthropic(
   prompt: string,
   attachment?: { base64: string; mediaType: string }
 ): Promise<unknown> {
-  if (!process.env.ANTHROPIC_API_KEY) throw new Error('MISSING_ANTHROPIC_API_KEY')
-
   const result = await generateText({
-    model: anthropic(process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-5'),
+    model: await getCurrentUserAnthropicModel('pat'),
     output: Output.object({
       schema: PATSchema,
       name: 'plan_appui_temporaire',
@@ -36,6 +35,8 @@ export async function generateStructuredPATWithAnthropic(
     maxRetries: 1,
     timeout: 60000,
   })
+
+  await recordCurrentUserAIUsage('pat', 'agent', result.usage)
 
   return result.output
 }

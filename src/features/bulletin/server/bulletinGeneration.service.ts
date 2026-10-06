@@ -1,7 +1,8 @@
 import 'server-only'
 
-import { anthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
+import { getCurrentUserAnthropicModel } from '@/features/ai/server/aiProviderResolver'
+import { recordCurrentUserAIUsage } from '@/features/ai/server/aiUsageRecorder'
 import { buildBulletinPrompt } from '@/lib/prompts/bulletin'
 import { generatedBulletinSchema, type BulletinGenerationInput, type GeneratedBulletin } from '@/features/bulletin/schemas/bulletinSchema'
 import { BulletinValidationError, parseAndValidateBulletinDraft } from '@/features/bulletin/server/bulletinValidation'
@@ -57,7 +58,7 @@ async function callAnthropic({
   })
 
   const result = await generateText({
-    model: anthropic(process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-5'),
+    model: await getCurrentUserAnthropicModel('bulletin'),
     system: systemPrompt,
     prompt:
       documentTemplate?.kind === 'pdf'
@@ -77,6 +78,8 @@ async function callAnthropic({
     timeout: 45000,
   })
 
+  await recordCurrentUserAIUsage('bulletin', 'general', result.usage)
+
   return result.text
 }
 
@@ -88,11 +91,6 @@ export async function generateBulletinComment(input: GenerateBulletinCommentInpu
 
   if (process.env.BULLETIN_GENERATION_MODE === 'mock') {
     return buildMockBulletin(input)
-  }
-
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.error('[bulletin:generation] ANTHROPIC_API_KEY manquante')
-    throw new Error('MISSING_ANTHROPIC_API_KEY')
   }
 
   try {
