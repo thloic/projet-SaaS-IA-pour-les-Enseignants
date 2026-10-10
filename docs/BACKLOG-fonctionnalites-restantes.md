@@ -4,6 +4,8 @@
 >
 > Source : synthèse du retour client du 2026-09-25 (cahier des charges du produit vu par le client), croisée avec `docs/cahier-des-charges.md` et l'état réel du code au moment de la rédaction.
 >
+> Dernière vérification contre le code : 2026-10-10.
+>
 > **Règle de travail (héritée de `CLAUDE.md` §4.1)** : une ligne = une fonctionnalité = une session. Chaque ligne attend une validation explicite du développeur avant tout code. Ne jamais enchaîner deux lignes dans la même session.
 
 ---
@@ -47,7 +49,7 @@ Aucune pour A/B/C ci-dessus — tout est déjà dans la stack (Vercel AI SDK `to
 ## Tier 2 — moyen (nouveau triplet intent/orchestration/schema, patron déjà connu)
 
 - [ ] **Document → questionnaire / guide d'étude** — pas un flux d'agent : même module que les variantes A/B/C d'examen (`src/features/adaptation/`), nouveau mode de sortie non persisté, réutilise l'upload existant.
-- [ ] **Portail de communication centralisé (historique)** — étendre `src/features/generated-documents/` (aujourd'hui PAT + bulletin) pour inclure `parent_email_drafts` et `parent_meeting_summaries`, suivant l'interface `StoredXxxDocument` déjà documentée.
+- [ ] **Portail de communication centralisé (historique)** — la génération elle-même (courriels parents : brouillon + traduction + envoi réel Gmail, et comptes-rendus de rencontre) est **déjà livrée**. Reste à étendre `src/features/generated-documents/` (aujourd'hui seulement `StoredPATDocument` + `StoredBulletinDocument`) pour y inclure `parent_email_drafts` et `parent_meeting_summaries`, suivant l'interface `StoredXxxDocument` déjà documentée, pour qu'ils apparaissent dans le même portail historique.
 - [ ] **Documentation orthopédagogie / psychoéducation** — même patron que le PAT. **Bloqué en partie** : besoin d'un gabarit institutionnel type, apport client comme pour le PAT.
 
 ## Tier 3 — nécessite la brique agentique (architecture §0.B/C)
@@ -69,4 +71,4 @@ Aucune pour A/B/C ci-dessus — tout est déjà dans la stack (Vercel AI SDK `to
 
 ## Prochaine étape recommandée
 
-Prochaine ligne suggérée : **compte rendu de rencontre parent** (Tier 2) ou **document → questionnaire/guide d'étude** (Tier 2).
+Prochaine ligne suggérée : **document → questionnaire/guide d'étude** (Tier 2) ou **intégration des courriels parents/comptes-rendus dans le portail historique** (Tier 2, voir ligne ci-dessus).
