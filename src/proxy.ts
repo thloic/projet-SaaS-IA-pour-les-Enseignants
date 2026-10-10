@@ -31,6 +31,13 @@ function redirectWithSession(request: NextRequest, pathname: string, sourceRespo
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // La home est publique et n'a aucune logique dependante de l'auth (contrairement
+  // a /login et /register) : on evite l'appel reseau a Supabase pour chaque visite.
+  if (pathname === '/') {
+    return NextResponse.next()
+  }
+
   const { supabaseResponse, user, supabase } = await updateSession(request)
 
   if (isPublicPath(pathname)) {
