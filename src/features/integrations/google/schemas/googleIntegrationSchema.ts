@@ -1,18 +1,26 @@
 import { z } from 'zod'
 
-// Un seul scope sensible demande pour l'instant (envoi), jamais un scope
-// restreint (gmail.readonly/modify) qui exigerait une evaluation de securite
-// CASA cote Google — voir docs/PRD-agent-envoi-gmail-drive.md.
 export const GMAIL_SEND_SCOPE = 'https://www.googleapis.com/auth/gmail.send'
+// gmail.readonly : scope sensible cote Google (necessitera une evaluation de
+// securite CASA avant une ouverture a tous les enseignants) — accorde a part
+// de l'envoi, uniquement pour que l'agent puisse chercher/lire dans la boite
+// de l'enseignant qui l'a explicitement connecte. Voir docs/PRD-agent-envoi-gmail-drive.md.
+export const GMAIL_READONLY_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly'
 // drive.file : non-sensible, acces limite aux fichiers choisis explicitement
 // par l'enseignant via le selecteur Google (jamais tout son Drive).
 export const DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file'
 
-export const GOOGLE_INTEGRATION_FEATURES = ['gmail', 'drive'] as const
+export const GOOGLE_INTEGRATION_FEATURES = ['gmail', 'drive', 'gmail_read'] as const
 export type GoogleIntegrationFeature = (typeof GOOGLE_INTEGRATION_FEATURES)[number]
 
+const SCOPE_BY_FEATURE: Record<GoogleIntegrationFeature, string> = {
+  gmail: GMAIL_SEND_SCOPE,
+  drive: DRIVE_FILE_SCOPE,
+  gmail_read: GMAIL_READONLY_SCOPE,
+}
+
 export function scopeForFeature(feature: GoogleIntegrationFeature): string {
-  return feature === 'gmail' ? GMAIL_SEND_SCOPE : DRIVE_FILE_SCOPE
+  return SCOPE_BY_FEATURE[feature]
 }
 
 export const googleIntegrationRecordSchema = z.object({

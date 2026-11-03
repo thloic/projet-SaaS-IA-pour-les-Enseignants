@@ -13,6 +13,7 @@ import BulletinReviewCard from '@/features/agent/components/BulletinReviewCard'
 import FollowUpPlanCard from '@/features/agent/components/FollowUpPlanCard'
 import ParentEmailDraftCard from '@/features/agent/components/ParentEmailDraftCard'
 import MeetingSummaryCard from '@/features/agent/components/MeetingSummaryCard'
+import IntegrationConnectCard from '@/features/agent/components/IntegrationConnectCard'
 import VoiceInputButton from '@/features/agent/components/VoiceInputButton'
 import AgentWorkspaceShell from '@/features/agent/components/AgentWorkspaceShell'
 import { useAppLocale } from '@/features/i18n/AppLocaleProvider'
@@ -36,6 +37,10 @@ const BRAND = '#534AB7'
 // OAuth (connexion Gmail/Drive), qui est une navigation plein-page, pas une
 // fonction d'historique persistant entre appareils.
 const CONVERSATION_STORAGE_KEY = 'educassist-agent-conversation'
+// Enregistrement a usage unique : permet de reposer automatiquement la
+// demande d'origine apres un aller-retour OAuth de connexion d'outil (Gmail,
+// puis Drive). Consomme (lu + supprime) des le retour, jamais relu ensuite.
+const PENDING_INTEGRATION_RESUME_KEY = 'educassist-agent-pending-integration'
 
 const UPGRADE_CTA_LABEL: Record<'fr' | 'en' | 'es', string> = {
   fr: 'Passer au plan Pro →',
@@ -98,9 +103,29 @@ export default function AgentChat({ initialAISource = 'included' }: { initialAIS
       showToast(copy.googleConnectFailed, 'error')
     }
 
+    const connectedFeature = params.get('feature')
     params.delete('google')
+    params.delete('feature')
     const query = params.toString()
     window.history.replaceState({}, '', `${window.location.pathname}${query ? `?${query}` : ''}`)
+
+    // Reprise automatique : consomme (lecture + suppression immediate) la
+    // demande en attente, et ne la reposte que si elle correspond exactement
+    // a l'outil qui vient d'etre connecte — toute autre situation (pas
+    // d'enregistrement, feature differente, statut error) garde le
+    // comportement actuel (toast seul, pas de renvoi).
+    try {
+      const raw = window.sessionStorage.getItem(PENDING_INTEGRATION_RESUME_KEY)
+      window.sessionStorage.removeItem(PENDING_INTEGRATION_RESUME_KEY)
+      if (googleStatus === 'connected' && connectedFeature && raw) {
+        const pending = JSON.parse(raw) as { feature?: string; continuationText?: string }
+        if (pending.feature === connectedFeature && pending.continuationText) {
+          void handleSend(pending.continuationText)
+        }
+      }
+    } catch {
+      // enregistrement en attente illisible — pas de reprise automatique
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -115,8 +140,8 @@ export default function AgentChat({ initialAISource = 'included' }: { initialAIS
     setError(null)
   }
 
-  async function handleSend() {
-    const trimmed = input.trim()
+  async function handleSend(overrideText?: string) {
+    const trimmed = (overrideText ?? input).trim()
     if (!trimmed || isStreaming) return
 
     const requestMessages = buildAgentRequestMessages(messages, trimmed)
@@ -209,6 +234,28 @@ export default function AgentChat({ initialAISource = 'included' }: { initialAIS
                 subjectsDiscussed: structured.data.subjectsDiscussed,
                 agreementsReached: structured.data.agreementsReached,
                 nextSteps: structured.data.nextSteps,
+              })
+          }
+          if (structured.data.kind === 'integration_connect_required') {
+            try {
+              window.sessionStorage.setItem(
+                PENDING_INTEGRATION_RESUME_KEY,
+                JSON.stringify({
+                  feature: structured.data.feature,
+                  continuationText: structured.data.continuationText,
+                })
+              )
+            } catch {
+              // stockage indisponible — la reprise automatique sera simplement indisponible
+            }
+            return replaceConversationMessage(current, assistantMessageId, {
+                id: assistantMessageId,
+                kind: 'integration_connect_required',
+                role: 'assistant',
+                feature: structured.data.feature,
+                message: structured.data.message,
+                connectUrl: structured.data.connectUrl,
+                continuationText: structured.data.continuationText,
               })
           }
           return replaceConversationMessage(current, assistantMessageId, {
@@ -382,6 +429,8 @@ export default function AgentChat({ initialAISource = 'included' }: { initialAIS
                 initialAgreementsReached={message.agreementsReached}
                 initialNextSteps={message.nextSteps}
               />
+            ) : message.kind === 'integration_connect_required' ? (
+              <IntegrationConnectCard key={message.id} message={message.message} connectUrl={message.connectUrl} />
             ) : (
               <div
                 key={message.id}
@@ -401,7 +450,7 @@ export default function AgentChat({ initialAISource = 'included' }: { initialAIS
                     <div className="mt-3">
                       <button
                         type="button"
-                        onClick={() => startCheckout('month')}
+                        onClick={() => startCheckout()}
                         disabled={pendingAction !== null}
                         className="inline-block rounded-full px-3 py-1.5 text-xs font-bold text-white disabled:opacity-60"
                         style={{ backgroundColor: BRAND }}

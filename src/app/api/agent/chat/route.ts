@@ -1,8 +1,12 @@
-import { streamText } from 'ai'
+import { streamText, stepCountIs } from 'ai'
 import { getCurrentUserAnthropicModel } from '@/features/ai/server/aiProviderResolver'
+import { createGmailSearchTool } from '@/features/agent/server/gmailSearchTool'
+import { buildIntegrationConnectRequiredResponse } from '@/features/agent/server/agentResponses'
+import type { GmailSearchToolOutput } from '@/features/agent/schemas/gmailSearchSchema'
 import { recordCurrentUserAIUsage } from '@/features/ai/server/aiUsageRecorder'
 import { NextResponse } from 'next/server'
-import { checkAndIncrementUsage, decrementUsage } from '@/features/billing/server/usage'
+import { assertAIGenerationAccess, checkAndIncrementUsage, decrementUsage } from '@/features/billing/server/usage'
+import { isPersonalAICredentialRequiredError } from '@/features/ai/server/aiAccessError'
 import { AGENT_LIMIT_REACHED_MESSAGES } from '@/features/billing/upgradeMessages'
 import {
   agentChatRequestSchema,
@@ -87,6 +91,8 @@ const ROUTE_COPY = {
     modificationFailed: 'Le document n’a pas pu être modifié. Votre quota n’a pas été débité.',
     contextFailed: 'Impossible de charger les données de vos classes. Votre quota n’a pas été débité.',
     quotaFailed: 'Impossible de vérifier votre quota pour le moment.',
+    personalKeyRequired: 'Connectez votre clé API personnelle dans les paramètres pour utiliser l’agent avec votre participation.',
+    chatFailed: 'La réponse n’a pas pu être générée. Votre quota n’a pas été débité.',
   },
   en: {
     limit: AGENT_LIMIT_REACHED_MESSAGES.en,
@@ -99,6 +105,8 @@ const ROUTE_COPY = {
     modificationFailed: 'The document could not be modified. Your quota was not charged.',
     contextFailed: 'Your class data could not be loaded. Your quota was not charged.',
     quotaFailed: 'Your quota could not be checked right now.',
+    personalKeyRequired: 'Connect your personal API key in Settings to use the agent with your participation.',
+    chatFailed: 'The response could not be generated. Your quota was not charged.',
   },
   es: {
     limit: AGENT_LIMIT_REACHED_MESSAGES.es,
@@ -111,6 +119,8 @@ const ROUTE_COPY = {
     modificationFailed: 'No se ha podido modificar el documento. No se ha descontado de tu cuota.',
     contextFailed: 'No se pudieron cargar los datos de tus clases. No se ha descontado de tu cuota.',
     quotaFailed: 'No se puede comprobar tu cuota en este momento.',
+    personalKeyRequired: 'Conecta tu clave API personal en Configuración para usar el agente con tu participación.',
+    chatFailed: 'No se ha podido generar la respuesta. No se ha descontado de tu cuota.',
   },
 } as const
 
@@ -142,6 +152,15 @@ export async function POST(request: Request) {
   }
   const copy = ROUTE_COPY[profile.interface_language]
 
+  try {
+    await assertAIGenerationAccess(user.id, USAGE_FEATURE)
+  } catch (error) {
+    if (isPersonalAICredentialRequiredError(error)) {
+      return jsonError(copy.personalKeyRequired, 428)
+    }
+    console.error('[agent] vérification de la source IA impossible', error)
+    return jsonError(copy.quotaFailed, 500)
+  }
   const latestUserMessage = [...parsed.data.messages]
     .reverse()
     .find((message) => message.role === 'user')
@@ -548,34 +567,100 @@ export async function POST(request: Request) {
     await decrementUsage(user!.id, USAGE_FEATURE)
   }
 
+  const result = streamText({
+    model: await getCurrentUserAnthropicModel('agent_chat'),
+    system: systemPrompt,
+    messages: parsed.data.messages,
+    temperature: 0.4,
+    maxOutputTokens: 2000,
+    maxRetries: 1,
+    timeout: 60000,
+    abortSignal: request.signal,
+    tools: { search_gmail_inbox: createGmailSearchTool(user.id) },
+    stopWhen: stepCountIs(3),
+  })
+
+  // Le Content-Type de la Response (texte en clair vs carte JSON) doit etre
+  // fige AVANT de la construire — impossible d'attendre un premier chunk pour
+  // "changer d'avis". On "peek" donc fullStream (qui porte aussi bien le
+  // texte que les resultats d'outils) avant de rien renvoyer : si l'outil
+  // Gmail signale needs_connection, on court-circuite en carte JSON comme
+  // toutes les autres intentions de ce fichier ; sinon, dès le premier
+  // texte on committe au streaming habituel, en continuant a drainer le
+  // MEME iterateur (jamais result.textStream, deja partiellement consomme).
+  const streamIterator = result.fullStream[Symbol.asyncIterator]()
+  let firstTextChunk: string | null = null
+  let finishedWithoutText = false
+
+  try {
+    while (firstTextChunk === null) {
+      const { value: part, done } = await streamIterator.next()
+      if (done) {
+        finishedWithoutText = true
+        break
+      }
+      if (request.signal.aborted) {
+        throw new Error('AGENT_CHAT_ABORTED')
+      }
+      if (part.type === 'text-delta') {
+        firstTextChunk = part.text
+        break
+      }
+      if (part.type === 'tool-result' && part.toolName === 'search_gmail_inbox') {
+        const output = part.output as GmailSearchToolOutput
+        if (output.status === 'needs_connection') {
+          await refundOnce()
+          return NextResponse.json(
+            agentStructuredResponseSchema.parse(
+              buildIntegrationConnectRequiredResponse(
+                output.feature,
+                latestUserMessage?.content ?? '',
+                profile.interface_language
+              )
+            )
+          )
+        }
+        continue
+      }
+      if (part.type === 'tool-error' || part.type === 'error') {
+        throw part.error
+      }
+      if (part.type === 'finish') {
+        finishedWithoutText = true
+        break
+      }
+    }
+  } catch (error) {
+    console.error('[agent] echec generation (avant texte)', error)
+    await refundOnce()
+    return jsonError(copy.chatFailed, 500)
+  }
+
+  if (finishedWithoutText) {
+    await recordCurrentUserAIUsage('agent_chat', 'agent', await result.usage)
+    await refundOnce()
+    return new Response('', {
+      headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-cache, no-transform' },
+    })
+  }
+
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       try {
-        const result = streamText({
-          model: await getCurrentUserAnthropicModel('agent_chat'),
-          system: systemPrompt,
-          messages: parsed.data.messages,
-          temperature: 0.4,
-          maxOutputTokens: 2000,
-          maxRetries: 1,
-          timeout: 60000,
-          abortSignal: request.signal,
-        })
+        controller.enqueue(encoder.encode(firstTextChunk ?? ''))
 
-        let receivedAnyChunk = false
-        for await (const chunk of result.textStream) {
+        while (true) {
+          const { value: part, done } = await streamIterator.next()
+          if (done) break
           if (request.signal.aborted) {
             throw new Error('AGENT_CHAT_ABORTED')
           }
-          receivedAnyChunk = true
-          controller.enqueue(encoder.encode(chunk))
+          if (part.type === 'text-delta') {
+            controller.enqueue(encoder.encode(part.text))
+          }
         }
 
         await recordCurrentUserAIUsage('agent_chat', 'agent', await result.usage)
-
-        if (!receivedAnyChunk) {
-          await refundOnce()
-        }
 
         settled = true
         controller.close()

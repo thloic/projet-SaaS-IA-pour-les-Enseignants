@@ -89,6 +89,26 @@ export function buildFollowUpPlanReviewNotReadyResponse(
   return { kind: 'follow_up_plan_review_not_ready', message }
 }
 
+export function buildIntegrationConnectRequiredResponse(
+  feature: Extract<AgentStructuredResponse, { kind: 'integration_connect_required' }>['feature'],
+  continuationText: string,
+  interfaceLanguage?: AppLocale
+): Extract<AgentStructuredResponse, { kind: 'integration_connect_required' }> {
+  const message =
+    interfaceLanguage === 'es'
+      ? 'Para buscar en tu Gmail, primero debes conectarlo.'
+      : interfaceLanguage === 'en'
+        ? 'To search your Gmail, connect it first.'
+        : 'Pour chercher dans votre Gmail, connectez-le d’abord.'
+  return {
+    kind: 'integration_connect_required',
+    feature,
+    message,
+    connectUrl: `/api/integrations/google/connect?feature=${feature}`,
+    continuationText,
+  }
+}
+
 export function buildDocumentNotFoundForModificationResponse(
   studentFullName: string,
   documentType: 'pat' | 'bulletin',

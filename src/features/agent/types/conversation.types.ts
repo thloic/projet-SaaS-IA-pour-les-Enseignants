@@ -65,6 +65,16 @@ export interface MeetingSummaryChatMessage {
   nextSteps: string[]
 }
 
+export interface IntegrationConnectRequiredChatMessage {
+  id: string
+  kind: 'integration_connect_required'
+  role: 'assistant'
+  feature: Extract<AgentStructuredResponse, { kind: 'integration_connect_required' }>['feature']
+  message: string
+  connectUrl: string
+  continuationText: string
+}
+
 export type ChatMessage =
   | TextChatMessage
   | PATChatMessage
@@ -72,3 +82,4 @@ export type ChatMessage =
   | FollowUpPlanChatMessage
   | ParentEmailDraftChatMessage
   | MeetingSummaryChatMessage
+  | IntegrationConnectRequiredChatMessage

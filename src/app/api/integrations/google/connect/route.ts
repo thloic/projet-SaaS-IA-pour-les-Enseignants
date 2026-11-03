@@ -8,6 +8,7 @@ function isGoogleIntegrationFeature(value: string | null): value is GoogleIntegr
 }
 
 export const GOOGLE_OAUTH_STATE_COOKIE = 'google_oauth_state'
+export const GOOGLE_OAUTH_FEATURE_COOKIE = 'google_oauth_feature'
 
 // state est un nonce anti-CSRF (jamais l'identite de l'utilisateur) : le
 // callback ne fait jamais confiance a state pour savoir a qui attribuer les
@@ -29,6 +30,15 @@ export async function GET(request: Request) {
   const consentUrl = buildGoogleConsentUrl(feature, state)
   const response = NextResponse.redirect(consentUrl)
   response.cookies.set(GOOGLE_OAUTH_STATE_COOKIE, state, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    maxAge: 300,
+    path: '/api/integrations/google',
+  })
+  // Cookie distinct du nonce CSRF : state reste un simple nonce, jamais
+  // reutilise pour transporter la feature demandee.
+  response.cookies.set(GOOGLE_OAUTH_FEATURE_COOKIE, feature, {
     httpOnly: true,
     secure: true,
     sameSite: 'lax',
