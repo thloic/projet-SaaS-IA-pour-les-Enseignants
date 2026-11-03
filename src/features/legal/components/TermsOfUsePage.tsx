@@ -38,13 +38,13 @@ const COPY = {
       {
         heading: '4. Subscriptions and payment',
         paragraphs: [
-          'EducAssist offers a limited free plan and a paid Pro plan (monthly or annual), billed through Stripe. Subscriptions renew automatically until cancelled. When you cancel, you keep Pro access until the end of the period already paid for, then automatically return to the free plan. If a renewal payment fails, we will notify you and attempt to charge your card again for a limited grace period before downgrading your account.',
+          'EducAssist offers a limited free plan and a paid monthly participation, billed through Stripe. The paid participation requires connecting your own AI provider API key: your AI usage is billed directly by your provider, and EducAssist does not charge for model usage itself. Subscriptions renew automatically until cancelled. When you cancel, you keep access until the end of the period already paid for, then automatically return to the free plan. If a renewal payment fails, we will notify you and attempt to charge your card again for a limited grace period before downgrading your account. [TO CONFIRM WITH COUNSEL: disclosure language for the personal API key requirement and the related transmission of data to the teacher’s own AI provider.]',
         ],
       },
       {
         heading: '5. Ambassador discount program',
         paragraphs: [
-          'Every teacher has a personal code they may share with a colleague. A colleague who subscribes to the Pro plan using that code pays full price — there is no discount for them. The teacher who owns the code instead sees their own subscription reduced by 10% for each distinct colleague who subscribes using it, cumulative up to a maximum of 100%. A code cannot be used on the account it belongs to. [TO CONFIRM WITH COUNSEL: whether any additional disclosure or consumer-protection language is required for this mechanic before launch.]',
+          'Every teacher has a personal code they may share with a colleague. A colleague who subscribes to the paid participation using that code pays full price — there is no discount for them. The teacher who owns the code instead sees their own subscription reduced by 10% for each distinct colleague who subscribes using it, cumulative up to a maximum of 100%. A code cannot be used on the account it belongs to. [TO CONFIRM WITH COUNSEL: whether any additional disclosure or consumer-protection language is required for this mechanic before launch.]',
         ],
       },
       {
@@ -133,13 +133,13 @@ const COPY = {
       {
         heading: '4. Abonnements et paiement',
         paragraphs: [
-          'EducAssist propose un plan gratuit limité et un plan Pro payant (mensuel ou annuel), facturé via Stripe. Les abonnements se renouvellent automatiquement jusqu’à annulation. Lorsque vous annulez, vous conservez l’accès Pro jusqu’à la fin de la période déjà payée, puis repassez automatiquement au plan gratuit. En cas d’échec d’un paiement de renouvellement, nous vous en informerons et tenterons de débiter votre carte à nouveau pendant une période de grâce limitée avant de rétrograder votre compte.',
+          'EducAssist propose un plan gratuit limité et une participation mensuelle payante, facturée via Stripe. La participation payante exige de connecter votre propre clé API de fournisseur IA : votre consommation IA est facturée directement par votre fournisseur, EducAssist ne facture pas l’usage du modèle lui-même. Les abonnements se renouvellent automatiquement jusqu’à annulation. Lorsque vous annulez, vous conservez l’accès jusqu’à la fin de la période déjà payée, puis repassez automatiquement au plan gratuit. En cas d’échec d’un paiement de renouvellement, nous vous en informerons et tenterons de débiter votre carte à nouveau pendant une période de grâce limitée avant de rétrograder votre compte. [À CONFIRMER AVEC UN CONSEILLER JURIDIQUE : formulation de la divulgation sur l’obligation de clé API personnelle et la transmission de données au fournisseur IA de l’enseignant.]',
         ],
       },
       {
         heading: '5. Programme de réduction ambassadeur',
         paragraphs: [
-          'Chaque enseignant dispose d’un code personnel qu’il peut partager avec un collègue. Un collègue qui s’abonne au plan Pro en utilisant ce code paie le plein tarif — il n’obtient aucune réduction. C’est plutôt l’enseignant propriétaire du code dont l’abonnement est réduit de 10% pour chaque collègue distinct qui s’abonne grâce à lui, cumulable jusqu’à un maximum de 100%. Un code ne peut pas être utilisé sur le compte auquel il appartient. [À CONFIRMER AVEC UN CONSEILLER JURIDIQUE : si une divulgation supplémentaire ou un encadrement de protection du consommateur est requis pour cette mécanique avant le lancement.]',
+          'Chaque enseignant dispose d’un code personnel qu’il peut partager avec un collègue. Un collègue qui s’abonne à la participation payante en utilisant ce code paie le plein tarif — il n’obtient aucune réduction. C’est plutôt l’enseignant propriétaire du code dont l’abonnement est réduit de 10% pour chaque collègue distinct qui s’abonne grâce à lui, cumulable jusqu’à un maximum de 100%. Un code ne peut pas être utilisé sur le compte auquel il appartient. [À CONFIRMER AVEC UN CONSEILLER JURIDIQUE : si une divulgation supplémentaire ou un encadrement de protection du consommateur est requis pour cette mécanique avant le lancement.]',
         ],
       },
       {
@@ -228,13 +228,13 @@ const COPY = {
       {
         heading: '4. Suscripciones y pago',
         paragraphs: [
-          'EducAssist ofrece un plan gratuito limitado y un plan Pro de pago (mensual o anual), facturado a través de Stripe. Las suscripciones se renuevan automáticamente hasta que se cancelen. Al cancelar, conserva el acceso Pro hasta el final del período ya pagado y luego pasa automáticamente al plan gratuito. Si falla un pago de renovación, se lo notificaremos e intentaremos cobrar su tarjeta nuevamente durante un período de gracia limitado antes de degradar su cuenta.',
+          'EducAssist ofrece un plan gratuito limitado y una participación mensual de pago, facturada a través de Stripe. La participación de pago exige conectar su propia clave API de proveedor de IA: su consumo de IA se factura directamente por su proveedor, y EducAssist no cobra por el uso del modelo en sí. Las suscripciones se renuevan automáticamente hasta que se cancelen. Al cancelar, conserva el acceso hasta el final del período ya pagado y luego pasa automáticamente al plan gratuito. Si falla un pago de renovación, se lo notificaremos e intentaremos cobrar su tarjeta nuevamente durante un período de gracia limitado antes de degradar su cuenta. [POR CONFIRMAR CON ASESORÍA LEGAL: redacción de la divulgación sobre la obligación de clave API personal y la transmisión de datos al proveedor de IA del docente.]',
         ],
       },
       {
         heading: '5. Programa de descuento de embajadores',
         paragraphs: [
-          'Cada docente dispone de un código personal que puede compartir con un colega. Un colega que se suscriba al plan Pro usando ese código paga el precio completo, sin ningún descuento. En cambio, el docente propietario del código ve su propia suscripción reducida en un 10% por cada colega distinto que se suscriba gracias a él, acumulable hasta un máximo del 100%. Un código no puede utilizarse en la cuenta a la que pertenece. [POR CONFIRMAR CON ASESORÍA LEGAL: si se requiere alguna divulgación adicional o protección al consumidor para este mecanismo antes del lanzamiento.]',
+          'Cada docente dispone de un código personal que puede compartir con un colega. Un colega que se suscriba a la participación de pago usando ese código paga el precio completo, sin ningún descuento. En cambio, el docente propietario del código ve su propia suscripción reducida en un 10% por cada colega distinto que se suscriba gracias a él, acumulable hasta un máximo del 100%. Un código no puede utilizarse en la cuenta a la que pertenece. [POR CONFIRMAR CON ASESORÍA LEGAL: si se requiere alguna divulgación adicional o protección al consumidor para este mecanismo antes del lanzamiento.]',
         ],
       },
       {

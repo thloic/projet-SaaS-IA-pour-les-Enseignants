@@ -20,6 +20,7 @@ const COPY = {
   fr: {
     section: 'Connexion IA', title: 'Choisissez votre source IA',
     description: 'Utilisez l’IA incluse avec EducAssist ou votre propre clé API. Cette option est disponible pour tous les comptes.',
+    required: 'Votre participation est active : une clé API personnelle est obligatoire pour lancer des générations IA.',
     included: 'IA EducAssist', includedHint: 'Vos générations utilisent le quota inclus dans votre compte EducAssist.',
     personal: 'Ma clé API personnelle', personalHint: 'Les générations sont facturées directement sur votre compte fournisseur. Votre quota EducAssist reste intact.',
     key: 'Clé API personnelle', placeholder: 'Saisissez votre clé API', consent: 'Je comprends que les données nécessaires aux générations seront transmises à mon fournisseur IA.',
@@ -28,6 +29,7 @@ const COPY = {
   en: {
     section: 'AI connection', title: 'Choose your AI source',
     description: 'Use AI included with EducAssist or your own API key. This option is available to every account.',
+    required: 'Your participation is active: a personal API key is required to run AI generations.',
     included: 'EducAssist AI', includedHint: 'Generations use the quota included with your EducAssist account.',
     personal: 'My personal API key', personalHint: 'Generations are billed directly through your provider account. Your EducAssist quota remains untouched.',
     key: 'Personal API key', placeholder: 'Enter your API key', consent: 'I understand that data required for generation will be sent to my AI provider.',
@@ -36,6 +38,7 @@ const COPY = {
   es: {
     section: 'Conexión IA', title: 'Elige tu fuente de IA',
     description: 'Usa la IA incluida con EducAssist o tu propia clave API. Esta opción está disponible para todas las cuentas.',
+    required: 'Tu participación está activa: se requiere una clave API personal para realizar generaciones de IA.',
     included: 'IA EducAssist', includedHint: 'Las generaciones usan la cuota incluida en tu cuenta EducAssist.',
     personal: 'Mi clave API personal', personalHint: 'Las generaciones se facturan directamente en tu cuenta del proveedor. Tu cuota EducAssist permanece intacta.',
     key: 'Clave API personal', placeholder: 'Introduce tu clave API', consent: 'Entiendo que los datos necesarios para generar contenido se enviarán a mi proveedor de IA.',
@@ -43,7 +46,13 @@ const COPY = {
   },
 } as const
 
-export default function AICredentialSettings({ initialStatus }: { initialStatus: AICredentialPublicStatus }) {
+export default function AICredentialSettings({
+  initialStatus,
+  requiresPersonalKey = false,
+}: {
+  initialStatus: AICredentialPublicStatus
+  requiresPersonalKey?: boolean
+}) {
   const { locale } = useAppLocale()
   const { showToast } = useToast()
   const copy = COPY[locale]
@@ -51,14 +60,14 @@ export default function AICredentialSettings({ initialStatus }: { initialStatus:
   const [apiKey, setApiKey] = useState('')
   const [showKey, setShowKey] = useState(false)
   const [consent, setConsent] = useState(false)
-  const [editing, setEditing] = useState(!initialStatus.connected)
-  const [selectedSource, setSelectedSource] = useState(initialStatus.source)
+  const [editing, setEditing] = useState(!initialStatus.connected || (requiresPersonalKey && !initialStatus.active))
+  const [selectedSource, setSelectedSource] = useState(requiresPersonalKey ? 'personal' : initialStatus.source)
   const [pending, setPending] = useState<string | null>(null)
 
   function handleResult(result: AICredentialActionResult, successMessage: string) {
     if (result.data) {
       setStatus(result.data)
-      setSelectedSource(result.data.source)
+      setSelectedSource(requiresPersonalKey ? 'personal' : result.data.source)
       showToast(successMessage, 'success')
       return true
     }
@@ -127,7 +136,7 @@ export default function AICredentialSettings({ initialStatus }: { initialStatus:
     if (pending) return
     setPending('remove')
     try {
-      if (handleResult(await deleteAICredentialAction(), copy.removed)) setEditing(false)
+      if (handleResult(await deleteAICredentialAction(), copy.removed)) setEditing(requiresPersonalKey)
     } finally {
       setPending(null)
     }
@@ -142,18 +151,18 @@ export default function AICredentialSettings({ initialStatus }: { initialStatus:
       <div className="space-y-5 rounded-2xl border border-border bg-muted/20 p-5">
         <div>
           <h3 className="font-bold">{copy.title}</h3>
-          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{copy.description}</p>
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{requiresPersonalKey ? copy.required : copy.description}</p>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <button type="button" onClick={selectIncluded} disabled={pending !== null}
+        <div className={`grid gap-3 ${requiresPersonalKey ? '' : 'sm:grid-cols-2'}`}>
+          {!requiresPersonalKey && <button type="button" onClick={selectIncluded} disabled={pending !== null}
             className={`rounded-2xl border p-4 text-left transition ${selectedSource === 'included' ? 'border-[#534AB7] bg-[#534AB7]/5 ring-2 ring-[#534AB7]/10' : 'border-border bg-background hover:border-[#534AB7]/35'}`}>
             <div className="flex items-center justify-between gap-2">
               <span className="flex items-center gap-2 font-bold"><Bot size={17} /> {copy.included}</span>
               {selectedSource === 'included' && <CheckCircle2 size={17} className="text-emerald-500" />}
             </div>
             <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{copy.includedHint}</p>
-          </button>
+          </button>}
           <button type="button" onClick={selectPersonal} disabled={pending !== null}
             className={`rounded-2xl border p-4 text-left transition ${selectedSource === 'personal' ? 'border-[#534AB7] bg-[#534AB7]/5 ring-2 ring-[#534AB7]/10' : 'border-border bg-background hover:border-[#534AB7]/35'}`}>
             <div className="flex items-center justify-between gap-2">
@@ -177,7 +186,7 @@ export default function AICredentialSettings({ initialStatus }: { initialStatus:
               <Button type="button" size="sm" variant="outline" onClick={() => void testKey()} disabled={pending !== null}><RefreshCw size={14} /> {copy.test}</Button>
               <Button type="button" size="sm" variant="outline" onClick={() => { setSelectedSource('personal'); setEditing(true) }} disabled={pending !== null}>{copy.replace}</Button>
               {!status.active && <Button type="button" size="sm" onClick={selectPersonal} disabled={pending !== null}>{copy.usePersonal}</Button>}
-              {status.active && <Button type="button" size="sm" variant="outline" onClick={selectIncluded} disabled={pending !== null}>{copy.useIncluded}</Button>}
+              {status.active && !requiresPersonalKey && <Button type="button" size="sm" variant="outline" onClick={selectIncluded} disabled={pending !== null}>{copy.useIncluded}</Button>}
               <Button type="button" size="sm" variant="ghost" className="text-destructive" onClick={() => void removeKey()} disabled={pending !== null}><Trash2 size={14} /> {copy.remove}</Button>
             </div>
           </div>

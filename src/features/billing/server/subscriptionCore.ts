@@ -16,6 +16,7 @@ export interface SubscriptionRecord {
   stripeCustomerId: string
   stripeSubscriptionId: string | null
   status: SubscriptionStatus
+  stripePriceId: string | null
   priceInterval: 'month' | 'year' | null
   cancelAtPeriodEnd: boolean
   currentPeriodEnd: string | null
@@ -37,20 +38,37 @@ export interface SubscriptionSummary {
 // décision "échec de paiement au renouvellement" — jamais de coupure brutale).
 const PRO_ACCESS_STATUSES: SubscriptionStatus[] = ['active', 'past_due']
 
+// Le statut Stripe seul ne suffit pas : un abonnement actif sur un ancien
+// produit, un prix inconnu ou un mauvais intervalle ne doit jamais accorder
+// silencieusement l'accès à la participation actuelle (voir le plan de
+// migration BYOK/participation — Lot 3).
+function hasAllowedParticipationPrice(record: SubscriptionRecord, allowedPriceIds: string[]): boolean {
+  return record.stripePriceId !== null && allowedPriceIds.includes(record.stripePriceId)
+}
+
 export async function hasActiveProAccessCore(
   userId: string,
-  repository: SubscriptionRepository
+  repository: SubscriptionRepository,
+  allowedPriceIds: string[]
 ): Promise<boolean> {
   const subscription = await repository.getSubscription(userId)
-  return subscription !== null && PRO_ACCESS_STATUSES.includes(subscription.status)
+  return (
+    subscription !== null &&
+    PRO_ACCESS_STATUSES.includes(subscription.status) &&
+    hasAllowedParticipationPrice(subscription, allowedPriceIds)
+  )
 }
 
 export async function getSubscriptionSummaryCore(
   userId: string,
-  repository: SubscriptionRepository
+  repository: SubscriptionRepository,
+  allowedPriceIds: string[]
 ): Promise<SubscriptionSummary> {
   const subscription = await repository.getSubscription(userId)
-  const isPro = subscription !== null && PRO_ACCESS_STATUSES.includes(subscription.status)
+  const isPro =
+    subscription !== null &&
+    PRO_ACCESS_STATUSES.includes(subscription.status) &&
+    hasAllowedParticipationPrice(subscription, allowedPriceIds)
 
   if (!isPro || !subscription) {
     return { plan: 'free', interval: null, currentPeriodEnd: null, cancelAtPeriodEnd: false }

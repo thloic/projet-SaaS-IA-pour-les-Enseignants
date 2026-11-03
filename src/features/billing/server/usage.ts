@@ -9,7 +9,8 @@ import {
   type UsageLimits,
 } from '@/features/billing/server/usageCore'
 import { getActiveAICredential } from '@/features/ai-credentials/server/aiCredentialRepository'
-import { shouldBypassIncludedAIQuota } from '@/features/ai/server/aiQuotaPolicy'
+import { shouldBypassIncludedAIQuota, shouldRequirePersonalKey } from '@/features/ai/server/aiQuotaPolicy'
+import { PersonalAICredentialRequiredError } from '@/features/ai/server/aiAccessError'
 
 const DEFAULT_GENERATION_LIMIT = 3
 const DEFAULT_PRO_GENERATION_LIMIT = 90
@@ -20,9 +21,21 @@ const DEFAULT_EMAIL_SEND_LIMIT = 10
 const DEFAULT_PRO_EMAIL_SEND_LIMIT = 200
 const PERSONAL_AI_VIRTUAL_LIMIT = 1_000_000
 
+// Meme regle que resolveAnthropicProviderForUser (aiProviderResolver.ts) : une
+// seule fonction pure (shouldRequirePersonalKey) tranche si une participation
+// active sans cle personnelle doit etre bloquee, pour ne jamais avoir deux
+// implementations de cette regle qui pourraient diverger.
 async function usesPersonalAI(userId: string, feature: string): Promise<boolean> {
   if (!shouldBypassIncludedAIQuota(feature, true)) return false
-  return shouldBypassIncludedAIQuota(feature, (await getActiveAICredential(userId)) !== null)
+  const hasPersonalKey = (await getActiveAICredential(userId)) !== null
+  if (shouldRequirePersonalKey(await hasActiveProAccess(userId), hasPersonalKey)) {
+    throw new PersonalAICredentialRequiredError()
+  }
+  return shouldBypassIncludedAIQuota(feature, hasPersonalKey)
+}
+
+export async function assertAIGenerationAccess(userId: string, feature = 'general'): Promise<void> {
+  await usesPersonalAI(userId, feature)
 }
 
 function envLimit(name: string, fallback: number): number {

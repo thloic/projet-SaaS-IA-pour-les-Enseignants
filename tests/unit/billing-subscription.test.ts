@@ -10,6 +10,8 @@ import {
 
 const USER_A = '11111111-1111-4111-8111-111111111111'
 const USER_B = '22222222-2222-4222-8222-222222222222'
+const PARTICIPATION_PRICE_ID = 'price_participation_monthly'
+const ALLOWED_PRICE_IDS = [PARTICIPATION_PRICE_ID]
 
 function fakeRepository(records: Map<string, SubscriptionRecord>): SubscriptionRepository {
   return {
@@ -24,6 +26,7 @@ function record(overrides: Partial<SubscriptionRecord> = {}): SubscriptionRecord
     stripeCustomerId: 'cus_123',
     stripeSubscriptionId: 'sub_123',
     status: 'active',
+    stripePriceId: PARTICIPATION_PRICE_ID,
     priceInterval: 'month',
     cancelAtPeriodEnd: false,
     currentPeriodEnd: '2026-10-01T00:00:00.000Z',
@@ -33,37 +36,47 @@ function record(overrides: Partial<SubscriptionRecord> = {}): SubscriptionRecord
 
 test('un abonnement actif donne droit à l’accès Pro', async () => {
   const repo = fakeRepository(new Map([[USER_A, record({ status: 'active' })]]))
-  assert.equal(await hasActiveProAccessCore(USER_A, repo), true)
+  assert.equal(await hasActiveProAccessCore(USER_A, repo, ALLOWED_PRICE_IDS), true)
 })
 
 test('un abonnement en retard de paiement (past_due) conserve l’accès Pro — période de grâce', async () => {
   const repo = fakeRepository(new Map([[USER_A, record({ status: 'past_due' })]]))
-  assert.equal(await hasActiveProAccessCore(USER_A, repo), true)
+  assert.equal(await hasActiveProAccessCore(USER_A, repo, ALLOWED_PRICE_IDS), true)
 })
 
 test('un abonnement résilié (canceled) ne donne plus accès au plan Pro', async () => {
   const repo = fakeRepository(new Map([[USER_A, record({ status: 'canceled' })]]))
-  assert.equal(await hasActiveProAccessCore(USER_A, repo), false)
+  assert.equal(await hasActiveProAccessCore(USER_A, repo, ALLOWED_PRICE_IDS), false)
 })
 
 test('un abonnement impayé (unpaid) ne donne plus accès au plan Pro', async () => {
   const repo = fakeRepository(new Map([[USER_A, record({ status: 'unpaid' })]]))
-  assert.equal(await hasActiveProAccessCore(USER_A, repo), false)
+  assert.equal(await hasActiveProAccessCore(USER_A, repo, ALLOWED_PRICE_IDS), false)
 })
 
 test('un utilisateur sans aucune ligne d’abonnement est traité comme gratuit', async () => {
   const repo = fakeRepository(new Map())
-  assert.equal(await hasActiveProAccessCore(USER_A, repo), false)
+  assert.equal(await hasActiveProAccessCore(USER_A, repo, ALLOWED_PRICE_IDS), false)
 })
 
 test('isole strictement les abonnements par utilisateur', async () => {
   const repo = fakeRepository(new Map([[USER_A, record({ status: 'active' })]]))
-  assert.equal(await hasActiveProAccessCore(USER_B, repo), false)
+  assert.equal(await hasActiveProAccessCore(USER_B, repo, ALLOWED_PRICE_IDS), false)
+})
+
+test('un abonnement actif sur un ancien prix Stripe (hors liste autorisée) ne donne pas accès Pro', async () => {
+  const repo = fakeRepository(new Map([[USER_A, record({ status: 'active', stripePriceId: 'price_old_annual' })]]))
+  assert.equal(await hasActiveProAccessCore(USER_A, repo, ALLOWED_PRICE_IDS), false)
+})
+
+test('un abonnement actif sans prix Stripe connu (null) ne donne pas accès Pro', async () => {
+  const repo = fakeRepository(new Map([[USER_A, record({ status: 'active', stripePriceId: null })]]))
+  assert.equal(await hasActiveProAccessCore(USER_A, repo, ALLOWED_PRICE_IDS), false)
 })
 
 test('getSubscriptionSummaryCore renvoie le plan gratuit sans ligne', async () => {
   const repo = fakeRepository(new Map())
-  const summary = await getSubscriptionSummaryCore(USER_A, repo)
+  const summary = await getSubscriptionSummaryCore(USER_A, repo, ALLOWED_PRICE_IDS)
   assert.deepEqual(summary, {
     plan: 'free',
     interval: null,
@@ -81,7 +94,7 @@ test('getSubscriptionSummaryCore renvoie l’intervalle et la date de renouvelle
       ],
     ])
   )
-  const summary = await getSubscriptionSummaryCore(USER_A, repo)
+  const summary = await getSubscriptionSummaryCore(USER_A, repo, ALLOWED_PRICE_IDS)
   assert.deepEqual(summary, {
     plan: 'pro',
     interval: 'year',
@@ -92,12 +105,18 @@ test('getSubscriptionSummaryCore renvoie l’intervalle et la date de renouvelle
 
 test('getSubscriptionSummaryCore signale une résiliation programmée', async () => {
   const repo = fakeRepository(new Map([[USER_A, record({ status: 'active', cancelAtPeriodEnd: true })]]))
-  const summary = await getSubscriptionSummaryCore(USER_A, repo)
+  const summary = await getSubscriptionSummaryCore(USER_A, repo, ALLOWED_PRICE_IDS)
   assert.equal(summary.cancelAtPeriodEnd, true)
 })
 
 test('getSubscriptionSummaryCore renvoie le plan gratuit pour un abonnement résilié', async () => {
   const repo = fakeRepository(new Map([[USER_A, record({ status: 'canceled' })]]))
-  const summary = await getSubscriptionSummaryCore(USER_A, repo)
+  const summary = await getSubscriptionSummaryCore(USER_A, repo, ALLOWED_PRICE_IDS)
+  assert.equal(summary.plan, 'free')
+})
+
+test('getSubscriptionSummaryCore renvoie le plan gratuit pour un prix Stripe hors liste autorisée', async () => {
+  const repo = fakeRepository(new Map([[USER_A, record({ status: 'active', stripePriceId: 'price_old_annual' })]]))
+  const summary = await getSubscriptionSummaryCore(USER_A, repo, ALLOWED_PRICE_IDS)
   assert.equal(summary.plan, 'free')
 })

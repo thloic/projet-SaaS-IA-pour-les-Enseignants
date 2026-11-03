@@ -12,7 +12,7 @@ import { ambassadorDiscountPercent } from '../../src/features/billing/server/amb
 
 const AMBASSADOR = '33333333-3333-4333-8333-333333333333'
 const FILLEUL = '11111111-1111-4111-8111-111111111111'
-const PRICE_IDS = { month: 'price_month_123', year: 'price_year_456' }
+const PRICE_ID = 'price_participation_monthly_123'
 const APP_URL = 'https://educassist.example.com'
 
 function fakeWebhookDeps(
@@ -67,10 +67,9 @@ test('parcours complet : un filleul indique le code d’un ambassadeur déjà ab
   const filleulCheckoutParams = buildCheckoutSessionParams({
     userId: FILLEUL,
     email: 'filleul@example.com',
-    interval: 'month',
     existingCustomerId: null,
     appUrl: APP_URL,
-    priceIds: PRICE_IDS,
+    priceId: PRICE_ID,
     ambassadorUserId: AMBASSADOR,
   })
 
@@ -125,14 +124,13 @@ test('un ambassadeur qui passe au plan Pro après avoir déjà 2 filleuls reçoi
   const ambassadorCheckoutParams = buildCheckoutSessionParams({
     userId: AMBASSADOR,
     email: 'ambassadeur@example.com',
-    interval: 'year',
     existingCustomerId: null,
     appUrl: APP_URL,
-    priceIds: PRICE_IDS,
+    priceId: PRICE_ID,
     discountCouponId: `coupon_tier_${discountPercent}`,
   })
 
   assert.equal(discountPercent, 20)
   assert.deepEqual(ambassadorCheckoutParams.discounts, [{ coupon: 'coupon_tier_20' }])
-  assert.equal(ambassadorCheckoutParams.line_items?.[0]?.price, PRICE_IDS.year)
+  assert.equal(ambassadorCheckoutParams.line_items?.[0]?.price, PRICE_ID)
 })

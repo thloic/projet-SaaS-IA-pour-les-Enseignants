@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, Crown, Zap } from 'lucide-react'
+import { Check, Crown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -13,6 +13,9 @@ const BRAND = '#534AB7'
 
 const FEATURES = {
   fr: [
+    'Participation mensuelle à la plateforme EducAssist',
+    'Utilisation de votre propre clé API pour les générations IA',
+    "Votre consommation IA est facturée directement par votre fournisseur",
     "Agent IA connecté à l'historique de vos élèves",
     'Génération de cours, quiz et évaluations',
     'Commentaires de bulletin et PAT',
@@ -23,6 +26,9 @@ const FEATURES = {
     'Historique de tous vos documents',
   ],
   en: [
+    'Monthly participation in the EducAssist platform',
+    'Use your own API key for AI generations',
+    'Your AI usage is billed directly by your provider',
     'AI agent connected to your student history',
     'Lessons, quizzes, and assessments generation',
     'Report card comments and PATs',
@@ -33,6 +39,9 @@ const FEATURES = {
     'Full document history',
   ],
   es: [
+    'Participación mensual en la plataforma EducAssist',
+    'Uso de su propia clave API para las generaciones de IA',
+    'El consumo de IA se factura directamente por su proveedor',
     'Agente IA conectado al historial de sus alumnos',
     'Generación de lecciones, cuestionarios y evaluaciones',
     'Comentarios de boletín y PAT',
@@ -46,27 +55,19 @@ const FEATURES = {
 
 const COPY = {
   fr: {
-    title: 'Choisissez votre offre',
-    subtitle: "Les deux plans donnent accès aux mêmes fonctionnalités. L'annuel vous fait économiser 50 $.",
+    title: 'Rejoignez la plateforme',
+    subtitle: 'Une participation accessible, avec votre propre clé API et sans frais IA cachés chez EducAssist.',
     monthly: {
-      name: 'Mensuel',
-      price: '30 $',
+      name: 'Participation EducAssist',
+      price: '10 $ US',
       period: '/ mois',
       audience: 'Résiliable à tout moment',
-      cta: 'S’abonner mensuellement',
-    },
-    annual: {
-      name: 'Annuel',
-      price: '300 $',
-      period: '/ an',
-      audience: 'Un seul paiement, 12 mois d’accès',
-      cta: 'S’abonner annuellement',
-      badge: 'Économisez 60 $',
+      cta: 'Participer pour 10 $ US / mois',
     },
     currentPlan: 'Votre offre actuelle',
-    alreadyPro: 'Vous êtes déjà abonné au plan Pro.',
+    alreadyPro: 'Votre participation à EducAssist est active.',
     manageLink: 'Gérer mon abonnement →',
-    included: 'Tout inclus dans les deux offres',
+    included: 'Ce que comprend votre participation',
     promoCodeLabel: 'Code d’un collègue (optionnel)',
     promoCodePlaceholder: 'ex. MARIE01',
     promoCodeHint: 'Ne change pas votre prix — ça réduit l’abonnement de la personne qui vous l’a partagé.',
@@ -75,27 +76,19 @@ const COPY = {
     checkoutFailed: 'Une erreur est survenue, réessayez.',
   },
   en: {
-    title: 'Choose your plan',
-    subtitle: 'Both plans include the same features. Annual billing saves you $60.',
+    title: 'Join the platform',
+    subtitle: 'Accessible participation using your own API key, with no hidden AI charges from EducAssist.',
     monthly: {
-      name: 'Monthly',
-      price: '$30',
+      name: 'EducAssist participation',
+      price: '$10 US',
       period: '/ month',
       audience: 'Cancel anytime',
-      cta: 'Subscribe monthly',
-    },
-    annual: {
-      name: 'Annual',
-      price: '$300',
-      period: '/ year',
-      audience: 'One payment, 12 months of access',
-      cta: 'Subscribe annually',
-      badge: 'Save $60',
+      cta: 'Participate for $10 US / month',
     },
     currentPlan: 'Your current plan',
-    alreadyPro: 'You are already subscribed to the Pro plan.',
+    alreadyPro: 'Your EducAssist participation is active.',
     manageLink: 'Manage my subscription →',
-    included: 'Everything included in both plans',
+    included: 'What your participation includes',
     promoCodeLabel: 'A colleague’s code (optional)',
     promoCodePlaceholder: 'e.g. MARIE01',
     promoCodeHint: 'Doesn’t change your price — it reduces the subscription of whoever shared it with you.',
@@ -104,27 +97,19 @@ const COPY = {
     checkoutFailed: 'Something went wrong, please try again.',
   },
   es: {
-    title: 'Elija su oferta',
-    subtitle: 'Ambos planes incluyen las mismas funciones. La facturación anual le ahorra $60.',
+    title: 'Únase a la plataforma',
+    subtitle: 'Una participación accesible con su propia clave API y sin cargos ocultos de IA por parte de EducAssist.',
     monthly: {
-      name: 'Mensual',
-      price: '$30',
+      name: 'Participación EducAssist',
+      price: '10 $ US',
       period: '/ mes',
       audience: 'Cancelable en cualquier momento',
-      cta: 'Suscribirse mensualmente',
-    },
-    annual: {
-      name: 'Anual',
-      price: '$300',
-      period: '/ año',
-      audience: 'Un pago, 12 meses de acceso',
-      cta: 'Suscribirse anualmente',
-      badge: 'Ahorre $60',
+      cta: 'Participar por 10 $ US / mes',
     },
     currentPlan: 'Su plan actual',
-    alreadyPro: 'Ya está suscrito al plan Pro.',
+    alreadyPro: 'Su participación en EducAssist está activa.',
     manageLink: 'Gestionar mi suscripción →',
-    included: 'Todo incluido en ambos planes',
+    included: 'Lo que incluye su participación',
     promoCodeLabel: 'Código de un colega (opcional)',
     promoCodePlaceholder: 'ej. MARIE01',
     promoCodeHint: 'No cambia su precio — reduce la suscripción de quien se lo compartió.',
@@ -136,10 +121,9 @@ const COPY = {
 
 interface PricingViewProps {
   currentPlan: 'free' | 'pro'
-  currentInterval: 'month' | 'year' | null
 }
 
-export default function PricingView({ currentPlan, currentInterval }: PricingViewProps) {
+export default function PricingView({ currentPlan }: PricingViewProps) {
   const { locale } = useAppLocale()
   const lang = locale === 'fr' || locale === 'en' || locale === 'es' ? locale : 'fr'
   const c = COPY[lang]
@@ -147,8 +131,7 @@ export default function PricingView({ currentPlan, currentInterval }: PricingVie
   const { startCheckout, openPortal, pendingAction, error } = useBilling()
   const [promoCode, setPromoCode] = useState('')
 
-  const isMonthly = currentPlan === 'pro' && currentInterval === 'month'
-  const isAnnual = currentPlan === 'pro' && currentInterval === 'year'
+  const isCurrent = currentPlan === 'pro'
 
   const promoCodeError =
     error === 'INVALID_PROMO_CODE'
@@ -195,17 +178,16 @@ export default function PricingView({ currentPlan, currentInterval }: PricingVie
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        {/* Monthly */}
+      <div className="mx-auto grid max-w-xl gap-4">
         <div
           className={`flex flex-col rounded-2xl border p-6 space-y-5 ${
-            isMonthly ? 'border-primary ring-2 ring-primary/20' : 'border-border'
+            isCurrent ? 'border-primary ring-2 ring-primary/20' : 'border-primary/50 bg-primary/5'
           }`}
         >
           <div>
             <div className="flex items-center justify-between">
               <p className="font-bold text-lg">{c.monthly.name}</p>
-              {isMonthly && (
+              {isCurrent && (
                 <Badge style={{ backgroundColor: BRAND, color: 'white' }} className="text-[10px]">
                   {c.currentPlan}
                 </Badge>
@@ -218,7 +200,7 @@ export default function PricingView({ currentPlan, currentInterval }: PricingVie
             <span className="text-sm text-muted-foreground mb-1">{c.monthly.period}</span>
           </div>
           <Button
-            onClick={() => startCheckout('month', promoCode)}
+            onClick={() => startCheckout(promoCode)}
             disabled={pendingAction !== null || currentPlan === 'pro'}
             className="w-full font-bold text-white h-10"
             style={{ backgroundColor: BRAND }}
@@ -227,42 +209,6 @@ export default function PricingView({ currentPlan, currentInterval }: PricingVie
           </Button>
         </div>
 
-        {/* Annual */}
-        <div
-          className={`relative flex flex-col rounded-2xl border p-6 space-y-5 ${
-            isAnnual ? 'border-primary ring-2 ring-primary/20' : 'border-primary/50 bg-primary/5'
-          }`}
-        >
-          <div className="absolute -top-3 right-4">
-            <Badge className="text-[11px] px-2.5 py-0.5 font-semibold text-white" style={{ backgroundColor: '#f59e0b' }}>
-              <Zap size={11} className="mr-1 inline" />
-              {c.annual.badge}
-            </Badge>
-          </div>
-          <div>
-            <div className="flex items-center justify-between">
-              <p className="font-bold text-lg">{c.annual.name}</p>
-              {isAnnual && (
-                <Badge style={{ backgroundColor: BRAND, color: 'white' }} className="text-[10px]">
-                  {c.currentPlan}
-                </Badge>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">{c.annual.audience}</p>
-          </div>
-          <div className="flex items-end gap-1">
-            <span className="text-4xl font-extrabold">{c.annual.price}</span>
-            <span className="text-sm text-muted-foreground mb-1">{c.annual.period}</span>
-          </div>
-          <Button
-            onClick={() => startCheckout('year', promoCode)}
-            disabled={pendingAction !== null || currentPlan === 'pro'}
-            className="w-full font-bold text-white h-10"
-            style={{ backgroundColor: BRAND }}
-          >
-            {c.annual.cta}
-          </Button>
-        </div>
       </div>
 
       {/* Features */}

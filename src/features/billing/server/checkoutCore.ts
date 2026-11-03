@@ -3,10 +3,9 @@ import type Stripe from 'stripe'
 export interface BuildCheckoutSessionParamsInput {
   userId: string
   email: string
-  interval: 'month' | 'year'
   existingCustomerId: string | null
   appUrl: string
-  priceIds: { month: string; year: string }
+  priceId: string
   // user_id de l'ambassadeur dont le code a été indiqué par l'enseignant qui
   // s'abonne ici (le filleul) — déjà validé (existence, pas son propre code)
   // avant d'arriver ici. Ne modifie jamais le prix de CETTE session : le
@@ -23,16 +22,14 @@ export interface BuildCheckoutSessionParamsInput {
 export function buildCheckoutSessionParams({
   userId,
   email,
-  interval,
   existingCustomerId,
   appUrl,
-  priceIds,
+  priceId,
   ambassadorUserId,
   discountCouponId,
 }: BuildCheckoutSessionParamsInput): Stripe.Checkout.SessionCreateParams {
-  const priceId = interval === 'month' ? priceIds.month : priceIds.year
   if (!priceId) {
-    throw new Error(`STRIPE_PRICE_ID_MISSING_FOR_INTERVAL_${interval}`)
+    throw new Error('STRIPE_PRICE_ID_MONTHLY_MISSING')
   }
 
   const params: Stripe.Checkout.SessionCreateParams = {
@@ -44,6 +41,7 @@ export function buildCheckoutSessionParams({
     subscription_data: {
       metadata: {
         supabase_user_id: userId,
+        membership_type: 'participation',
         ...(ambassadorUserId ? { ambassador_user_id: ambassadorUserId } : {}),
       },
     },

@@ -2,7 +2,7 @@ import type { ContactInput, ContactReason } from '../schemas/contactSchema'
 
 const REASON_LABELS: Record<ContactReason, string> = {
   demo: 'Demande de démonstration',
-  teacher_subscription: 'Souscription enseignant',
+  teacher_subscription: 'Participation EducAssist',
   school: 'Offre établissement',
   district: 'Offre multi-établissements',
   support: 'Demande d’aide',

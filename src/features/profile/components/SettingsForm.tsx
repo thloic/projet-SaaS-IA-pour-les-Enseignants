@@ -408,7 +408,10 @@ export default function SettingsForm({
         </Button>
       </form>
 
-      <AICredentialSettings initialStatus={aiCredentialStatus} />
+      <AICredentialSettings
+        initialStatus={aiCredentialStatus}
+        requiresPersonalKey={subscription.plan === 'pro'}
+      />
 
       {/* Section 3 — Plan & Billing */}
       <SubscriptionSection

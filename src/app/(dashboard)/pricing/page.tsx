@@ -11,7 +11,6 @@ export default async function PricingPage() {
   return (
     <PricingView
       currentPlan={subscription.plan}
-      currentInterval={subscription.interval}
     />
   )
 }

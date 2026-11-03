@@ -28,7 +28,7 @@ export default function SubscriptionSection({
   const { t, locale } = useAppLocale()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { startCheckout, openPortal, pendingAction, error } = useBilling()
+  const { openPortal, pendingAction, error } = useBilling()
   const checkoutStatus = searchParams.get('checkout')
   const [activating, setActivating] = useState(checkoutStatus === 'success')
 

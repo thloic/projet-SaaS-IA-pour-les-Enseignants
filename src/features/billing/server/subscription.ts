@@ -14,6 +14,7 @@ interface SubscriptionRow {
   stripe_customer_id: string
   stripe_subscription_id: string | null
   status: SubscriptionRecord['status']
+  stripe_price_id: string | null
   price_interval: SubscriptionRecord['priceInterval']
   cancel_at_period_end: boolean
   current_period_end: string | null
@@ -25,7 +26,7 @@ const fetchSubscription = cache(async (userId: string): Promise<SubscriptionReco
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('subscriptions')
-    .select('stripe_customer_id, stripe_subscription_id, status, price_interval, cancel_at_period_end, current_period_end')
+    .select('stripe_customer_id, stripe_subscription_id, status, stripe_price_id, price_interval, cancel_at_period_end, current_period_end')
     .eq('user_id', userId)
     .maybeSingle()
 
@@ -41,6 +42,7 @@ const fetchSubscription = cache(async (userId: string): Promise<SubscriptionReco
     stripeCustomerId: row.stripe_customer_id,
     stripeSubscriptionId: row.stripe_subscription_id,
     status: row.status,
+    stripePriceId: row.stripe_price_id,
     priceInterval: row.price_interval,
     cancelAtPeriodEnd: row.cancel_at_period_end,
     currentPeriodEnd: row.current_period_end,
@@ -51,12 +53,19 @@ function createRepository(): SubscriptionRepository {
   return { getSubscription: fetchSubscription }
 }
 
+// Seul le prix de participation configuré sur Stripe donne accès — un ancien
+// prix ou un prix inconnu n'accorde jamais l'accès, même avec un statut actif.
+function allowedParticipationPriceIds(): string[] {
+  const monthly = process.env.STRIPE_PRICE_ID_MONTHLY
+  return monthly ? [monthly] : []
+}
+
 export async function hasActiveProAccess(userId: string): Promise<boolean> {
-  return hasActiveProAccessCore(userId, createRepository())
+  return hasActiveProAccessCore(userId, createRepository(), allowedParticipationPriceIds())
 }
 
 export async function getSubscriptionSummary(userId: string): Promise<SubscriptionSummary> {
-  return getSubscriptionSummaryCore(userId, createRepository())
+  return getSubscriptionSummaryCore(userId, createRepository(), allowedParticipationPriceIds())
 }
 
 // Utilisé par le checkout pour réutiliser un `stripe_customer_id` existant

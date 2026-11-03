@@ -7,7 +7,10 @@ import {
   getActiveAICredential,
   touchAICredential,
 } from '@/features/ai-credentials/server/aiCredentialRepository'
+import { hasActiveProAccess } from '@/features/billing/server/subscription'
 import { modelForTask, type AITask } from './aiTaskPolicies'
+import { shouldRequirePersonalKey } from './aiQuotaPolicy'
+import { PersonalAICredentialRequiredError } from './aiAccessError'
 
 export type AICredentialSource = 'included' | 'personal'
 
@@ -37,6 +40,14 @@ export async function resolveAnthropicProviderForUser(userId: string): Promise<{
       console.error('[ai-provider] clé personnelle illisible', error instanceof Error ? error.message : 'unknown')
       throw new PersonalAICredentialError()
     }
+  }
+
+
+  // La participation payante finance la plateforme, pas les appels au modèle.
+  // Un membre actif doit donc utiliser sa propre clé, sans repli silencieux sur
+  // la clé EDUASSIST. Le plan gratuit conserve ses générations d'essai incluses.
+  if (shouldRequirePersonalKey(await hasActiveProAccess(userId), false)) {
+    throw new PersonalAICredentialRequiredError()
   }
 
   const platformKey = process.env.ANTHROPIC_API_KEY

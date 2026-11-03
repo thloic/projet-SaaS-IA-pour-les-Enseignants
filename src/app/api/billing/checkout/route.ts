@@ -1,5 +1,5 @@
 import { getCurrentUser } from '@/features/profile/server/profile'
-import { getStripeCustomerId } from '@/features/billing/server/subscription'
+import { getStripeCustomerId, hasActiveProAccess } from '@/features/billing/server/subscription'
 import {
   findAmbassadorUserIdByCode,
   getAmbassadorCouponId,
@@ -18,6 +18,10 @@ export async function POST(req: Request) {
   const parsed = checkoutInputSchema.safeParse(body)
   if (!parsed.success) {
     return Response.json({ error: 'INVALID_INPUT' }, { status: 400 })
+  }
+
+  if (await hasActiveProAccess(user.id)) {
+    return Response.json({ error: 'ALREADY_SUBSCRIBED' }, { status: 409 })
   }
 
   let ambassadorUserId: string | null = null
@@ -47,13 +51,9 @@ export async function POST(req: Request) {
     const params = buildCheckoutSessionParams({
       userId: user.id,
       email: user.email ?? '',
-      interval: parsed.data.interval,
       existingCustomerId,
       appUrl,
-      priceIds: {
-        month: process.env.STRIPE_PRICE_ID_MONTHLY!,
-        year: process.env.STRIPE_PRICE_ID_ANNUAL!,
-      },
+      priceId: process.env.STRIPE_PRICE_ID_MONTHLY!,
       ambassadorUserId,
       discountCouponId,
     })

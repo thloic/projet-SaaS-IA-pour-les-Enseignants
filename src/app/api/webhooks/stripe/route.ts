@@ -21,7 +21,10 @@ function toStripeSubscriptionLike(subscription: Stripe.Subscription): StripeSubs
     items: {
       data: subscription.items.data.map((item) => ({
         current_period_end: item.current_period_end,
-        price: { recurring: item.price.recurring ? { interval: item.price.recurring.interval } : null },
+        price: {
+          id: item.price.id,
+          recurring: item.price.recurring ? { interval: item.price.recurring.interval } : null,
+        },
       })),
     },
   }
@@ -62,6 +65,7 @@ function createWebhookRepository(admin: ReturnType<typeof createAdminClient>): W
             user_id: upsert.userId,
             stripe_customer_id: upsert.stripeCustomerId,
             stripe_subscription_id: upsert.stripeSubscriptionId,
+            stripe_price_id: upsert.stripePriceId,
             status: upsert.status,
             price_interval: upsert.priceInterval,
             cancel_at_period_end: upsert.cancelAtPeriodEnd,

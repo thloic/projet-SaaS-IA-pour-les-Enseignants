@@ -41,7 +41,7 @@ const copy = {
     },
     reasons: {
       demo: 'Request a demo',
-      teacher_subscription: 'Individual subscription',
+      teacher_subscription: 'EducAssist participation',
       school: 'School plan',
       district: 'District plan',
       support: 'Support',
@@ -75,7 +75,7 @@ const copy = {
     },
     reasons: {
       demo: 'Demander une démonstration',
-      teacher_subscription: 'Abonnement individuel',
+      teacher_subscription: 'Participation EducAssist',
       school: 'Offre établissement',
       district: 'Offre multi-établissements',
       support: 'Assistance',
@@ -109,7 +109,7 @@ const copy = {
     },
     reasons: {
       demo: 'Solicitar una demostración',
-      teacher_subscription: 'Suscripción individual',
+      teacher_subscription: 'Participación EducAssist',
       school: 'Plan para centros',
       district: 'Plan multi-centros',
       support: 'Ayuda',

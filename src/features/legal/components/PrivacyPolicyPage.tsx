@@ -47,6 +47,7 @@ const COPY = {
         heading: '4. How artificial intelligence is used',
         paragraphs: [
           'EducAssist uses a third-party AI model (currently Anthropic\'s Claude) to generate lesson content, adaptations, and document drafts. When you ask the assistant a question or request a document, the relevant context — your teaching profile and the specific student or class information needed to answer accurately — is sent to that AI provider to produce a response.',
+          'Teachers on the paid participation connect their own API key with that provider. Each request still transits to the provider to generate a response — connecting a personal key does not mean the AI model runs locally on your device or that EducAssist keeps a local copy of the data sent for that request.',
           'Your data is never used to train the underlying AI models. Every AI-generated output is a draft: it is always presented to you for review before you use, send, or publish it. EducAssist does not make automated decisions about a student without your review and validation.',
         ],
       },
@@ -159,6 +160,7 @@ const COPY = {
         heading: '4. Comment l’intelligence artificielle est utilisée',
         paragraphs: [
           'EducAssist utilise un modèle d’intelligence artificielle tiers (actuellement Claude, d’Anthropic) pour générer du contenu de cours, des adaptations et des ébauches de documents. Quand vous posez une question à l’assistant ou demandez un document, le contexte nécessaire — votre profil enseignant et les renseignements précis sur l’élève ou la classe requis pour répondre correctement — est transmis à ce fournisseur d’IA pour produire une réponse.',
+          'Les enseignants en participation payante connectent leur propre clé API auprès de ce fournisseur. Chaque requête transite tout de même vers le fournisseur pour produire une réponse — connecter une clé personnelle ne signifie pas que le modèle d’IA s’exécute localement sur votre appareil, ni qu’EducAssist conserve une copie locale des données envoyées pour cette requête.',
           'Vos données ne servent jamais à entraîner les modèles d’IA sous-jacents. Toute sortie générée par l’IA est une ébauche : elle vous est toujours présentée pour relecture avant que vous l’utilisiez, l’envoyiez ou la publiiez. EducAssist ne prend aucune décision automatisée concernant un élève sans votre relecture et votre validation.',
         ],
       },
@@ -271,6 +273,7 @@ const COPY = {
         heading: '4. Cómo se utiliza la inteligencia artificial',
         paragraphs: [
           'EducAssist utiliza un modelo de inteligencia artificial de terceros (actualmente Claude, de Anthropic) para generar contenido de clases, adaptaciones y borradores de documentos. Cuando hace una pregunta al asistente o solicita un documento, el contexto necesario —su perfil docente y la información específica del alumno o del grupo requerida para responder correctamente— se envía a ese proveedor de IA para producir una respuesta.',
+          'Los docentes con participación de pago conectan su propia clave API con ese proveedor. Cada solicitud sigue transitando hacia el proveedor para producir una respuesta: conectar una clave personal no significa que el modelo de IA se ejecute localmente en su dispositivo, ni que EducAssist conserve una copia local de los datos enviados en esa solicitud.',
           'Sus datos nunca se utilizan para entrenar los modelos de IA subyacentes. Todo resultado generado por la IA es un borrador: siempre se le presenta para su revisión antes de que lo use, lo envíe o lo publique. EducAssist no toma ninguna decisión automatizada sobre un alumno sin su revisión y validación.',
         ],
       },

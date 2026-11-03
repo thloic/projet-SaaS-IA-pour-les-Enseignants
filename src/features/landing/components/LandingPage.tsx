@@ -515,7 +515,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 gap-8 max-w-2xl mx-auto">
             {t.pricing.tiers.map((tier) => (
               <div
                 key={tier.name}

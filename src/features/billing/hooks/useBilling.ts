@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-type BillingAction = 'checkout-month' | 'checkout-year' | 'portal' | null
+type BillingAction = 'checkout' | 'portal' | null
 
 export function useBilling() {
   const [pendingAction, setPendingAction] = useState<BillingAction>(null)
@@ -12,15 +12,15 @@ export function useBilling() {
     window.location.href = url
   }
 
-  async function startCheckout(interval: 'month' | 'year', promoCode?: string) {
+  async function startCheckout(promoCode?: string) {
     setError(null)
-    setPendingAction(interval === 'month' ? 'checkout-month' : 'checkout-year')
+    setPendingAction('checkout')
     try {
       const trimmedCode = promoCode?.trim()
       const response = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ interval, ...(trimmedCode ? { promoCode: trimmedCode } : {}) }),
+        body: JSON.stringify({ ...(trimmedCode ? { promoCode: trimmedCode } : {}) }),
       })
       const data = await response.json()
       if (!response.ok || !data.url) {

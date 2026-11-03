@@ -10,7 +10,7 @@ export interface StripeSubscriptionLike {
   cancel_at_period_end: boolean
   metadata: Record<string, string>
   items: {
-    data: Array<{ current_period_end: number; price: { recurring: { interval: string } | null } }>
+    data: Array<{ current_period_end: number; price: { id?: string; recurring: { interval: string } | null } }>
   }
 }
 
@@ -30,6 +30,7 @@ export interface SubscriptionUpsert {
   stripeCustomerId: string
   stripeSubscriptionId: string
   status: string
+  stripePriceId: string | null
   priceInterval: string | null
   cancelAtPeriodEnd: boolean
   currentPeriodEnd: string | null
@@ -82,6 +83,7 @@ function toSubscriptionUpsert(
     stripeCustomerId: subscription.customer,
     stripeSubscriptionId: subscription.id,
     status: subscription.status,
+    stripePriceId: item?.price.id ?? null,
     priceInterval: item?.price.recurring?.interval ?? null,
     cancelAtPeriodEnd: subscription.cancel_at_period_end,
     currentPeriodEnd: item ? new Date(item.current_period_end * 1000).toISOString() : null,

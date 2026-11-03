@@ -8,7 +8,7 @@ import { decryptCredential, encryptCredential } from '../../src/features/ai-cred
 import { validateAnthropicApiKey } from '../../src/features/ai-credentials/server/anthropicKeyValidation.ts'
 import { isAICredentialStorageMissing } from '../../src/features/ai-credentials/server/credentialStorageError.ts'
 import { estimateAnthropicCostMicroUsd } from '../../src/features/ai/server/aiCostEstimator.ts'
-import { shouldBypassIncludedAIQuota } from '../../src/features/ai/server/aiQuotaPolicy.ts'
+import { shouldBypassIncludedAIQuota, shouldRequirePersonalKey } from '../../src/features/ai/server/aiQuotaPolicy.ts'
 import { modelForTask } from '../../src/features/ai/server/aiTaskPolicies.ts'
 
 const MASTER_KEY = Buffer.alloc(32, 7).toString('base64')
@@ -60,6 +60,12 @@ test('la clé personnelle contourne seulement les quotas de génération Claude'
   assert.equal(shouldBypassIncludedAIQuota('agent_audio', true), false)
   assert.equal(shouldBypassIncludedAIQuota('agent_email_send', true), false)
   assert.equal(shouldBypassIncludedAIQuota('agent', false), false)
+})
+
+test('une participation active exige une clé personnelle sans supprimer le plan gratuit', () => {
+  assert.equal(shouldRequirePersonalKey(true, false), true)
+  assert.equal(shouldRequirePersonalKey(true, true), false)
+  assert.equal(shouldRequirePersonalKey(false, false), false)
 })
 
 test('le calcul de coût distingue Sonnet et Haiku sans enregistrer le contenu', () => {
