@@ -1,4 +1,5 @@
 import type { PAT } from '@/features/agent/schemas/patSchema'
+import type { ParentEmailRegister } from '@/features/agent/schemas/parentEmailSchema'
 import type { BulletinTone } from '@/features/bulletin/schemas/bulletinSchema'
 import type { ContentLanguage } from '@/features/i18n/locale'
 
@@ -26,11 +27,45 @@ export interface StoredBulletinDocument {
   createdAt: string
 }
 
-export type StoredGeneratedDocument = StoredPATDocument | StoredBulletinDocument
+export interface StoredParentEmailDocument {
+  documentType: 'parent-email'
+  id: string
+  studentId: string
+  studentName: string
+  classId: string | null
+  register: ParentEmailRegister
+  situation?: string
+  subject: string
+  body: string
+  sentAt: string | null
+  sentTo: string | null
+  createdAt: string
+}
+
+export interface StoredMeetingSummaryDocument {
+  documentType: 'meeting-summary'
+  id: string
+  studentId: string
+  studentName: string
+  classId: string | null
+  notes: string
+  subjectsDiscussed: string[]
+  agreementsReached: string[]
+  nextSteps: string[]
+  createdAt: string
+}
+
+export type StoredGeneratedDocument =
+  | StoredPATDocument
+  | StoredBulletinDocument
+  | StoredParentEmailDocument
+  | StoredMeetingSummaryDocument
 
 export type GeneratedDocumentHistoryItem =
   | (StoredPATDocument & { studentName: string })
   | StoredBulletinDocument
+  | StoredParentEmailDocument
+  | StoredMeetingSummaryDocument
 
 export type NewGeneratedDocument =
   | {

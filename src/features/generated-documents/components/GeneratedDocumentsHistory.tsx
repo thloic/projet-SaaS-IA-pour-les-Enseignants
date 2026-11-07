@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Check, Copy, Download, FileText, Loader2, MessageSquare, Search } from 'lucide-react'
+import { ArrowLeft, Check, Copy, Download, FileText, Loader2, Mail, MessageSquare, Search, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/components/shared/ToastProvider'
@@ -17,19 +17,25 @@ interface GeneratedDocumentsHistoryProps {
 
 const COPY_TEXT = {
   fr: {
-    back: 'Retour à l’historique', title: 'Documents générés', subtitle: 'PAT et commentaires de bulletin conservés automatiquement.',
-    allClasses: 'Toutes les classes', studentSearch: 'Rechercher un élève dans cette classe…', allTypes: 'Tous les types', pat: 'PAT', bulletin: 'Bulletins', empty: 'Aucun document ne correspond à ces filtres.', noClass: 'Sans classe',
+    back: 'Retour à l’historique', title: 'Documents générés', subtitle: 'PAT, bulletins, courriels parents et comptes-rendus conservés automatiquement.',
+    allClasses: 'Toutes les classes', studentSearch: 'Rechercher un élève dans cette classe…', allTypes: 'Tous les types', pat: 'PAT', bulletin: 'Bulletins', parentEmail: 'Courriels parents', meetingSummary: 'Comptes-rendus', empty: 'Aucun document ne correspond à ces filtres.', noClass: 'Sans classe',
     failed: 'Impossible de charger les documents pour le moment.', export: 'Exporter DOCX', copy: 'Copier', copied: 'Copié !', exportFailed: 'L’export du PAT a échoué.', exported: 'PAT exporté.',
+    sentOn: 'Envoyé le', draft: 'Brouillon', subjectsDiscussed: 'Sujets abordés', agreementsReached: 'Ententes', nextSteps: 'Prochaines étapes',
+    registers: { comportement: 'Comportement', echec: 'Échec', plagiat: 'Plagiat', autre: 'Autre' },
   },
   en: {
-    back: 'Back to history', title: 'Generated documents', subtitle: 'Support plans and report card comments saved automatically.',
-    allClasses: 'All classes', studentSearch: 'Search for a student in this class…', allTypes: 'All types', pat: 'Support plans', bulletin: 'Reports', empty: 'No document matches these filters.', noClass: 'No class',
+    back: 'Back to history', title: 'Generated documents', subtitle: 'Support plans, reports, parent emails and meeting summaries saved automatically.',
+    allClasses: 'All classes', studentSearch: 'Search for a student in this class…', allTypes: 'All types', pat: 'Support plans', bulletin: 'Reports', parentEmail: 'Parent emails', meetingSummary: 'Meeting summaries', empty: 'No document matches these filters.', noClass: 'No class',
     failed: 'Documents cannot be loaded right now.', export: 'Export DOCX', copy: 'Copy', copied: 'Copied!', exportFailed: 'The support plan export failed.', exported: 'Support plan exported.',
+    sentOn: 'Sent on', draft: 'Draft', subjectsDiscussed: 'Topics discussed', agreementsReached: 'Agreements', nextSteps: 'Next steps',
+    registers: { comportement: 'Behavior', echec: 'Failing grade', plagiat: 'Plagiarism', autre: 'Other' },
   },
   es: {
-    back: 'Volver al historial', title: 'Documentos generados', subtitle: 'PAT y comentarios de boletín guardados automáticamente.',
-    allClasses: 'Todas las clases', studentSearch: 'Buscar un alumno en esta clase…', allTypes: 'Todos los tipos', pat: 'PAT', bulletin: 'Boletines', empty: 'Ningún documento coincide con estos filtros.', noClass: 'Sin clase',
+    back: 'Volver al historial', title: 'Documentos generados', subtitle: 'PAT, boletines, correos a padres y resúmenes de reunión guardados automáticamente.',
+    allClasses: 'Todas las clases', studentSearch: 'Buscar un alumno en esta clase…', allTypes: 'Todos los tipos', pat: 'PAT', bulletin: 'Boletines', parentEmail: 'Correos a padres', meetingSummary: 'Resúmenes de reunión', empty: 'Ningún documento coincide con estos filtros.', noClass: 'Sin clase',
     failed: 'No se pueden cargar los documentos ahora.', export: 'Exportar DOCX', copy: 'Copiar', copied: '¡Copiado!', exportFailed: 'La exportación del PAT ha fallado.', exported: 'PAT exportado.',
+    sentOn: 'Enviado el', draft: 'Borrador', subjectsDiscussed: 'Temas tratados', agreementsReached: 'Acuerdos', nextSteps: 'Próximos pasos',
+    registers: { comportement: 'Comportamiento', echec: 'Fracaso', plagiat: 'Plagio', autre: 'Otro' },
   },
 } as const
 
@@ -39,7 +45,7 @@ export default function GeneratedDocumentsHistory({ documents, classes, loadFail
   const copy = COPY_TEXT[locale]
   const [classId, setClassId] = useState('all')
   const [studentQuery, setStudentQuery] = useState('')
-  const [type, setType] = useState<'all' | 'pat' | 'bulletin'>('all')
+  const [type, setType] = useState<'all' | 'pat' | 'bulletin' | 'parent-email' | 'meeting-summary'>('all')
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [exportingId, setExportingId] = useState<string | null>(null)
 
@@ -83,10 +89,20 @@ export default function GeneratedDocumentsHistory({ documents, classes, loadFail
     }
   }
 
-  async function copyBulletin(document: Extract<GeneratedDocumentHistoryItem, { documentType: 'bulletin' }>) {
-    await navigator.clipboard.writeText(document.comment)
-    setCopiedId(document.id)
+  async function copyText(id: string, text: string) {
+    await navigator.clipboard.writeText(text)
+    setCopiedId(id)
     setTimeout(() => setCopiedId(null), 1800)
+  }
+
+  function meetingSummaryText(document: Extract<GeneratedDocumentHistoryItem, { documentType: 'meeting-summary' }>) {
+    const sections = [
+      document.notes,
+      document.subjectsDiscussed.length ? `${copy.subjectsDiscussed}:\n${document.subjectsDiscussed.map((item) => `- ${item}`).join('\n')}` : null,
+      document.agreementsReached.length ? `${copy.agreementsReached}:\n${document.agreementsReached.map((item) => `- ${item}`).join('\n')}` : null,
+      document.nextSteps.length ? `${copy.nextSteps}:\n${document.nextSteps.map((item) => `- ${item}`).join('\n')}` : null,
+    ]
+    return sections.filter(Boolean).join('\n\n')
   }
 
   return (
@@ -121,7 +137,7 @@ export default function GeneratedDocumentsHistory({ documents, classes, loadFail
           </datalist>
         </div>
         <select value={type} onChange={(event) => setType(event.target.value as typeof type)} className="h-10 rounded-md border border-input bg-background px-3 text-sm" aria-label={copy.allTypes}>
-          <option value="all">{copy.allTypes}</option><option value="pat">{copy.pat}</option><option value="bulletin">{copy.bulletin}</option>
+          <option value="all">{copy.allTypes}</option><option value="pat">{copy.pat}</option><option value="bulletin">{copy.bulletin}</option><option value="parent-email">{copy.parentEmail}</option><option value="meeting-summary">{copy.meetingSummary}</option>
         </select>
       </div>
 
@@ -136,12 +152,20 @@ export default function GeneratedDocumentsHistory({ documents, classes, loadFail
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex min-w-0 gap-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    {document.documentType === 'pat' ? <FileText /> : <MessageSquare />}
+                    {document.documentType === 'pat' ? <FileText /> : document.documentType === 'bulletin' ? <MessageSquare /> : document.documentType === 'parent-email' ? <Mail /> : <Users />}
                   </span>
                   <div className="min-w-0">
                     <h2 className="font-bold">{document.studentName}</h2>
                     <p className="text-xs text-muted-foreground">
-                      {classNames.get(document.classId ?? '') ?? copy.noClass} · {document.documentType === 'pat' ? copy.pat : `${copy.bulletin} · ${document.subject} · ${document.grade}`} · {new Date(document.createdAt).toLocaleString(locale)}
+                      {classNames.get(document.classId ?? '') ?? copy.noClass} ·{' '}
+                      {document.documentType === 'pat'
+                        ? copy.pat
+                        : document.documentType === 'bulletin'
+                          ? `${copy.bulletin} · ${document.subject} · ${document.grade}`
+                          : document.documentType === 'parent-email'
+                            ? `${copy.parentEmail} · ${copy.registers[document.register]}`
+                            : copy.meetingSummary}{' '}
+                      · {new Date(document.createdAt).toLocaleString(locale)}
                     </p>
                   </div>
                 </div>
@@ -149,13 +173,44 @@ export default function GeneratedDocumentsHistory({ documents, classes, loadFail
                   <Button type="button" size="sm" onClick={() => void exportPAT(document)} disabled={exportingId === document.id}>
                     {exportingId === document.id ? <Loader2 className="animate-spin" /> : <Download />} {copy.export}
                   </Button>
+                ) : document.documentType === 'bulletin' ? (
+                  <Button type="button" size="sm" variant="outline" onClick={() => void copyText(document.id, document.comment)}>
+                    {copiedId === document.id ? <Check /> : <Copy />} {copiedId === document.id ? copy.copied : copy.copy}
+                  </Button>
+                ) : document.documentType === 'parent-email' ? (
+                  <Button type="button" size="sm" variant="outline" onClick={() => void copyText(document.id, `${document.subject}\n\n${document.body}`)}>
+                    {copiedId === document.id ? <Check /> : <Copy />} {copiedId === document.id ? copy.copied : copy.copy}
+                  </Button>
                 ) : (
-                  <Button type="button" size="sm" variant="outline" onClick={() => void copyBulletin(document)}>
+                  <Button type="button" size="sm" variant="outline" onClick={() => void copyText(document.id, meetingSummaryText(document))}>
                     {copiedId === document.id ? <Check /> : <Copy />} {copiedId === document.id ? copy.copied : copy.copy}
                   </Button>
                 )}
               </div>
               {document.documentType === 'bulletin' && <p className="mt-4 text-sm leading-relaxed">{document.comment}</p>}
+              {document.documentType === 'parent-email' && (
+                <div className="mt-4 space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    {document.sentAt ? `${copy.sentOn} ${new Date(document.sentAt).toLocaleString(locale)}${document.sentTo ? ` · ${document.sentTo}` : ''}` : copy.draft}
+                  </p>
+                  <p className="text-sm font-semibold">{document.subject}</p>
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{document.body}</p>
+                </div>
+              )}
+              {document.documentType === 'meeting-summary' && (
+                <div className="mt-4 space-y-2 text-sm leading-relaxed">
+                  <p className="whitespace-pre-wrap">{document.notes}</p>
+                  {document.subjectsDiscussed.length > 0 && (
+                    <p><span className="font-semibold">{copy.subjectsDiscussed} :</span> {document.subjectsDiscussed.join(', ')}</p>
+                  )}
+                  {document.agreementsReached.length > 0 && (
+                    <p><span className="font-semibold">{copy.agreementsReached} :</span> {document.agreementsReached.join(', ')}</p>
+                  )}
+                  {document.nextSteps.length > 0 && (
+                    <p><span className="font-semibold">{copy.nextSteps} :</span> {document.nextSteps.join(', ')}</p>
+                  )}
+                </div>
+              )}
             </article>
           ))}
         </div>

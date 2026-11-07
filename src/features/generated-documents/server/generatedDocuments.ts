@@ -9,6 +9,12 @@ import type {
   GeneratedDocumentHistoryItem,
   StoredGeneratedDocument,
 } from '@/features/generated-documents/types/generatedDocument.types'
+import {
+  toMeetingSummaryDocument,
+  toParentEmailDocument,
+  type MeetingSummaryRow,
+  type ParentEmailDraftRow,
+} from '@/features/generated-documents/server/generatedDocumentRows'
 
 interface PATRow {
   id: string
@@ -133,7 +139,7 @@ export async function listMyGeneratedDocuments(): Promise<GeneratedDocumentHisto
   const user = await getCurrentUser()
   if (!user) return []
   const supabase = await createClient()
-  const [patResult, bulletinResult] = await Promise.all([
+  const [patResult, bulletinResult, parentEmailResult, meetingSummaryResult] = await Promise.all([
     supabase
       .from('pat_generations')
       .select('id, student_id, class_id, language, pat, created_at, student_profiles!inner(first_name, last_name)')
@@ -147,9 +153,26 @@ export async function listMyGeneratedDocuments(): Promise<GeneratedDocumentHisto
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(200),
+    supabase
+      .from('parent_email_drafts')
+      .select('id, student_id, class_id, register, situation, subject, body, sent_at, sent_to, created_at, student_profiles!inner(first_name, last_name)')
+      .eq('user_id', user.id)
+      .eq('student_profiles.user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(200),
+    supabase
+      .from('parent_meeting_summaries')
+      .select('id, student_id, class_id, notes, subjects_discussed, agreements_reached, next_steps, created_at, student_profiles!inner(first_name, last_name)')
+      .eq('user_id', user.id)
+      .eq('student_profiles.user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(200),
   ])
-  if (patResult.error || bulletinResult.error) {
-    console.error('[generated-documents] chargement de l’historique refusé', patResult.error ?? bulletinResult.error)
+  if (patResult.error || bulletinResult.error || parentEmailResult.error || meetingSummaryResult.error) {
+    console.error(
+      '[generated-documents] chargement de l’historique refusé',
+      patResult.error ?? bulletinResult.error ?? parentEmailResult.error ?? meetingSummaryResult.error
+    )
     throw new Error('GENERATED_DOCUMENT_HISTORY_FAILED')
   }
 
@@ -164,6 +187,16 @@ export async function listMyGeneratedDocuments(): Promise<GeneratedDocumentHisto
     const document = toBulletinDocument(row as BulletinRow)
     return document?.documentType === 'bulletin' ? [document] : []
   })
+  const parentEmails = (parentEmailResult.data ?? []).flatMap((row) => {
+    const document = toParentEmailDocument(row as unknown as ParentEmailDraftRow)
+    return document?.documentType === 'parent-email' ? [document] : []
+  })
+  const meetingSummaries = (meetingSummaryResult.data ?? []).flatMap((row) => {
+    const document = toMeetingSummaryDocument(row as unknown as MeetingSummaryRow)
+    return document?.documentType === 'meeting-summary' ? [document] : []
+  })
 
-  return [...pats, ...bulletins].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  return [...pats, ...bulletins, ...parentEmails, ...meetingSummaries].sort((a, b) =>
+    b.createdAt.localeCompare(a.createdAt)
+  )
 }
