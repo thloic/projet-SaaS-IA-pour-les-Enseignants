@@ -17,13 +17,14 @@ Après connexion, l'enseignant atterrit sur l'agent. Ce n'est PAS une 4e boîte 
 
 | L'agent V1 FAIT | L'agent V1 ne fait PAS (reporté) |
 |---|---|
-| Chat contextuel (connaît le profil enseignant : matière, niveau, pays) | Tool calling / connecteurs Google Drive / Sheets en écriture réelle |
-| Génère un document structuré à partir d'infos collées ou saisies | Lit automatiquement le Drive de l'enseignant |
+| Chat contextuel (connaît le profil enseignant : matière, niveau, pays) | Lit automatiquement le Drive de l'enseignant (seulement les fichiers choisis via le sélecteur natif) |
+| Génère un document structuré à partir d'infos collées ou saisies | Envoi de courriel sans relecture explicite de l'enseignant |
 | Actions rapides qui pré-cadrent la conversation | Relances quotidiennes / rapports automatiques planifiés (cron) |
 | Streaming de la réponse (réutilise le pattern `streamText` existant) | Multi-agents / orchestrateur |
 | Export du livrable (PDF/DOCX, réutilise l'existant) | Gestion de l'horaire / calendrier cyclique (4j/5j) |
+| Tool calling natif : recherche Gmail en lecture (`search_gmail_inbox`) | Écriture dans le Drive / Sheets |
 
-> **Décision d'architecte tranchée :** pas de tool calling réel en V1. L'agent *génère*, il n'*agit* pas encore sur des systèmes externes. Les connecteurs viendront quand le périmètre sera confirmé avec le client. Ne pas câbler d'API Google.
+> **Décision d'architecte (mise à jour 2026-11-07) :** le tool calling natif du SDK est en place. Les outils sont branchés dans `src/app/api/agent/chat/route.ts`. Règle non négociable : **le modèle ne déclenche jamais un envoi seul.** Un envoi passe par une carte de relecture puis un bouton « Envoyer » qui appelle un endpoint dédié, hors de la boucle du modèle. Périmètre détaillé dans `docs/PRD-agent-envoi-gmail-drive.md`.
 
 ---
 
