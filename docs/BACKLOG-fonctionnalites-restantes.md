@@ -48,7 +48,6 @@ Aucune pour A/B/C ci-dessus — tout est déjà dans la stack (Vercel AI SDK `to
 
 ## Tier 2 — moyen (nouveau triplet intent/orchestration/schema, patron déjà connu)
 
-- [ ] **Document → questionnaire / guide d'étude** — pas un flux d'agent : même module que les variantes A/B/C d'examen (`src/features/adaptation/`), nouveau mode de sortie non persisté, réutilise l'upload existant.
 - [ ] **Documentation orthopédagogie / psychoéducation** — même patron que le PAT. **Bloqué en partie** : besoin d'un gabarit institutionnel type, apport client comme pour le PAT.
 
 ## Tier 3 — nécessite la brique agentique (architecture §0.B/C)
@@ -70,4 +69,4 @@ Aucune pour A/B/C ci-dessus — tout est déjà dans la stack (Vercel AI SDK `to
 
 ## Prochaine étape recommandée
 
-Prochaine ligne suggérée : **document → questionnaire/guide d'étude** (Tier 2). Le portail historique est livré (retiré du backlog).
+Prochaine ligne suggérée : aucune ligne Tier 2 n'est prête sans apport client (voir la ligne orthopédagogie). Les lignes livrées (portail historique, questionnaire d'étude) sont retirées du backlog.

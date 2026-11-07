@@ -93,6 +93,9 @@ export default function AdaptationLibrary({ adaptations }: AdaptationLibraryProp
           <Button asChild variant="outline" className="min-h-10">
             <Link href="/adaptations/exam-variants"><FileText /> Examen A/B/C</Link>
           </Button>
+          <Button asChild variant="outline" className="min-h-10">
+            <Link href="/adaptations/study-questionnaire"><FileText /> Questionnaire</Link>
+          </Button>
           <Button asChild className="min-h-10">
             <Link href="/adaptations/new"><Plus /> Adapter une leçon</Link>
           </Button>

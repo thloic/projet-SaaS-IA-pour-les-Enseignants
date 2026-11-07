@@ -11,6 +11,7 @@ export type AITask =
   | 'quiz'
   | 'adaptation'
   | 'exam_variant'
+  | 'study_questionnaire'
   | 'correction'
 
 export function modelForTask(task: AITask): string {
