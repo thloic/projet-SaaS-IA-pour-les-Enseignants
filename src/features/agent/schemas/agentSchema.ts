@@ -137,7 +137,7 @@ export const agentStructuredResponseSchema = z.discriminatedUnion('kind', [
   z
     .object({
       kind: z.literal('integration_connect_required'),
-      feature: z.enum(['gmail_read', 'gmail']),
+      feature: z.enum(['gmail_read']),
       message: z.string().min(1),
       connectUrl: z.string().min(1),
       continuationText: z.string().min(1),

@@ -1,6 +1,10 @@
 import { streamText, stepCountIs } from 'ai'
 import { getCurrentUserAnthropicModel } from '@/features/ai/server/aiProviderResolver'
 import { createGmailSearchTool } from '@/features/agent/server/gmailSearchTool'
+import {
+  createPrepareParentEmailSendTool,
+  type PrepareParentEmailSendToolOutput,
+} from '@/features/agent/server/prepareParentEmailSendTool'
 import { buildIntegrationConnectRequiredResponse } from '@/features/agent/server/agentResponses'
 import type { GmailSearchToolOutput } from '@/features/agent/schemas/gmailSearchSchema'
 import { recordCurrentUserAIUsage } from '@/features/ai/server/aiUsageRecorder'
@@ -576,7 +580,10 @@ export async function POST(request: Request) {
     maxRetries: 1,
     timeout: 60000,
     abortSignal: request.signal,
-    tools: { search_gmail_inbox: createGmailSearchTool(user.id) },
+    tools: {
+      search_gmail_inbox: createGmailSearchTool(user.id),
+      prepare_parent_email_send: createPrepareParentEmailSendTool(user.id),
+    },
     stopWhen: stepCountIs(3),
   })
 
@@ -620,6 +627,31 @@ export async function POST(request: Request) {
             )
           )
         }
+        continue
+      }
+      // Relecture avant envoi : l'outil ne fait que retrouver le brouillon.
+      // On affiche la carte existante (bouton « Envoyer » de l'enseignant) au
+      // lieu de répondre en texte. Aucun envoi n'est déclenché ici.
+      if (part.type === 'tool-result' && part.toolName === 'prepare_parent_email_send') {
+        const output = part.output as PrepareParentEmailSendToolOutput
+        if (output.status === 'ready') {
+          await refundOnce()
+          const card = agentStructuredResponseSchema.safeParse({
+            kind: 'parent_email_draft',
+            studentId: output.studentId,
+            draftId: output.draftId,
+            register: output.register,
+            subject: output.subject,
+            body: output.body,
+            familyLanguage: output.familyLanguage,
+          })
+          if (!card.success) {
+            console.error('[agent:prepare-parent-email-send] carte invalide', card.error.issues)
+            return jsonError(copy.parentEmailFailed, 500)
+          }
+          return NextResponse.json(card.data)
+        }
+        // already_sent / not_found / error : le modèle répond en texte.
         continue
       }
       if (part.type === 'tool-error' || part.type === 'error') {

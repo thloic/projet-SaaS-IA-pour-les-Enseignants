@@ -16,11 +16,15 @@ test('le prompt décrit l’outil de recherche Gmail en lecture seule', () => {
   assert.ok(prompt.includes('strictement en lecture'))
 })
 
-test('aucune règle du prompt n’est une chaîne cassée par des guillemets typographiques', () => {
+test('le prompt décrit la relecture avant envoi et interdit l’envoi par le modèle', () => {
   const prompt = buildAgentSystemPrompt(profile as never)
-  // Une ligne de règle commence par « - » ; elle ne doit jamais contenir de
-  // délimiteur typographique résiduel en début ou fin de ligne de code (ici
-  // on vérifie le rendu : aucune ligne de règle ne commence par un guillemet).
+  assert.ok(prompt.includes('prepare_parent_email_send'))
+  assert.ok(prompt.includes('Tu n’envoies jamais un courriel toi-même'))
+  assert.ok(!prompt.includes('send_gmail'))
+})
+
+test('aucune ligne de règle ne commence par un guillemet typographique résiduel', () => {
+  const prompt = buildAgentSystemPrompt(profile as never)
   for (const line of prompt.split('\n')) {
     assert.ok(!line.startsWith('‘') && !line.startsWith('’'), `ligne suspecte : ${line.slice(0, 40)}`)
   }

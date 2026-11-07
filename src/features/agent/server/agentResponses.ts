@@ -94,20 +94,12 @@ export function buildIntegrationConnectRequiredResponse(
   continuationText: string,
   interfaceLanguage?: AppLocale
 ): Extract<AgentStructuredResponse, { kind: 'integration_connect_required' }> {
-  const isGmailSend = feature === 'gmail'
-
   const message =
     interfaceLanguage === 'es'
-      ? isGmailSend
-        ? 'Para enviar un correo desde tu Gmail, primero debes conectarlo.'
-        : 'Para buscar en tu Gmail, primero debes conectarlo.'
+      ? 'Para buscar en tu Gmail, primero debes conectarlo.'
       : interfaceLanguage === 'en'
-        ? isGmailSend
-          ? 'To send an email from your Gmail, connect it first.'
-          : 'To search your Gmail, connect it first.'
-        : isGmailSend
-          ? 'Pour envoyer un courriel depuis votre Gmail, connectez-le d’abord.'
-          : 'Pour chercher dans votre Gmail, connectez-le d’abord.'
+        ? 'To search your Gmail, connect it first.'
+        : 'Pour chercher dans votre Gmail, connectez-le d’abord.'
 
   return {
     kind: 'integration_connect_required',
