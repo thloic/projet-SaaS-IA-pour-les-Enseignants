@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { PATSchema } from './patSchema.ts'
 import { parentEmailRegisterSchema } from './parentEmailSchema.ts'
+import { GOOGLE_INTEGRATION_FEATURES } from '../../integrations/google/schemas/googleIntegrationSchema.ts'
 
 export const agentMessageSchema = z.object({
   role: z.enum(['user', 'assistant']),
@@ -137,7 +138,7 @@ export const agentStructuredResponseSchema = z.discriminatedUnion('kind', [
   z
     .object({
       kind: z.literal('integration_connect_required'),
-      feature: z.enum(['gmail_read']),
+      feature: z.enum(GOOGLE_INTEGRATION_FEATURES),
       message: z.string().min(1),
       connectUrl: z.string().min(1),
       continuationText: z.string().min(1),

@@ -31,7 +31,14 @@ const fetchSubscription = cache(async (userId: string): Promise<SubscriptionReco
     .maybeSingle()
 
   if (error) {
-    console.error("[billing:subscription] lecture de l’abonnement refusée", error)
+    // Les champs de l'erreur PostgREST ne sont pas énumérables : sans les
+    // extraire, le journal affiche `{}` et la cause reste invisible.
+    console.error('[billing:subscription] lecture de l’abonnement refusée', {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    })
     return null
   }
 

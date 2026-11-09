@@ -1,12 +1,9 @@
 import { streamText, stepCountIs } from 'ai'
 import { getCurrentUserAnthropicModel } from '@/features/ai/server/aiProviderResolver'
-import { createGmailSearchTool } from '@/features/agent/server/gmailSearchTool'
 import {
-  createPrepareParentEmailSendTool,
   type PrepareParentEmailSendToolOutput,
 } from '@/features/agent/server/prepareParentEmailSendTool'
 import { buildIntegrationConnectRequiredResponse } from '@/features/agent/server/agentResponses'
-import type { GmailSearchToolOutput } from '@/features/agent/schemas/gmailSearchSchema'
 import { recordCurrentUserAIUsage } from '@/features/ai/server/aiUsageRecorder'
 import { NextResponse } from 'next/server'
 import { assertAIGenerationAccess, checkAndIncrementUsage, decrementUsage } from '@/features/billing/server/usage'
@@ -80,6 +77,10 @@ import {
   MeetingSummaryOrchestrationError,
 } from '@/features/agent/server/meetingSummaryOrchestration'
 import { saveAgentMeetingSummary } from '@/features/agent/server/meetingSummaryRepository'
+import { findMissingConnection } from '@/features/agent/server/integrationGates'
+import { createAgentTools } from '@/features/agent/server/agentTools'
+import { isNeedsConnectionOutput } from '@/features/agent/server/needsConnection'
+import { getGoogleIntegrationStatus } from '@/features/integrations/google/server/googleIntegrationRepository'
 
 const USAGE_FEATURE = 'agent'
 
@@ -539,6 +540,27 @@ export async function POST(request: Request) {
     return jsonError(copy.contextFailed, 500)
   }
 
+  // Garde-fou déterministe : une demande de lecture de la boîte mail sans
+  // Gmail connecté reçoit la carte de connexion tout de suite, sans dépendre
+  // de l'appel d'outil du modèle (qui pouvait répondre en texte seul, sans
+  // bouton). Placé avant le quota : rien n'est débité.
+  if (latestUserMessage) {
+    try {
+      const missing = await findMissingConnection(latestUserMessage.content, () => getGoogleIntegrationStatus(user.id))
+      if (missing) {
+        return NextResponse.json(
+          agentStructuredResponseSchema.parse(
+            buildIntegrationConnectRequiredResponse(missing, latestUserMessage.content, profile.interface_language)
+          )
+        )
+      }
+    } catch (error) {
+      // Statut illisible : la demande suit son cours ; l'outil renverra de toute
+      // façon needs_connection si la connexion manque.
+      console.error('[agent:integration-gate] statut indisponible, la demande continue', error)
+    }
+  }
+
   let usage
   try {
     usage = await checkAndIncrementUsage(user.id, USAGE_FEATURE)
@@ -580,10 +602,7 @@ export async function POST(request: Request) {
     maxRetries: 1,
     timeout: 60000,
     abortSignal: request.signal,
-    tools: {
-      search_gmail_inbox: createGmailSearchTool(user.id),
-      prepare_parent_email_send: createPrepareParentEmailSendTool(user.id),
-    },
+    tools: createAgentTools(user.id),
     stopWhen: stepCountIs(3),
   })
 
@@ -613,21 +632,19 @@ export async function POST(request: Request) {
         firstTextChunk = part.text
         break
       }
-      if (part.type === 'tool-result' && part.toolName === 'search_gmail_inbox') {
-        const output = part.output as GmailSearchToolOutput
-        if (output.status === 'needs_connection') {
-          await refundOnce()
-          return NextResponse.json(
-            agentStructuredResponseSchema.parse(
-              buildIntegrationConnectRequiredResponse(
-                output.feature,
-                latestUserMessage?.content ?? '',
-                profile.interface_language
-              )
+      // Tout outil qui signale une connexion manquante produit la même carte,
+      // quel que soit l'outil (voir agentTools.ts).
+      if (part.type === 'tool-result' && isNeedsConnectionOutput(part.output)) {
+        await refundOnce()
+        return NextResponse.json(
+          agentStructuredResponseSchema.parse(
+            buildIntegrationConnectRequiredResponse(
+              part.output.feature,
+              latestUserMessage?.content ?? '',
+              profile.interface_language
             )
           )
-        }
-        continue
+        )
       }
       // Relecture avant envoi : l'outil ne fait que retrouver le brouillon.
       // On affiche la carte existante (bouton « Envoyer » de l'enseignant) au
@@ -669,11 +686,13 @@ export async function POST(request: Request) {
   }
 
   if (finishedWithoutText) {
+    // Le modèle a terminé sans produire de texte (ex. trois étapes d'outils
+    // sans réponse). Une réponse 200 vide laisse le chat figé sans message :
+    // on signale donc un échec explicite et on rembourse le quota.
+    console.error('[agent] fin de génération sans texte', { finishReason: await result.finishReason })
     await recordCurrentUserAIUsage('agent_chat', 'agent', await result.usage)
     await refundOnce()
-    return new Response('', {
-      headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-cache, no-transform' },
-    })
+    return jsonError(copy.chatFailed, 500)
   }
 
   const stream = new ReadableStream<Uint8Array>({

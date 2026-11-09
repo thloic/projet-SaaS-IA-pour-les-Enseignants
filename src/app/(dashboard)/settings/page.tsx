@@ -5,6 +5,7 @@ import { getCurrentUser, getCurrentTeacherProfile } from '@/features/profile/ser
 import SettingsForm from '@/features/profile/components/SettingsForm'
 import { normalizeGradingSystem } from '@/features/profile/types/profile.types'
 import { getAICredentialPublicStatus } from '@/features/ai-credentials/server/aiCredentialRepository'
+import GoogleConnectionsSection from '@/features/integrations/google/components/GoogleConnectionsSection'
 
 export default async function SettingsPage() {
   const [user, profile] = await Promise.all([getCurrentUser(), getCurrentTeacherProfile()])
@@ -22,6 +23,7 @@ export default async function SettingsPage() {
   ])
 
   return (
+    <>
     <SettingsForm
       initialFirstName={profile?.first_name ?? ''}
       initialLastName={profile?.last_name ?? ''}
@@ -44,5 +46,9 @@ export default async function SettingsPage() {
       ambassador={ambassador}
       aiCredentialStatus={aiCredentialStatus}
     />
+    <div className="mx-auto w-full max-w-2xl min-w-0 pb-10">
+      <GoogleConnectionsSection />
+    </div>
+    </>
   )
 }

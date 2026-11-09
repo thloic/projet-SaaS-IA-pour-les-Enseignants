@@ -89,22 +89,36 @@ export function buildFollowUpPlanReviewNotReadyResponse(
   return { kind: 'follow_up_plan_review_not_ready', message }
 }
 
+const INTEGRATION_CONNECT_MESSAGES: Record<
+  Extract<AgentStructuredResponse, { kind: 'integration_connect_required' }>['feature'],
+  Record<AppLocale, string>
+> = {
+  gmail_read: {
+    fr: 'Pour chercher dans votre Gmail, connectez-le d’abord.',
+    en: 'To search your Gmail, connect it first.',
+    es: 'Para buscar en tu Gmail, primero debes conectarlo.',
+  },
+  gmail: {
+    fr: 'Pour envoyer ce courriel depuis votre Gmail, connectez-le d’abord.',
+    en: 'To send this email from your Gmail, connect it first.',
+    es: 'Para enviar este correo desde tu Gmail, primero debes conectarlo.',
+  },
+  drive: {
+    fr: 'Pour utiliser un document de votre Google Drive, connectez-le d’abord.',
+    en: 'To use a document from your Google Drive, connect it first.',
+    es: 'Para usar un documento de tu Google Drive, primero debes conectarlo.',
+  },
+}
+
 export function buildIntegrationConnectRequiredResponse(
   feature: Extract<AgentStructuredResponse, { kind: 'integration_connect_required' }>['feature'],
   continuationText: string,
   interfaceLanguage?: AppLocale
 ): Extract<AgentStructuredResponse, { kind: 'integration_connect_required' }> {
-  const message =
-    interfaceLanguage === 'es'
-      ? 'Para buscar en tu Gmail, primero debes conectarlo.'
-      : interfaceLanguage === 'en'
-        ? 'To search your Gmail, connect it first.'
-        : 'Pour chercher dans votre Gmail, connectez-le d’abord.'
-
   return {
     kind: 'integration_connect_required',
     feature,
-    message,
+    message: INTEGRATION_CONNECT_MESSAGES[feature][interfaceLanguage ?? 'fr'],
     connectUrl: `/api/integrations/google/connect?feature=${feature}`,
     continuationText,
   }

@@ -2,11 +2,21 @@ import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
 import type { GoogleIntegrationStatus } from '../schemas/googleIntegrationSchema'
+import type { EncryptedCredential } from '@/features/ai-credentials/server/credentialEncryption'
+import { openGoogleToken, sealGoogleToken } from './googleTokenCodec.ts'
 
+// Forme renvoyee aux appelants : les jetons sont dechiffres en memoire uniquement.
 interface GoogleIntegrationRow {
   scopes: string[]
   access_token: string
   refresh_token: string
+  expires_at: string
+}
+
+interface GoogleIntegrationEncryptedRow {
+  scopes: string[]
+  access_token_encrypted: EncryptedCredential
+  refresh_token_encrypted: EncryptedCredential
   expires_at: string
 }
 
@@ -32,7 +42,7 @@ export async function getGoogleIntegrationCredentials(
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('google_integrations')
-    .select('scopes, access_token, refresh_token, expires_at')
+    .select('scopes, access_token_encrypted, refresh_token_encrypted, expires_at')
     .eq('user_id', userId)
     .maybeSingle()
 
@@ -40,8 +50,15 @@ export async function getGoogleIntegrationCredentials(
     console.error('[integrations:google] lecture des identifiants refusée', error)
     throw new Error('GOOGLE_INTEGRATION_CREDENTIALS_FAILED')
   }
+  if (!data) return null
 
-  return data
+  const row = data as GoogleIntegrationEncryptedRow
+  return {
+    scopes: row.scopes,
+    access_token: openGoogleToken(row.access_token_encrypted),
+    refresh_token: openGoogleToken(row.refresh_token_encrypted),
+    expires_at: row.expires_at,
+  }
 }
 
 // Fusionne les scopes : connecter Drive apres Gmail (ou l'inverse) etend la
@@ -55,7 +72,17 @@ export async function upsertGoogleIntegration(input: {
   expiresAt: string
 }): Promise<void> {
   const supabase = await createClient()
-  const existing = await getGoogleIntegrationCredentials(input.userId)
+  const { data: existing, error: readError } = await supabase
+    .from('google_integrations')
+    .select('scopes')
+    .eq('user_id', input.userId)
+    .maybeSingle()
+
+  if (readError) {
+    console.error('[integrations:google] lecture des scopes existants refusée', readError)
+    throw new Error('GOOGLE_INTEGRATION_SAVE_FAILED')
+  }
+
   const mergedScopes = Array.from(new Set([...(existing?.scopes ?? []), ...input.newScopes]))
 
   const { error } = await supabase
@@ -64,8 +91,8 @@ export async function upsertGoogleIntegration(input: {
       {
         user_id: input.userId,
         scopes: mergedScopes,
-        access_token: input.accessToken,
-        refresh_token: input.refreshToken,
+        access_token_encrypted: sealGoogleToken(input.accessToken),
+        refresh_token_encrypted: sealGoogleToken(input.refreshToken),
         expires_at: input.expiresAt,
       },
       { onConflict: 'user_id' }
@@ -85,11 +112,22 @@ export async function updateGoogleAccessToken(
   const supabase = await createClient()
   const { error } = await supabase
     .from('google_integrations')
-    .update({ access_token: accessToken, expires_at: expiresAt })
+    .update({ access_token_encrypted: sealGoogleToken(accessToken), expires_at: expiresAt })
     .eq('user_id', userId)
 
   if (error) {
     console.error('[integrations:google] mise à jour du jeton refusée', error)
     throw new Error('GOOGLE_INTEGRATION_TOKEN_UPDATE_FAILED')
+  }
+}
+
+// Supprime la connexion (toutes les fonctionnalités Google de l'enseignant).
+export async function deleteGoogleIntegration(userId: string): Promise<void> {
+  const supabase = await createClient()
+  const { error } = await supabase.from('google_integrations').delete().eq('user_id', userId)
+
+  if (error) {
+    console.error('[integrations:google] suppression de la connexion refusée', error)
+    throw new Error('GOOGLE_INTEGRATION_DELETE_FAILED')
   }
 }

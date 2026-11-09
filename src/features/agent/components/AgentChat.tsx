@@ -430,7 +430,7 @@ export default function AgentChat({ initialAISource = 'included' }: { initialAIS
                 initialNextSteps={message.nextSteps}
               />
             ) : message.kind === 'integration_connect_required' ? (
-              <IntegrationConnectCard key={message.id} message={message.message} connectUrl={message.connectUrl} />
+              <IntegrationConnectCard key={message.id} feature={message.feature} message={message.message} connectUrl={message.connectUrl} />
             ) : (
               <div
                 key={message.id}
