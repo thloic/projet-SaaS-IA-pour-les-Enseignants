@@ -13,6 +13,7 @@ export const agentTranslations = {
     interrupted: 'Réponse interrompue',
     failedTurn: 'La réponse n’a pas pu être terminée.',
     googleConnected: 'Gmail connecté avec succès.',
+    googleDriveConnected: 'Google Drive connecté avec succès.',
     googleConnectFailed: 'La connexion à Google a échoué, réessayez.',
     patPrompt: (name: string) => `Génère le PAT de ${name}`,
     quick: [
@@ -35,6 +36,7 @@ export const agentTranslations = {
     interrupted: 'Response stopped',
     failedTurn: 'The response could not be completed.',
     googleConnected: 'Gmail connected successfully.',
+    googleDriveConnected: 'Google Drive connected successfully.',
     googleConnectFailed: 'The connection to Google failed, try again.',
     patPrompt: (name: string) => `Generate the support plan for ${name}`,
     quick: [
@@ -57,6 +59,7 @@ export const agentTranslations = {
     interrupted: 'Respuesta interrumpida',
     failedTurn: 'No se pudo completar la respuesta.',
     googleConnected: 'Gmail conectado correctamente.',
+    googleDriveConnected: 'Google Drive conectado correctamente.',
     googleConnectFailed: 'La conexión con Google ha fallado, inténtalo de nuevo.',
     patPrompt: (name: string) => `Genera el PAT de ${name}`,
     quick: [

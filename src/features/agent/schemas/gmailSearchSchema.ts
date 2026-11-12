@@ -17,7 +17,7 @@ export const gmailSearchResultItemSchema = z.object({
 // dans le fil, plutot qu'en echec du tour de chat.
 export const gmailSearchToolOutputSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('ok'), results: z.array(gmailSearchResultItemSchema) }),
-  z.object({ status: z.literal('needs_connection'), feature: z.literal('gmail_read') }),
+  z.object({ status: z.literal('needs_connection'), feature: z.literal('gmail') }),
   z.object({ status: z.literal('error') }),
 ])
 

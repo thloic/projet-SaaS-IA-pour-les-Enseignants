@@ -1,83 +1,57 @@
-# TECHPLAN — Import d'un document Google Drive comme source de génération
+# Plan technique — Accès Google Drive complet pour l'agent
 
-Statut : **proposition, en attente de validation** (aucun code Drive écrit).
-Référence produit : `docs/PRD-agent-envoi-gmail-drive.md`, section Drive (prochaine étape de ce PRD).
+Référence produit : `docs/PRD-agent-envoi-gmail-drive.md`. Ce document remplace la version « sélecteur de fichier (Picker) » : le Picker, sa clé API et les routes d'import sont retirés.
 
-## 1. Objectif
+## 1. Décisions
 
-Quand l'enseignant veut que l'agent s'appuie sur un document de son Google Drive (gabarit, lettre type, exercice de référence), il choisit ce fichier précis via la fenêtre native Google. Le texte du fichier devient la source de la génération en cours, sans téléchargement ni réimport manuel.
+- **Tool calling AI SDK** : l'agent appelle des outils liés à l'enseignant connecté (`userId` figé côté serveur, jamais fourni par le modèle).
+- **Scope unique** : `https://www.googleapis.com/auth/drive` (lecture, création, modification). Pas de Picker, pas de clé API navigateur, pas de jeton exposé au navigateur.
+- **Écriture jamais directe** : `drive_propose_change` ne fait que décrire la modification. La carte « Confirmer / Annuler » appelle ensuite `POST /api/agent/drive/apply`, qui revalide la structure et applique.
+- **Données, pas instructions** : le contenu des fichiers et des courriels est entouré de délimiteurs (`<document_drive>`) et neutralisé. Le prompt précise qu'il ne contient jamais d'ordres.
+- **Réglages** : deux fonctionnalités visibles, « Gmail » (`gmail.readonly` + `gmail.send`) et « Google Drive — accès complet » (`drive`). Une fonctionnalité est active seulement si tous ses scopes sont accordés (`isFeatureSatisfied`).
 
-## 2. Périmètre
+## 2. Outils de l'agent (`src/features/agent/server/agentTools.ts`)
 
-Inclus :
-- Connexion Drive séparée de Gmail (scope `drive.file`, déjà défini dans `googleIntegrationSchema.ts` et déjà géré par `GET /api/integrations/google/connect?feature=drive`).
-- Sélecteur de fichier Google Picker, côté navigateur, limité aux fichiers choisis.
-- Lecture du contenu côté serveur pour les formats `.docx`, `.pdf`, `.txt`, et Google Docs (export texte).
-- Utilisation du texte comme source de génération pour la requête en cours.
-
-Hors périmètre :
-- Accès libre au Drive, parcours de dossiers par l'agent (interdit par le PRD).
-- Indexation ou cache du contenu Drive (interdit par le PRD).
-- Écriture dans le Drive.
-- Sources Google Sheets / Slides (à voir plus tard).
-
-## 3. Décision à valider : sélecteur
-
-Le PRD impose la fenêtre native Google. Deux options :
-
-| Option | Principe | Coût |
+| Outil | Rôle | Écriture |
 |---|---|---|
-| **A. Google Picker (recommandé)** | Script `apis.google.com/js/api.js` chargé dans le navigateur, avec un identifiant de projet et une clé API navigateur. Le fichier est renvoyé au client, puis son `fileId` est envoyé au serveur. | Ajouter deux variables d'environnement (`GOOGLE_PICKER_API_KEY`, `GOOGLE_CLOUD_PROJECT_NUMBER`) et activer l'API Picker dans Google Cloud. Pas de nouvelle dépendance npm. |
-| B. Liste de fichiers maison | Le serveur liste le Drive et l'enseignant choisit dans une liste EducAssist. | Contraire au PRD : l'application voit tout le Drive. Refusé. |
+| `drive_search` | Lister / chercher des fichiers (nom, date) | non |
+| `drive_read` | Lire un fichier (Google Doc, PDF texte, DOCX, TXT, Markdown) | non |
+| `drive_propose_change` | Proposer `update_doc` (Google Doc existant) ou `create_doc` | non (carte) |
+| `gmail_read_message` | Lire un courriel complet (`messageId`) | non |
+| `search_gmail_inbox` | Chercher dans la boîte mail | non |
+| `prepare_parent_email_send` | Afficher le brouillon à envoyer (relecture) | non |
 
-Je recommande A. Il faut votre accord et la clé API navigateur (restreinte aux domaines `localhost:3000` et `www.eduassist360.com`).
+Sorties communes : `ok`, `proposal`, `needs_connection` (feature `gmail` ou `drive`), `error` avec un code métier. Aucun message brut de Google n'est renvoyé au modèle.
 
-## 4. Flux
+## 3. Modules
 
-1. L'enseignant demande : « utilise mon gabarit du Drive ».
-2. Si Drive n'est pas connecté : carte « Connecter Google Drive » (même mécanisme que Gmail, feature `drive`).
-3. Si connecté : l'agent renvoie une carte « Choisir un fichier dans Drive ».
-4. Le clic ouvre le Picker (client). Le client reçoit `{ id, name, mimeType }`.
-5. Le client appelle `POST /api/integrations/drive/import` avec le `fileId`.
-6. Le serveur :
-   - vérifie la session et le scope `drive.file` (`getValidGoogleAccessToken`, scope `DRIVE_FILE_SCOPE`) ;
-   - télécharge ou exporte le fichier (`files.get` avec `alt=media`, ou `files.export` en `text/plain` pour Google Docs) ;
-   - extrait le texte (`.docx` via mammoth ou équivalent, `.pdf` via un extracteur, `.txt` direct) ;
-   - tronque à une taille maximale (ex. 40 000 caractères) et renvoie `{ name, text, truncated }`.
-7. Le texte est injecté comme source pour la génération en cours. Rien n'est conservé au-delà de la requête.
+- `src/features/integrations/google/schemas/googleIntegrationSchema.ts` — scopes, features, `isFeatureSatisfied`.
+- `src/features/integrations/drive/schemas/driveChangeSchema.ts` — `driveChangeSchema` (update_doc / create_doc, strict), entrées des outils.
+- `src/features/integrations/drive/server/driveTools.ts` — logique métier avec dépendances injectées : `searchDriveFiles`, `readDriveFile`, `proposeDriveChange`, `applyDriveChange`. Codes : `DRIVE_NOT_CONNECTED`, `DRIVE_SCOPE_MISSING`, `FILE_NOT_FOUND`, `FILE_UNSUPPORTED`, `FILE_TOO_LARGE`, `FILE_EMPTY`, `CHANGE_UNSUPPORTED`, `DRIVE_FAILED`.
+- `src/features/integrations/drive/server/driveFileClient.ts` — appels réels Drive v3 et Docs v1 (`files.list/get/export/create`, `documents.batchUpdate`).
+- `src/features/integrations/drive/server/driveRealDependencies.ts` — câblage réel (server-only).
+- `src/features/integrations/drive/server/driveFileText.ts` — extraction de texte, troncature à 40 000 caractères.
+- `src/features/agent/server/driveAgentTools.ts` — outils AI SDK `drive_search`, `drive_read`, `drive_propose_change`.
+- `src/features/agent/server/gmailReadMessageTool.ts` — outil `gmail_read_message`.
+- `src/features/integrations/google/server/gmailMessageBody.ts` — extraction du corps (texte brut, repli HTML, 20 000 caractères).
+- `src/features/agent/server/integrationGates.ts` — garde-fous déterministes `gmail` / `drive`.
+- `src/app/api/agent/chat/route.ts` — garde-fou, boucle de lecture du flux, carte `drive_change_proposal` (`stepCountIs(8)`).
+- `src/app/api/agent/drive/apply/route.ts` — application confirmée (auth, validation, codes HTTP 404 / 409 / 422 / 500).
+- `src/features/agent/components/DriveChangeCard.tsx` — carte de confirmation.
 
-## 5. Fichiers à créer ou modifier
+## 4. Tests
 
-- `src/features/integrations/drive/server/driveFileImport.ts` — téléchargement, export, extraction, troncature (fonctions pures testables + appels Drive injectés).
-- `src/app/api/integrations/drive/import/route.ts` — route POST, auth, validation du `fileId`.
-- `src/features/integrations/drive/components/DrivePickerButton.tsx` — chargement de `api.js`, ouverture du Picker, appel de la route.
-- `src/features/agent/schemas/agentSchema.ts` — étendre `feature` à `drive` dans `integration_connect_required` et ajouter une carte `drive_file_pick`.
-- `src/features/agent/server/agentResponses.ts` — construire la carte de connexion Drive.
-- `src/app/api/agent/chat/route.ts` — garde-fou sur les demandes « mon Drive / mon gabarit / ce document » (même principe que Gmail).
-- `src/features/agent/components/AgentChat.tsx` — rendu de la carte de sélection et reprise après connexion.
-- Variables : `GOOGLE_PICKER_API_KEY`, `GOOGLE_CLOUD_PROJECT_NUMBER` dans `.env.example` (vides) et `.env.local`.
+- Unitaires (`npm run test:unit`) : intentions, schémas, gardes Gmail/Drive, carte de proposition, corps Gmail, extraction de texte.
+- Intégration (`npm run test:integration`) : `tests/integration/drive-import-flow.test.ts` — recherche, lecture, proposition sans écriture, application après confirmation, refus d'un fichier non Google Doc, Drive absent, aucun message brut exposé.
+- Aucun test n'appelle Google : toutes les dépendances réseau sont injectées.
 
-## 6. Tests
+## 5. Limites connues
 
-- Unitaires : extraction et troncature (`.txt`, `.docx` minimal, fichier trop long), refus d'un `fileId` vide ou invalide, garde-fou Drive (`looksLikeDriveRequest`).
-- Intégration (appels Drive simulés) : fichier importé, scope manquant, fichier introuvable (404), jeton expiré rafraîchi.
-- Navigateur : connexion Drive, ouverture du Picker, choix d'un fichier de test, réponse de l'agent qui utilise son contenu.
+- Seuls les Google Docs peuvent être modifiés ; DOCX, PDF et TXT restent en lecture seule (v1).
+- Si le modèle écrit du texte avant d'appeler `drive_propose_change`, la réponse est déjà en flux texte et la carte n'est pas affichée. Le prompt demande d'appeler les outils d'abord ; à surveiller en test manuel.
+- Un message d'erreur Google inattendu est journalisé côté serveur (`console.error`) mais jamais renvoyé au modèle ni à l'enseignant.
+- Vérification Google requise avant ouverture publique (scopes `drive`, `gmail.readonly`, `gmail.send`).
 
-## 7. Risques
+## 6. Configuration Google Cloud (à faire par le client)
 
-- **Restriction de la clé API Picker** : une clé non restreinte peut être abusée. À limiter aux origines autorisées.
-- **Vérification Google** : `drive.file` n'est pas un scope sensible, donc pas de vérification lourde, mais l'écran de consentement reste en mode test tant que l'application n'est pas publiée.
-- **Données élèves** : le document peut contenir des données d'élèves. Le texte n'est ni stocké ni envoyé hors du serveur, sauf vers le modèle pour la génération demandée.
-
-## 8. Questions ouvertes
-
-1. Option A (Picker) validée ? Si oui, j'ai besoin de la clé API navigateur et du numéro de projet Google Cloud.
-2. Formats prioritaires : `.docx`, `.pdf`, Google Docs. Faut-il ajouter autre chose ?
-3. Taille maximale acceptée pour le texte importé (40 000 caractères proposés) ?
-
-## 9. Ordre de livraison proposé
-
-1. Validation de la Gmail (en cours, bloquée par l'écran de consentement).
-2. Drive : serveur (extraction + route) avec tests unitaires.
-3. Drive : Picker et carte dans l'agent, puis test navigateur.
-4. Commit et push, une fois la fonctionnalité validée par vous.
+Voir la section « Étapes Google Cloud » du compte rendu de session. Variables retirées : `GOOGLE_PICKER_API_KEY`, `GOOGLE_CLOUD_PROJECT_NUMBER`.

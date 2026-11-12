@@ -93,21 +93,39 @@ const INTEGRATION_CONNECT_MESSAGES: Record<
   Extract<AgentStructuredResponse, { kind: 'integration_connect_required' }>['feature'],
   Record<AppLocale, string>
 > = {
-  gmail_read: {
-    fr: 'Pour chercher dans votre Gmail, connectez-le d’abord.',
-    en: 'To search your Gmail, connect it first.',
-    es: 'Para buscar en tu Gmail, primero debes conectarlo.',
-  },
   gmail: {
-    fr: 'Pour envoyer ce courriel depuis votre Gmail, connectez-le d’abord.',
-    en: 'To send this email from your Gmail, connect it first.',
-    es: 'Para enviar este correo desde tu Gmail, primero debes conectarlo.',
+    fr: 'Pour accéder à votre Gmail (lecture et envoi), connectez-le d’abord.',
+    en: 'To access your Gmail (reading and sending), connect it first.',
+    es: 'Para acceder a tu Gmail (lectura y envío), primero debes conectarlo.',
   },
   drive: {
-    fr: 'Pour utiliser un document de votre Google Drive, connectez-le d’abord.',
-    en: 'To use a document from your Google Drive, connect it first.',
-    es: 'Para usar un documento de tu Google Drive, primero debes conectarlo.',
+    fr: 'Pour accéder à votre Google Drive, connectez-le d’abord.',
+    en: 'To access your Google Drive, connect it first.',
+    es: 'Para acceder a tu Google Drive, primero debes conectarlo.',
   },
+}
+
+const DRIVE_PROPOSAL_MESSAGES: Record<AppLocale, string> = {
+  fr: 'Voici la modification proposée dans votre Google Drive. Rien n’est modifié tant que vous ne confirmez pas.',
+  en: 'Here is the change proposed in your Google Drive. Nothing is modified until you confirm.',
+  es: 'Este es el cambio propuesto en tu Google Drive. No se modifica nada hasta que lo confirmes.',
+}
+
+export function buildDriveChangeProposalResponse(
+  proposal: {
+    change: Extract<AgentStructuredResponse, { kind: 'drive_change_proposal' }>['change']
+    targetName: string
+    webViewLink: string | null
+  },
+  interfaceLanguage?: AppLocale
+): Extract<AgentStructuredResponse, { kind: 'drive_change_proposal' }> {
+  return {
+    kind: 'drive_change_proposal',
+    message: DRIVE_PROPOSAL_MESSAGES[interfaceLanguage ?? 'fr'],
+    change: proposal.change,
+    targetName: proposal.targetName,
+    webViewLink: proposal.webViewLink,
+  }
 }
 
 export function buildIntegrationConnectRequiredResponse(

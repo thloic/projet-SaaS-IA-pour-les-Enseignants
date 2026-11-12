@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { PATSchema } from './patSchema.ts'
 import { parentEmailRegisterSchema } from './parentEmailSchema.ts'
 import { GOOGLE_INTEGRATION_FEATURES } from '../../integrations/google/schemas/googleIntegrationSchema.ts'
+import { driveChangeSchema } from '../../integrations/drive/schemas/driveChangeSchema.ts'
 
 export const agentMessageSchema = z.object({
   role: z.enum(['user', 'assistant']),
@@ -133,6 +134,17 @@ export const agentStructuredResponseSchema = z.discriminatedUnion('kind', [
       subjectsDiscussed: z.array(z.string().min(1)).min(1),
       agreementsReached: z.array(z.string().min(1)),
       nextSteps: z.array(z.string().min(1)),
+    })
+    .strict(),
+  // Modification Drive proposée par l'agent : rien n'est écrit avant la
+  // confirmation de l'enseignant (route /api/agent/drive/apply).
+  z
+    .object({
+      kind: z.literal('drive_change_proposal'),
+      message: z.string().min(1),
+      change: driveChangeSchema,
+      targetName: z.string().min(1).max(300),
+      webViewLink: z.string().min(1).nullable(),
     })
     .strict(),
   z

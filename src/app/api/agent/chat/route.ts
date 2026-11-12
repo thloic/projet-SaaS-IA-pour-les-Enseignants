@@ -3,7 +3,11 @@ import { getCurrentUserAnthropicModel } from '@/features/ai/server/aiProviderRes
 import {
   type PrepareParentEmailSendToolOutput,
 } from '@/features/agent/server/prepareParentEmailSendTool'
-import { buildIntegrationConnectRequiredResponse } from '@/features/agent/server/agentResponses'
+import {
+  buildDriveChangeProposalResponse,
+  buildIntegrationConnectRequiredResponse,
+} from '@/features/agent/server/agentResponses'
+import type { DriveProposalToolOutput } from '@/features/agent/server/driveAgentTools'
 import { recordCurrentUserAIUsage } from '@/features/ai/server/aiUsageRecorder'
 import { NextResponse } from 'next/server'
 import { assertAIGenerationAccess, checkAndIncrementUsage, decrementUsage } from '@/features/billing/server/usage'
@@ -83,6 +87,8 @@ import { isNeedsConnectionOutput } from '@/features/agent/server/needsConnection
 import { getGoogleIntegrationStatus } from '@/features/integrations/google/server/googleIntegrationRepository'
 
 const USAGE_FEATURE = 'agent'
+// Nombre maximal d'étapes d'outils (ex. recherche Drive, lecture, puis proposition).
+const AGENT_MAX_TOOL_STEPS = 8
 
 const ROUTE_COPY = {
   fr: {
@@ -540,10 +546,9 @@ export async function POST(request: Request) {
     return jsonError(copy.contextFailed, 500)
   }
 
-  // Garde-fou déterministe : une demande de lecture de la boîte mail sans
-  // Gmail connecté reçoit la carte de connexion tout de suite, sans dépendre
-  // de l'appel d'outil du modèle (qui pouvait répondre en texte seul, sans
-  // bouton). Placé avant le quota : rien n'est débité.
+  // Garde-fou déterministe : une demande portant sur Gmail ou Drive sans la
+  // connexion correspondante reçoit la carte de connexion tout de suite, sans
+  // dépendre de l'appel d'outil du modèle. Placé avant le quota : rien n'est débité.
   if (latestUserMessage) {
     try {
       const missing = await findMissingConnection(latestUserMessage.content, () => getGoogleIntegrationStatus(user.id))
@@ -555,8 +560,8 @@ export async function POST(request: Request) {
         )
       }
     } catch (error) {
-      // Statut illisible : la demande suit son cours ; l'outil renverra de toute
-      // façon needs_connection si la connexion manque.
+      // Statut illisible : la demande suit son cours ; les outils renverront de
+      // toute façon needs_connection si la connexion manque.
       console.error('[agent:integration-gate] statut indisponible, la demande continue', error)
     }
   }
@@ -603,7 +608,7 @@ export async function POST(request: Request) {
     timeout: 60000,
     abortSignal: request.signal,
     tools: createAgentTools(user.id),
-    stopWhen: stepCountIs(3),
+    stopWhen: stepCountIs(AGENT_MAX_TOOL_STEPS),
   })
 
   // Le Content-Type de la Response (texte en clair vs carte JSON) doit etre
@@ -669,6 +674,31 @@ export async function POST(request: Request) {
           return NextResponse.json(card.data)
         }
         // already_sent / not_found / error : le modèle répond en texte.
+        continue
+      }
+      // Proposition de modification Drive : la carte « Confirmer / Annuler » est
+      // affichée. Rien n'est écrit ici ; l'écriture passe par /api/agent/drive/apply.
+      // Les autres résultats Drive (recherche, lecture, erreurs) restent au modèle.
+      if (part.type === 'tool-result' && part.toolName === 'drive_propose_change') {
+        const output = part.output as DriveProposalToolOutput
+        if (output.status === 'proposal') {
+          await refundOnce()
+          const card = agentStructuredResponseSchema.safeParse(
+            buildDriveChangeProposalResponse(
+              {
+                change: output.change,
+                targetName: output.targetName,
+                webViewLink: output.webViewLink,
+              },
+              profile.interface_language
+            )
+          )
+          if (!card.success) {
+            console.error('[agent:drive-change] carte invalide', card.error.issues)
+            return jsonError(copy.chatFailed, 500)
+          }
+          return NextResponse.json(card.data)
+        }
         continue
       }
       if (part.type === 'tool-error' || part.type === 'error') {

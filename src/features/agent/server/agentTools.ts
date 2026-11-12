@@ -2,13 +2,18 @@
 // lié à l'enseignant connecté (userId figé à la création, jamais fourni par le
 // modèle). Le contrat « besoin de connexion » est défini dans needsConnection.ts.
 import { createGmailSearchTool } from './gmailSearchTool.ts'
+import { createGmailReadMessageTool } from './gmailReadMessageTool.ts'
 import { createPrepareParentEmailSendTool } from './prepareParentEmailSendTool.ts'
+import { createDriveAgentTools } from './driveAgentTools.ts'
+import { realDriveToolDependencies } from '../../integrations/drive/server/driveRealDependencies.ts'
 
 export { isNeedsConnectionOutput, type NeedsConnectionOutput } from './needsConnection.ts'
 
 export function createAgentTools(userId: string) {
   return {
     search_gmail_inbox: createGmailSearchTool(userId),
+    gmail_read_message: createGmailReadMessageTool(userId),
     prepare_parent_email_send: createPrepareParentEmailSendTool(userId),
+    ...createDriveAgentTools(userId, realDriveToolDependencies),
   }
 }

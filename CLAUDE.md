@@ -80,7 +80,7 @@ Ce schéma est minimal et sera étendu module par module. Ne pas tout créer d'u
 - Sessions courtes (1h) avec renouvellement silencieux.
 - Droit à l'effacement intégré (suppression en cascade).
 - Les données ne sont JAMAIS utilisées pour entraîner les modèles d'IA.
-- Scopes OAuth Google limités au strict nécessaire (profil + email). Scopes sensibles (Drive/Gmail) reportés.
+- Scopes OAuth Google limités au strict nécessaire (profil + email). Scopes sensibles accordés à la demande de l'enseignant : Gmail (lecture + envoi) et Google Drive en accès complet (lecture, création, modification). Chaque modification du Drive exige la confirmation explicite de l'enseignant (carte « Confirmer / Annuler »). Vérification Google requise avant toute ouverture publique.
 - Rate limiting sur les appels pour prévenir les abus.
 
 ---

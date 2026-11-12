@@ -49,7 +49,7 @@ Reliés par un **tableau de bord central** qui donne une vue 360° de chaque él
 
 **Valeur** : la première barrière à franchir pour un nouvel utilisateur doit être quasi inexistante.
 
-**Vigilance** : ne demander que les permissions Google minimales (profil + email). Les accès sensibles (Drive, Gmail) sont volontairement écartés pour éviter une validation longue.
+**Vigilance** : ne demander que les permissions Google minimales (profil + email). Les accès sensibles (Gmail lecture + envoi, Drive accès complet) sont accordés à la demande de l'enseignant, avec modifications du Drive soumises à confirmation ; la vérification Google est requise avant ouverture publique.
 
 ---
 

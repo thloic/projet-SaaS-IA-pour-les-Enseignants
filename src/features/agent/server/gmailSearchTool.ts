@@ -49,7 +49,7 @@ export function createGmailSearchTool(userId: string) {
           error instanceof GmailSearchOrchestrationError &&
           (error.code === 'GOOGLE_NOT_CONNECTED' || error.code === 'GOOGLE_SCOPE_MISSING')
         ) {
-          return { status: 'needs_connection', feature: 'gmail_read' }
+          return { status: 'needs_connection', feature: 'gmail' }
         }
         console.error('[agent:gmail-search-tool] echec', error)
         return { status: 'error' }

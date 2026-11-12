@@ -2,7 +2,7 @@ import 'server-only'
 
 import { google } from 'googleapis'
 import type { GoogleIntegrationFeature } from '../schemas/googleIntegrationSchema'
-import { scopeForFeature } from '../schemas/googleIntegrationSchema'
+import { scopesForFeature } from '../schemas/googleIntegrationSchema'
 
 function requiredEnv(name: string): string {
   const value = process.env[name]
@@ -33,7 +33,7 @@ export function buildGoogleConsentUrl(feature: GoogleIntegrationFeature, state: 
     access_type: 'offline',
     prompt: 'consent',
     include_granted_scopes: true,
-    scope: [scopeForFeature(feature)],
+    scope: [...scopesForFeature(feature)],
     state,
   })
 }

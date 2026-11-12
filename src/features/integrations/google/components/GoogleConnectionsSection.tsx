@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Mail, HardDrive, Send } from 'lucide-react'
+import { Mail, HardDrive } from 'lucide-react'
 import { useAppLocale } from '@/features/i18n/AppLocaleProvider'
 import type { AppLocale } from '@/features/i18n/locale'
 import type { GoogleIntegrationFeature } from '../schemas/googleIntegrationSchema'
@@ -11,7 +11,7 @@ interface FeatureStatus {
   connected: boolean
 }
 
-const FEATURES: GoogleIntegrationFeature[] = ['gmail_read', 'gmail', 'drive']
+const FEATURES: GoogleIntegrationFeature[] = ['gmail', 'drive']
 
 const LABELS: Record<AppLocale, {
   title: string
@@ -34,9 +34,8 @@ const LABELS: Record<AppLocale, {
     loadError: 'Impossible de vérifier la connexion Google pour le moment.',
     disconnectError: 'La déconnexion n’a pas pu être effectuée. Réessayez.',
     features: {
-      gmail_read: { label: 'Gmail — recherche', hint: 'Chercher dans votre boîte mail (lecture seule).' },
-      gmail: { label: 'Gmail — envoi', hint: 'Envoyer les courriels aux parents après votre relecture.' },
-      drive: { label: 'Google Drive', hint: 'Accéder aux seuls fichiers que vous choisissez.' },
+      gmail: { label: 'Gmail', hint: 'Lire et chercher dans votre boîte mail, envoyer les courriels aux parents après votre relecture.' },
+      drive: { label: 'Google Drive — accès complet', hint: 'Lister, lire, créer et modifier vos fichiers. Chaque modification attend votre confirmation.' },
     },
   },
   en: {
@@ -49,9 +48,8 @@ const LABELS: Record<AppLocale, {
     loadError: 'Could not check the Google connection right now.',
     disconnectError: 'Disconnection failed. Please try again.',
     features: {
-      gmail_read: { label: 'Gmail — search', hint: 'Search your mailbox (read only).' },
-      gmail: { label: 'Gmail — sending', hint: 'Send parent emails after your review.' },
-      drive: { label: 'Google Drive', hint: 'Access only the files you choose.' },
+      gmail: { label: 'Gmail', hint: 'Read and search your mailbox, send parent emails after your review.' },
+      drive: { label: 'Google Drive — full access', hint: 'List, read, create and edit your files. Every change waits for your confirmation.' },
     },
   },
   es: {
@@ -64,16 +62,14 @@ const LABELS: Record<AppLocale, {
     loadError: 'No se puede comprobar la conexión con Google en este momento.',
     disconnectError: 'No se pudo desconectar. Inténtalo de nuevo.',
     features: {
-      gmail_read: { label: 'Gmail — búsqueda', hint: 'Buscar en tu correo (solo lectura).' },
-      gmail: { label: 'Gmail — envío', hint: 'Enviar correos a las familias tras tu revisión.' },
-      drive: { label: 'Google Drive', hint: 'Acceder solo a los archivos que elijas.' },
+      gmail: { label: 'Gmail', hint: 'Leer y buscar en tu correo, enviar correos a las familias tras tu revisión.' },
+      drive: { label: 'Google Drive — acceso completo', hint: 'Listar, leer, crear y modificar tus archivos. Cada cambio espera tu confirmación.' },
     },
   },
 }
 
 const FEATURE_ICON: Record<GoogleIntegrationFeature, typeof Mail> = {
-  gmail_read: Mail,
-  gmail: Send,
+  gmail: Mail,
   drive: HardDrive,
 }
 

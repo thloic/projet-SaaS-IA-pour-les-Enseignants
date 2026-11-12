@@ -1,26 +1,24 @@
 import { z } from 'zod'
 
+// Scopes Google utilisés par EducAssist. Ils sont regroupés par fonctionnalité
+// visible par l'enseignant : « Gmail » (lecture + envoi) et « Google Drive »
+// (accès complet aux fichiers). Voir docs/PRD-agent-envoi-gmail-drive.md.
 export const GMAIL_SEND_SCOPE = 'https://www.googleapis.com/auth/gmail.send'
-// gmail.readonly : scope sensible cote Google (necessitera une evaluation de
-// securite CASA avant une ouverture a tous les enseignants) — accorde a part
-// de l'envoi, uniquement pour que l'agent puisse chercher/lire dans la boite
-// de l'enseignant qui l'a explicitement connecte. Voir docs/PRD-agent-envoi-gmail-drive.md.
 export const GMAIL_READONLY_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly'
-// drive.file : non-sensible, acces limite aux fichiers choisis explicitement
-// par l'enseignant via le selecteur Google (jamais tout son Drive).
-export const DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file'
+// Accès complet au Drive (lecture, création, modification). Scope restreint côté
+// Google : vérification requise avant ouverture publique.
+export const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive'
 
-export const GOOGLE_INTEGRATION_FEATURES = ['gmail', 'drive', 'gmail_read'] as const
+export const GOOGLE_INTEGRATION_FEATURES = ['gmail', 'drive'] as const
 export type GoogleIntegrationFeature = (typeof GOOGLE_INTEGRATION_FEATURES)[number]
 
-const SCOPE_BY_FEATURE: Record<GoogleIntegrationFeature, string> = {
-  gmail: GMAIL_SEND_SCOPE,
-  drive: DRIVE_FILE_SCOPE,
-  gmail_read: GMAIL_READONLY_SCOPE,
+const SCOPES_BY_FEATURE: Record<GoogleIntegrationFeature, readonly string[]> = {
+  gmail: [GMAIL_READONLY_SCOPE, GMAIL_SEND_SCOPE],
+  drive: [DRIVE_SCOPE],
 }
 
-export function scopeForFeature(feature: GoogleIntegrationFeature): string {
-  return SCOPE_BY_FEATURE[feature]
+export function scopesForFeature(feature: GoogleIntegrationFeature): readonly string[] {
+  return SCOPES_BY_FEATURE[feature]
 }
 
 export const googleIntegrationRecordSchema = z.object({
@@ -36,6 +34,11 @@ export type GoogleIntegrationRecord = z.infer<typeof googleIntegrationRecordSche
 export interface GoogleIntegrationStatus {
   connected: boolean
   scopes: string[]
+}
+
+// Une fonctionnalité est active seulement si TOUS ses scopes sont accordés.
+export function isFeatureSatisfied(status: GoogleIntegrationStatus, feature: GoogleIntegrationFeature): boolean {
+  return status.connected && scopesForFeature(feature).every((scope) => status.scopes.includes(scope))
 }
 
 export function hasScope(status: GoogleIntegrationStatus, scope: string): boolean {

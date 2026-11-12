@@ -3,7 +3,7 @@ import { getCurrentUser } from '@/features/profile/server/profile'
 import { getGoogleIntegrationStatus } from '@/features/integrations/google/server/googleIntegrationRepository'
 import {
   GOOGLE_INTEGRATION_FEATURES,
-  scopeForFeature,
+  isFeatureSatisfied,
   type GoogleIntegrationFeature,
 } from '@/features/integrations/google/schemas/googleIntegrationSchema'
 
@@ -11,8 +11,8 @@ function isGoogleIntegrationFeature(value: string | null): value is GoogleIntegr
   return GOOGLE_INTEGRATION_FEATURES.includes(value as GoogleIntegrationFeature)
 }
 
-// Defaut 'gmail' pour ne rien casser : ParentEmailDraftCard.tsx appelle cette
-// route sans parametre et attend deja gmailConnected/connectUrl pour l'envoi.
+// Défaut « gmail » : ParentEmailDraftCard.tsx appelle cette route sans paramètre
+// et attend gmailConnected/connectUrl pour l'envoi.
 export async function GET(request: Request) {
   const user = await getCurrentUser()
   if (!user) return NextResponse.json({ error: 'AUTH_REQUIRED' }, { status: 401 })
@@ -22,7 +22,7 @@ export async function GET(request: Request) {
 
   try {
     const status = await getGoogleIntegrationStatus(user.id)
-    const connected = status.connected && status.scopes.includes(scopeForFeature(feature))
+    const connected = isFeatureSatisfied(status, feature)
     return NextResponse.json({
       gmailConnected: connected,
       connected,

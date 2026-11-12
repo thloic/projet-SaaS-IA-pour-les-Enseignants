@@ -75,6 +75,16 @@ export interface IntegrationConnectRequiredChatMessage {
   continuationText: string
 }
 
+export interface DriveChangeProposalChatMessage {
+  id: string
+  kind: 'drive_change_proposal'
+  role: 'assistant'
+  message: string
+  change: Extract<AgentStructuredResponse, { kind: 'drive_change_proposal' }>['change']
+  targetName: string
+  webViewLink: string | null
+}
+
 export type ChatMessage =
   | TextChatMessage
   | PATChatMessage
@@ -83,3 +93,4 @@ export type ChatMessage =
   | ParentEmailDraftChatMessage
   | MeetingSummaryChatMessage
   | IntegrationConnectRequiredChatMessage
+  | DriveChangeProposalChatMessage

@@ -1,6 +1,6 @@
 'use client'
 
-import { HardDrive, Mail, Send } from 'lucide-react'
+import { HardDrive, Mail } from 'lucide-react'
 import { useAppLocale } from '@/features/i18n/AppLocaleProvider'
 import type { GoogleIntegrationFeature } from '@/features/integrations/google/schemas/googleIntegrationSchema'
 
@@ -11,14 +11,12 @@ interface IntegrationConnectCardProps {
 }
 
 const CONNECT_LABELS: Record<GoogleIntegrationFeature, Record<'fr' | 'en' | 'es', string>> = {
-  gmail_read: { fr: 'Connecter Gmail', en: 'Connect Gmail', es: 'Conectar Gmail' },
-  gmail: { fr: 'Connecter Gmail (envoi)', en: 'Connect Gmail (sending)', es: 'Conectar Gmail (envío)' },
+  gmail: { fr: 'Connecter Gmail', en: 'Connect Gmail', es: 'Conectar Gmail' },
   drive: { fr: 'Connecter Google Drive', en: 'Connect Google Drive', es: 'Conectar Google Drive' },
 }
 
 const ICONS: Record<GoogleIntegrationFeature, typeof Mail> = {
-  gmail_read: Mail,
-  gmail: Send,
+  gmail: Mail,
   drive: HardDrive,
 }
 

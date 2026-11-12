@@ -14,6 +14,7 @@ import FollowUpPlanCard from '@/features/agent/components/FollowUpPlanCard'
 import ParentEmailDraftCard from '@/features/agent/components/ParentEmailDraftCard'
 import MeetingSummaryCard from '@/features/agent/components/MeetingSummaryCard'
 import IntegrationConnectCard from '@/features/agent/components/IntegrationConnectCard'
+import DriveChangeCard from '@/features/agent/components/DriveChangeCard'
 import VoiceInputButton from '@/features/agent/components/VoiceInputButton'
 import AgentWorkspaceShell from '@/features/agent/components/AgentWorkspaceShell'
 import { useAppLocale } from '@/features/i18n/AppLocaleProvider'
@@ -98,7 +99,12 @@ export default function AgentChat({ initialAISource = 'included' }: { initialAIS
     if (!googleStatus) return
 
     if (googleStatus === 'connected') {
-      showToast(copy.googleConnected, 'success')
+      // Le message dépend du service réellement connecté (Drive ou Gmail).
+      const connectedService = params.get('feature')
+      showToast(
+        connectedService === 'drive' ? copy.googleDriveConnected : copy.googleConnected,
+        'success'
+      )
     } else if (googleStatus === 'error') {
       showToast(copy.googleConnectFailed, 'error')
     }
@@ -159,9 +165,7 @@ export default function AgentChat({ initialAISource = 'included' }: { initialAIS
       const response = await fetch('/api/agent/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: requestMessages,
-        }),
+        body: JSON.stringify({ messages: requestMessages }),
         signal: controller.signal,
       })
 
@@ -234,6 +238,17 @@ export default function AgentChat({ initialAISource = 'included' }: { initialAIS
                 subjectsDiscussed: structured.data.subjectsDiscussed,
                 agreementsReached: structured.data.agreementsReached,
                 nextSteps: structured.data.nextSteps,
+              })
+          }
+          if (structured.data.kind === 'drive_change_proposal') {
+            return replaceConversationMessage(current, assistantMessageId, {
+                id: assistantMessageId,
+                kind: 'drive_change_proposal',
+                role: 'assistant',
+                message: structured.data.message,
+                change: structured.data.change,
+                targetName: structured.data.targetName,
+                webViewLink: structured.data.webViewLink,
               })
           }
           if (structured.data.kind === 'integration_connect_required') {
@@ -339,6 +354,7 @@ export default function AgentChat({ initialAISource = 'included' }: { initialAIS
   }
 
   const composer = (
+    <div className="space-y-2">
     <div className="flex items-end gap-2 rounded-2xl border border-border/80 bg-background p-2 shadow-sm transition focus-within:border-[#534AB7]/45 focus-within:ring-4 focus-within:ring-[#534AB7]/5">
       <textarea
         value={input}
@@ -387,6 +403,7 @@ export default function AgentChat({ initialAISource = 'included' }: { initialAIS
         {isStreaming ? <Loader2 size={16} className="animate-spin" /> : <Send size={17} />}
       </Button>
     </div>
+    </div>
   )
 
   return (
@@ -431,6 +448,14 @@ export default function AgentChat({ initialAISource = 'included' }: { initialAIS
               />
             ) : message.kind === 'integration_connect_required' ? (
               <IntegrationConnectCard key={message.id} feature={message.feature} message={message.message} connectUrl={message.connectUrl} />
+            ) : message.kind === 'drive_change_proposal' ? (
+              <DriveChangeCard
+                key={message.id}
+                message={message.message}
+                change={message.change}
+                targetName={message.targetName}
+                webViewLink={message.webViewLink}
+              />
             ) : (
               <div
                 key={message.id}
