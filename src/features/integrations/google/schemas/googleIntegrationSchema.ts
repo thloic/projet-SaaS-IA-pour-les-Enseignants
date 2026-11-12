@@ -40,7 +40,3 @@ export interface GoogleIntegrationStatus {
 export function isFeatureSatisfied(status: GoogleIntegrationStatus, feature: GoogleIntegrationFeature): boolean {
   return status.connected && scopesForFeature(feature).every((scope) => status.scopes.includes(scope))
 }
-
-export function hasScope(status: GoogleIntegrationStatus, scope: string): boolean {
-  return status.connected && status.scopes.includes(scope)
-}

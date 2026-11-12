@@ -1,4 +1,6 @@
-import { streamText, stepCountIs } from 'ai'
+import { generateText, streamText, stepCountIs } from 'ai'
+import { looksLikeDriveFileRequest } from '@/features/agent/server/driveFileIntent'
+import { decideDriveTurnOutcome } from '@/features/agent/server/driveTurnOutcome'
 import { getCurrentUserAnthropicModel } from '@/features/ai/server/aiProviderResolver'
 import {
   type PrepareParentEmailSendToolOutput,
@@ -89,6 +91,8 @@ import { getGoogleIntegrationStatus } from '@/features/integrations/google/serve
 const USAGE_FEATURE = 'agent'
 // Nombre maximal d'étapes d'outils (ex. recherche Drive, lecture, puis proposition).
 const AGENT_MAX_TOOL_STEPS = 8
+// Assez pour écrire un document complet (une modification Drive contient tout le texte).
+const AGENT_MAX_OUTPUT_TOKENS = 16000
 
 const ROUTE_COPY = {
   fr: {
@@ -598,12 +602,74 @@ export async function POST(request: Request) {
     await decrementUsage(user!.id, USAGE_FEATURE)
   }
 
+  // Tour lié à Drive : réponse lue en entier, pour que la carte de confirmation
+  // ne soit jamais perdue derrière un texte déjà streamé (voir driveTurnOutcome.ts).
+  if (latestUserMessage && looksLikeDriveFileRequest(latestUserMessage.content)) {
+    try {
+      const generated = await generateText({
+        model: await getCurrentUserAnthropicModel('agent_chat'),
+        system: systemPrompt,
+        messages: parsed.data.messages,
+        temperature: 0.4,
+        maxOutputTokens: AGENT_MAX_OUTPUT_TOKENS,
+        maxRetries: 1,
+        timeout: 60000,
+        abortSignal: request.signal,
+        tools: createAgentTools(user.id),
+        stopWhen: stepCountIs(AGENT_MAX_TOOL_STEPS),
+      })
+      const outcome = decideDriveTurnOutcome(generated.steps.flatMap((step) => step.toolResults))
+
+      if (outcome.kind === 'needs_connection') {
+        await refundOnce()
+        return NextResponse.json(
+          agentStructuredResponseSchema.parse(
+            buildIntegrationConnectRequiredResponse(outcome.output.feature, latestUserMessage.content, profile.interface_language)
+          )
+        )
+      }
+      if (outcome.kind === 'proposal') {
+        await refundOnce()
+        const card = agentStructuredResponseSchema.safeParse(
+          buildDriveChangeProposalResponse(
+            {
+              change: outcome.output.change,
+              targetName: outcome.output.targetName,
+              webViewLink: outcome.output.webViewLink,
+            },
+            profile.interface_language
+          )
+        )
+        if (!card.success) {
+          console.error('[agent:drive-change] carte invalide', card.error.issues)
+          return jsonError(copy.chatFailed, 500)
+        }
+        return NextResponse.json(card.data)
+      }
+
+      await recordCurrentUserAIUsage('agent_chat', 'agent', generated.usage)
+      if (!generated.text.trim()) {
+        console.error('[agent] fin de génération Drive sans texte')
+        await refundOnce()
+        return jsonError(copy.chatFailed, 500)
+      }
+      settled = true
+      return new Response(generated.text, {
+        headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-cache, no-transform' },
+      })
+    } catch (error) {
+      console.error('[agent] echec generation Drive', error)
+      await refundOnce()
+      return jsonError(copy.chatFailed, 500)
+    }
+  }
+
   const result = streamText({
     model: await getCurrentUserAnthropicModel('agent_chat'),
     system: systemPrompt,
     messages: parsed.data.messages,
     temperature: 0.4,
-    maxOutputTokens: 2000,
+    maxOutputTokens: AGENT_MAX_OUTPUT_TOKENS,
     maxRetries: 1,
     timeout: 60000,
     abortSignal: request.signal,

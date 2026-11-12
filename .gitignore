@@ -41,3 +41,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Données d'élèves (tableurs d'adaptation) : jamais versionnées.
+docs/8e - Adaptations*.xlsx

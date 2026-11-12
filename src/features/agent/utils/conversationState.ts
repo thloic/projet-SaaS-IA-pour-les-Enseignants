@@ -4,18 +4,36 @@ import type { AppLocale } from '../../i18n/locale.ts'
 
 const MAX_REQUEST_MESSAGES = 50
 
+// Une proposition Drive affichée n'est pas du texte, mais le modèle doit la
+// connaître pour une demande de suivi (« modifie aussi le titre »).
+// Le schéma serveur accepte 8000 caractères par message : l'en-tête et le texte
+// doivent rester dessous, sinon toute la requête est refusée.
+const MAX_PROPOSAL_HISTORY_CHARS = 7000
+
+function describeDriveProposal(message: Extract<ChatMessage, { kind: 'drive_change_proposal' }>): string {
+  const target =
+    message.change.type === 'update_doc'
+      ? `modification du Google Doc « ${message.targetName} » (fileId : ${message.change.fileId})`
+      : `création du Google Doc « ${message.change.name} »`
+  const text = message.change.text.slice(0, MAX_PROPOSAL_HISTORY_CHARS)
+  return `[Proposition Drive affichée à l’enseignant, en attente de confirmation : ${target}. Texte proposé :]\n${text}`
+}
+
 export function buildAgentRequestMessages(
   messages: ChatMessage[],
   nextUserContent: string
 ): AgentMessage[] {
-  const previous = messages.flatMap((message) =>
-    message.kind === 'text' &&
-    message.content.trim() &&
-    message.status !== 'pending' &&
-    message.status !== 'error'
+  const previous = messages.flatMap((message): AgentMessage[] => {
+    if (message.kind === 'drive_change_proposal') {
+      return [{ role: 'assistant', content: describeDriveProposal(message) }]
+    }
+    return message.kind === 'text' &&
+      message.content.trim() &&
+      message.status !== 'pending' &&
+      message.status !== 'error'
       ? [{ role: message.role, content: message.content.trim() } satisfies AgentMessage]
       : []
-  )
+  })
   return [...previous, { role: 'user' as const, content: nextUserContent.trim() }]
     .slice(-MAX_REQUEST_MESSAGES)
 }

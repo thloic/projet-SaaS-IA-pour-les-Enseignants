@@ -9,7 +9,7 @@ import {
   searchDriveFiles,
   type DriveToolDependencies,
 } from '../../src/features/integrations/drive/server/driveTools.ts'
-import { createDriveAgentTools } from '../../src/features/agent/server/driveAgentTools.ts'
+import { createDriveAgentTools, MAX_DRIVE_READS_PER_REQUEST } from '../../src/features/agent/server/driveAgentTools.ts'
 import { GoogleAccessTokenError } from '../../src/features/integrations/google/server/googleAccessToken.ts'
 import { DRIVE_GOOGLE_DOC_MIME, DRIVE_PDF_MIME } from '../../src/features/integrations/drive/schemas/driveImportSchema.ts'
 
@@ -206,4 +206,20 @@ test('document plus long que la limite de lecture : modification refusée, rien 
     (error: unknown) => error instanceof DriveToolError && error.code === 'CHANGE_UNSUPPORTED'
   )
   assert.equal(calls.replaceDocText.length, 0)
+})
+
+test('budget de lecture : au-delà de la limite par requête, aucune lecture supplémentaire', async () => {
+  const { deps } = makeDeps()
+  const tools = createDriveAgentTools(USER_ID, deps) as unknown as Record<
+    string,
+    { execute: (input: unknown, options: unknown) => Promise<Record<string, unknown>> }
+  >
+  const options = { toolCallId: 'test', messages: [] }
+  const outcomes: string[] = []
+  for (let index = 0; index < MAX_DRIVE_READS_PER_REQUEST + 1; index += 1) {
+    const result = await tools.drive_read!.execute({ fileId: DOC_ID }, options)
+    outcomes.push(String(result.status === 'ok' ? 'ok' : result.reason))
+  }
+  assert.equal(outcomes.at(-1), 'READ_LIMIT_REACHED')
+  assert.equal(outcomes.slice(0, -1).every((status) => status === 'ok'), true)
 })
